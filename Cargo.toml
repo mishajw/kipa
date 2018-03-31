@@ -1,0 +1,19 @@
+[package]
+name = "kipa"
+version = "0.1.0"
+authors = ["Misha Wagner <mishajw@gmail.com>"]
+
+[lib]
+name = "kipa_lib"
+path = "src/lib/lib.rs"
+
+[[bin]]
+name = "kipa_cli"
+path = "src/cli/main.rs"
+
+[[bin]]
+name = "kipa_daemon"
+path = "src/daemon/main.rs"
+
+[dependencies]
+
