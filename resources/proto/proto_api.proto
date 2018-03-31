@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+message Key {
+  bytes data = 1;
+}
+
+message Address {
+  uint32 ipv4 = 1;
+  uint32 port = 2;
+}
+
+message Node {
+  Key key = 1;
+  Address address = 2;
+}
+
+message GeneralRequest {
+  QueryRequest query_request = 1;
+  SearchRequest search_request = 2;
+}
+
+message GeneralResponse {
+  QueryResponse query_response = 1;
+  SearchResponse search_response = 2;
+}
+
+message QueryRequest {
+  Key key = 1;
+}
+
+message QueryResponse {
+  repeated Node nodes = 1;
+}
+
+message SearchRequest {
+  Key key = 1;
+}
+
+message SearchResponse {
+  Node node = 1;
+}
+

@@ -2,6 +2,7 @@
 name = "kipa"
 version = "0.1.0"
 authors = ["Misha Wagner <mishajw@gmail.com>"]
+build = "build.rs"
 
 [lib]
 name = "kipa_lib"
@@ -15,5 +16,22 @@ path = "src/cli/main.rs"
 name = "kipa_daemon"
 path = "src/daemon/main.rs"
 
+[features]
+default = ["use-protobuf", "use-tcp", "use-graph"]
+use-protobuf = []
+use-tcp = []
+use-graph = []
+
 [dependencies]
+error-chain = "0.11.0"
+protobuf = "1.5.0"
+gpgme = "0.7.2"
+clap = "2"
+log = "0.4"
+simple_logger = "0.5.0"
+byteorder = "1.2.2"
+cfg-if = "0.1"
+
+[build-dependencies]
+protoc-rust = "1.4.0"
 
