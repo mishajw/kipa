@@ -3,6 +3,8 @@
 use address::Address;
 use key::Key;
 
+use std::fmt;
+
 /// The information on a KIPA node.
 #[derive(Clone)]
 pub struct Node {
@@ -18,6 +20,12 @@ impl Node {
         Node {
             address: address, key: key
         }
+    }
+}
+
+impl fmt::Display for Node {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Node({})", self.address)
     }
 }
 

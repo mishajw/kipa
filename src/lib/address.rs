@@ -1,4 +1,6 @@
 use error::*;
+
+use std::fmt;
 use std::net::{SocketAddr, IpAddr, Ipv4Addr};
 
 /// An address of a node.
@@ -43,6 +45,21 @@ impl Address {
                         self.ip_data[2],
                         self.ip_data[3])),
                     self.port)
+        } else {
+            unimplemented!();
+        }
+    }
+}
+
+impl fmt::Display for Address {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.ip_data.len() == 4 {
+            write!(
+                f, "{}.{}.{}.{}",
+                self.ip_data[0],
+                self.ip_data[1],
+                self.ip_data[2],
+                self.ip_data[3])
         } else {
             unimplemented!();
         }

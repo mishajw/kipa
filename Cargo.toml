@@ -22,9 +22,10 @@ name = "kipa_daemon"
 path = "src/daemon/main.rs"
 
 [features]
-default = ["use-protobuf", "use-tcp", "use-graph"]
+default = ["use-protobuf", "use-tcp", "use-unix-socket", "use-graph"]
 use-protobuf = []
 use-tcp = []
+use-unix-socket = []
 use-graph = []
 
 [dependencies]
