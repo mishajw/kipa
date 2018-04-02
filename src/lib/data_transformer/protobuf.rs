@@ -1,3 +1,13 @@
+//! Implementation of `DataTransformer` using protobufs to serialize messages.
+//!
+//! Activated through the `use-protobuf` feature.
+//!
+//! Some relevant files:
+//! 1) `.proto` file can be found in `resources/proto/proto_api.proto`.
+//! 2) `build.rs` file creates the protobuf objects and places them in...
+//! 3) `src/lib/data_handler/proto_api.rs` is where the generated protobuf
+//! files are placed.
+
 use address::Address;
 use data_transformer::{DataTransformer, proto_api};
 use error::*;
@@ -10,9 +20,11 @@ use protobuf::*;
 use std::convert::{From, Into};
 use std::io::Cursor;
 
+/// The protobuf data transformer type
 pub struct ProtobufDataTransformer {}
 
 impl ProtobufDataTransformer {
+    /// Create a new protobuf data transformer
     pub fn new() -> Self {
         ProtobufDataTransformer{}
     }

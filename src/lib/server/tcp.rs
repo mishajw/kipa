@@ -1,3 +1,5 @@
+//! Implementation of servers using TCP sockets.
+
 use data_transformer::DataTransformer;
 use error::*;
 use node::Node;
@@ -13,11 +15,16 @@ use std::net::{SocketAddr, Ipv4Addr, IpAddr, TcpListener, TcpStream};
 use std::sync::Arc;
 use std::thread;
 
+/// Server that listens on a specified TCP socket.
 pub struct TcpPublicServer {
     thread: Option<thread::JoinHandle<()>>
 }
 
 impl TcpPublicServer {
+    /// Create a new TCP server.
+    /// - `request_hanlder` is what to send requests to.
+    /// - `data_transformer` used to decode requests.
+    /// - `port` the port used to listen on.
     pub fn new(
             request_handler: Arc<RequestHandler>,
             data_transformer: Arc<DataTransformer>,
@@ -88,11 +95,14 @@ impl PublicServer for TcpPublicServer {
     }
 }
 
+/// Implementation of sending requests to TCP servers.
 pub struct TcpRemoteServer {
     data_transformer: Arc<DataTransformer>
 }
 
 impl TcpRemoteServer {
+    /// Create a new sender, which uses a `DataTransformer` to serialize packets
+    /// before going on the line.
     pub fn new(data_transformer: Arc<DataTransformer>) -> Self {
         TcpRemoteServer {
             data_transformer: data_transformer

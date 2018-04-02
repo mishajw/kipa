@@ -1,9 +1,12 @@
+//! Implement `RequestHandler` using graph based searches through KIPA net.
+
 use error::*;
 use key::Key;
 use node::Node;
 use request_handler::{RequestHandler, Request, Response};
 use server::RemoteServer;
 
+/// Contains graph search information.
 pub struct GraphRequestHandler {
     #[allow(dead_code)]
     key: Key,
@@ -13,6 +16,11 @@ pub struct GraphRequestHandler {
 }
 
 impl GraphRequestHandler {
+    /// Create a new graph request handler.
+    ///
+    /// - `key` is the key for the local node.
+    /// - `remote_server` is used for communicating with other nodes.
+    /// - `initial_node` is the initial other node in KIPA network.
     pub fn new(
             key: Key,
             remote_server: Box<RemoteServer>,

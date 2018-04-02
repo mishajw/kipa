@@ -1,17 +1,24 @@
 use error::*;
 use std::net::{SocketAddr, IpAddr, Ipv4Addr};
 
+/// An address of a node.
 #[derive(Clone)]
 pub struct Address {
+    /// The IP address data.
+    ///
+    /// Can either be 4 bytes long for IPv4, or 16 bytes long for IPv6.
     pub ip_data: Vec<u8>,
+    /// The 16-bit port number of the address.
     pub port: u16
 }
 
 impl Address {
+    /// Create a new address with some address and port.
     pub fn new(ip_data: Vec<u8>, port: u16) -> Self {
         Address { ip_data: ip_data, port: port }
     }
 
+    /// Create a new address from a string.
     pub fn from_string(s: &str) -> Result<Address> {
         let socket_addr: SocketAddr =
             s.parse().chain_err(|| "Error on parsing IP address")?;
@@ -25,6 +32,7 @@ impl Address {
         }
     }
 
+    /// Get the `SocketAddr` for the address.
     pub fn get_socket_addr(&self) -> SocketAddr {
         if self.ip_data.len() == 4 {
             SocketAddr::new(
