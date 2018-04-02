@@ -3,6 +3,11 @@ name = "kipa"
 version = "0.1.0"
 authors = ["Misha Wagner <mishajw@gmail.com>"]
 build = "build.rs"
+description = "Distributed Key to IP Address (KIPA) query network"
+repository = "https://github.com/mishajw/kipa"
+readme = "README.md"
+keywords = ["distributed", "network", "dns"]
+license = "GPL-3.0"
 
 [lib]
 name = "kipa_lib"
