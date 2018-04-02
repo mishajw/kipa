@@ -1,9 +1,7 @@
-#[cfg(feature = "use-protobuf")]
 extern crate protoc_rust;
-#[cfg(feature = "use-protobuf")]
+
 use std::fs;
 
-#[cfg(feature = "use-protobuf")]
 fn main() {
     let output_proto_directory = "src/lib/data_transformer";
     fs::create_dir_all(output_proto_directory)
