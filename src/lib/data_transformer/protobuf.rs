@@ -80,8 +80,13 @@ impl DataTransformer for ProtobufDataTransformer {
             }
             &Response::SearchResponse(ref node) => {
                 let mut search = proto_api::SearchResponse::new();
-                let n: Result<proto_api::Node> = node.clone().into();
-                search.set_node(n?);
+                match node {
+                    &Some(ref node) => {
+                        let n: Result<proto_api::Node> = node.clone().into();
+                        search.set_node(n?);
+                    }
+                    &None => {}
+                }
                 general_response.set_search_response(search);
             }
         };
@@ -101,9 +106,13 @@ impl DataTransformer for ProtobufDataTransformer {
                 .iter().map(|n| n.clone().into()).collect();
             Ok(Response::QueryResponse(nodes?))
         } else if response.has_search_response() {
-            let node: Result<Node> =
-                response.get_search_response().get_node().clone().into();
-            Ok(Response::SearchResponse(node?))
+            if response.get_search_response().has_node() {
+                let node: Result<Node> =
+                    response.get_search_response().get_node().clone().into();
+                Ok(Response::SearchResponse(Some(node?)))
+            } else {
+                Ok(Response::SearchResponse(None))
+            }
         } else {
             Err(ErrorKind::ParseError("Unrecognized response".into()).into())
         }

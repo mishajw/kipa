@@ -24,7 +24,7 @@ pub enum Request {
 /// The response for a given request.
 pub enum Response {
     /// Response for a [`Request::SearchRequest`].
-    SearchResponse(Node),
+    SearchResponse(Option<Node>),
     /// Response for a [`Request::QueryRequest`].
     QueryResponse(Vec<Node>)
 }
