@@ -7,6 +7,9 @@ use node::Node;
 #[cfg(feature = "use-graph")]
 pub mod graph;
 
+#[cfg(feature = "use-black-hole")]
+pub mod black_hole;
+
 /// A request for the request handler.
 pub enum Request {
     /// Request a search for some key.

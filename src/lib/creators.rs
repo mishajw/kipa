@@ -126,6 +126,15 @@ cfg_if! {
             Ok(Arc::new(GraphRequestHandler::new(
                 local_key, remote_server, initial_node)))
         }
+    } else if #[cfg(feature = "use-black-hole")] {
+        use request_handler::black_hole::BlackHoleRequestHandler;
+
+        pub fn create_request_handler(
+                gpg_key_handler: &mut GpgKeyHandler,
+                remote_server: Box<GlobalSendServer>,
+                args: &clap::ArgMatches) -> Result<Arc<RequestHandler>> {
+            Ok(Arc::new(BlackHoleRequestHandler::new()))
+        }
     } else {
         #[allow(missing_docs)]
         pub fn create_request_handler(
