@@ -4,13 +4,13 @@ use error::*;
 use key::Key;
 use node::Node;
 use request_handler::{RequestHandler, Request, Response};
-use server::RemoteServer;
+use server::SendServer;
 
 /// Contains graph search information.
 pub struct GraphRequestHandler {
     #[allow(dead_code)]
     key: Key,
-    remote_server: Box<RemoteServer>,
+    remote_server: Box<SendServer>,
     #[allow(dead_code)]
     neighbours: Vec<Node>
 }
@@ -23,7 +23,7 @@ impl GraphRequestHandler {
     /// - `initial_node` is the initial other node in KIPA network.
     pub fn new(
             key: Key,
-            remote_server: Box<RemoteServer>,
+            remote_server: Box<SendServer>,
             initial_node: Node) -> Self {
 
         GraphRequestHandler {

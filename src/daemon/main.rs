@@ -11,7 +11,7 @@ use kipa_lib::data_transformer::DataTransformer;
 use kipa_lib::error::*;
 use kipa_lib::gpg_key::GpgKeyHandler;
 use kipa_lib::request_handler::RequestHandler;
-use kipa_lib::server::{PublicServer, RemoteServer};
+use kipa_lib::server::{ReceiveServer, SendServer};
 
 use error_chain::ChainedError;
 use std::sync::Arc;
@@ -57,14 +57,14 @@ fn run_servers(args: &clap::ArgMatches) -> Result<()> {
     let data_transformer = create_data_transformer()?;
 
     // Set up out communication
-    let remote_server = create_remote_server(data_transformer.clone())?;
+    let remote_server = create_send_server(data_transformer.clone())?;
 
     // Set up request handler
     let request_handler = create_request_handler(
         &mut gpg_key_handler, remote_server, args)?;
 
     // Set up listening for connections
-    let mut public_server = create_public_server(
+    let mut public_server = create_receive_server(
         request_handler.clone(), data_transformer.clone(), args)?;
 
     // Wait for the public server to finish
@@ -91,33 +91,33 @@ cfg_if! {
 // Create server functions
 cfg_if! {
     if #[cfg(feature = "use-tcp")] {
-        use kipa_lib::server::tcp::{TcpPublicServer, TcpRemoteServer};
-        fn create_remote_server(
+        use kipa_lib::server::tcp::{TcpReceiveServer, TcpSendServer};
+        fn create_send_server(
                 data_transformer: Arc<DataTransformer>) ->
-                Result<Box<RemoteServer>> {
-            Ok(Box::new(TcpRemoteServer::new(data_transformer)))
+                Result<Box<SendServer>> {
+            Ok(Box::new(TcpSendServer::new(data_transformer)))
         }
 
-        fn create_public_server(
+        fn create_receive_server(
                 request_handler: Arc<RequestHandler>,
                 data_transformer: Arc<DataTransformer>,
-                args: &clap::ArgMatches) -> Result<Box<PublicServer>> {
+                args: &clap::ArgMatches) -> Result<Box<ReceiveServer>> {
             let port = args.value_of("port").unwrap()
                 .parse::<u16>().chain_err(|| "")?;
-            Ok(Box::new(TcpPublicServer::new(
+            Ok(Box::new(TcpReceiveServer::new(
                 request_handler, data_transformer.clone(), port)?))
         }
     } else {
-        fn create_remote_server(
+        fn create_send_server(
                 data_transformer: Arc<DataTransformer>) ->
-                Result<Box<RemoteServer>> {
+                Result<Box<SendServer>> {
             Err(ErrorKind::ConfigError(
                 "A server feature was not selected".into()).into())
         }
-        fn create_public_server(
+        fn create_receive_server(
                 request_handler: Arc<RequestHandler>,
                 data_transformer: Arc<DataTransformer>,
-                args: &clap::ArgMatches) -> Result<Box<PublicServer>> {
+                args: &clap::ArgMatches) -> Result<Box<ReceiveServer>> {
             Err(ErrorKind::ConfigError(
                 "A server feature was not selected".into()).into())
         }
@@ -131,7 +131,7 @@ cfg_if! {
         use kipa_lib::request_handler::graph::GraphRequestHandler;
         fn create_request_handler(
                 gpg_key_handler: &mut GpgKeyHandler,
-                remote_server: Box<RemoteServer>,
+                remote_server: Box<SendServer>,
                 args: &clap::ArgMatches) -> Result<Arc<RequestHandler>> {
 
             // Get local key
@@ -153,7 +153,7 @@ cfg_if! {
     } else {
         fn create_request_handler(
                 gpg_key_handler: &mut GpgKeyHandler,
-                remote_server: Box<RemoteServer>,
+                remote_server: Box<SendServer>,
                 args: &clap::ArgMatches) -> Result<Arc<RequestHandler>> {
             Err(ErrorKind::ConfigError(
                 "A request handler feature was not selected".into()).into())

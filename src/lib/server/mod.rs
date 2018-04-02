@@ -11,7 +11,7 @@ pub mod tcp;
 
 /// Create a server that can listen for requests and pass onto a
 /// `RequestHandler`.
-pub trait PublicServer {
+pub trait ReceiveServer {
     /// Join on the server, waiting for all child threads to terminate.
     ///
     /// If there are no child threads, do nothing.
@@ -19,7 +19,7 @@ pub trait PublicServer {
 }
 
 /// Functionality for sending requests to other KIPA servers.
-pub trait RemoteServer: Send + Sync {
+pub trait SendServer: Send + Sync {
     /// Send a request to another `Node` and get the `Response`.
     fn receive<'a>(&self, node: &Node, request: &Request) -> Result<Response>;
 }

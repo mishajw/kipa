@@ -4,7 +4,7 @@ use data_transformer::DataTransformer;
 use error::*;
 use node::Node;
 use request_handler::{RequestHandler, Request, Response};
-use server::{PublicServer, RemoteServer};
+use server::{ReceiveServer, SendServer};
 
 use byteorder::{NetworkEndian, ReadBytesExt, WriteBytesExt};
 use error_chain::ChainedError;
@@ -16,11 +16,11 @@ use std::sync::Arc;
 use std::thread;
 
 /// Server that listens on a specified TCP socket.
-pub struct TcpPublicServer {
+pub struct TcpReceiveServer {
     thread: Option<thread::JoinHandle<()>>
 }
 
-impl TcpPublicServer {
+impl TcpReceiveServer {
     /// Create a new TCP server.
     /// - `request_hanlder` is what to send requests to.
     /// - `data_transformer` used to decode requests.
@@ -43,7 +43,7 @@ impl TcpPublicServer {
                         .chain_err(|| "Error on creating socket")
                         .and_then(
                             |mut socket|
-                            TcpPublicServer::handle_socket(
+                            TcpReceiveServer::handle_socket(
                                 &*request_handler,
                                 &*data_transformer,
                                 &mut socket));
@@ -56,7 +56,7 @@ impl TcpPublicServer {
                     }
                 });
         });
-        Ok(TcpPublicServer {
+        Ok(TcpReceiveServer {
             thread: Some(t)
         })
     }
@@ -81,7 +81,7 @@ impl TcpPublicServer {
     }
 }
 
-impl PublicServer for TcpPublicServer {
+impl ReceiveServer for TcpReceiveServer {
     fn join(&mut self) -> Result<()> {
         let mut thread: Option<thread::JoinHandle<()>> = None;
         swap(&mut self.thread, &mut thread);
@@ -96,21 +96,21 @@ impl PublicServer for TcpPublicServer {
 }
 
 /// Implementation of sending requests to TCP servers.
-pub struct TcpRemoteServer {
+pub struct TcpSendServer {
     data_transformer: Arc<DataTransformer>
 }
 
-impl TcpRemoteServer {
+impl TcpSendServer {
     /// Create a new sender, which uses a `DataTransformer` to serialize packets
     /// before going on the line.
     pub fn new(data_transformer: Arc<DataTransformer>) -> Self {
-        TcpRemoteServer {
+        TcpSendServer {
             data_transformer: data_transformer
         }
     }
 }
 
-impl RemoteServer for TcpRemoteServer {
+impl SendServer for TcpSendServer {
     fn receive<'a>(&self, node: &Node, request: &Request) -> Result<Response> {
         let request_bytes =
             self.data_transformer.request_to_bytes(request)?;
