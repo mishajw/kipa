@@ -68,6 +68,7 @@ fn run_servers(args: &clap::ArgMatches) -> Result<()> {
         request_handler.clone(), data_transformer.clone(), args)?;
 
     // Set up local listening for requests
+    #[allow(unused)]
     let mut local_server = create_local_receive_server(
         request_handler.clone(), data_transformer.clone(), args)?;
 

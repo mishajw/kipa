@@ -6,11 +6,13 @@ use node::Node;
 use request_handler::{RequestHandler, Request, Response};
 use global_server::GlobalSendServer;
 
+use std::sync::Arc;
+
 /// Contains graph search information.
 pub struct GraphRequestHandler {
     #[allow(dead_code)]
     key: Key,
-    remote_server: Box<GlobalSendServer>,
+    remote_server: Arc<GlobalSendServer>,
     #[allow(dead_code)]
     neighbours: Vec<Node>
 }
@@ -23,7 +25,7 @@ impl GraphRequestHandler {
     /// - `initial_node` is the initial other node in KIPA network.
     pub fn new(
             key: Key,
-            remote_server: Box<GlobalSendServer>,
+            remote_server: Arc<GlobalSendServer>,
             initial_node: Node) -> Self {
 
         GraphRequestHandler {

@@ -37,8 +37,8 @@ cfg_if! {
         /// Create a `GlobalSendServer`
         pub fn create_global_send_server(
                 data_transformer: Arc<DataTransformer>) ->
-                Result<Box<GlobalSendServer>> {
-            Ok(Box::new(TcpGlobalSendServer::new(data_transformer)))
+                Result<Arc<GlobalSendServer>> {
+            Ok(Arc::new(TcpGlobalSendServer::new(data_transformer)))
         }
 
         /// Create a `GlobalRecieveServer`
@@ -55,7 +55,7 @@ cfg_if! {
         #[allow(missing_docs)]
         pub fn create_send_server(
                 data_transformer: Arc<DataTransformer>) ->
-                Result<Box<GlobalSendServer>> {
+                Result<Arc<GlobalSendServer>> {
             Err(ErrorKind::ConfigError(
                 "A server feature was not selected".into()).into())
         }
@@ -107,7 +107,7 @@ cfg_if! {
         /// Create a `RequestHandler`
         pub fn create_request_handler(
                 gpg_key_handler: &mut GpgKeyHandler,
-                remote_server: Box<GlobalSendServer>,
+                remote_server: Arc<GlobalSendServer>,
                 args: &clap::ArgMatches) -> Result<Arc<RequestHandler>> {
 
             // Get local key
@@ -131,7 +131,7 @@ cfg_if! {
 
         pub fn create_request_handler(
                 gpg_key_handler: &mut GpgKeyHandler,
-                remote_server: Box<GlobalSendServer>,
+                remote_server: Arc<GlobalSendServer>,
                 args: &clap::ArgMatches) -> Result<Arc<RequestHandler>> {
             Ok(Arc::new(BlackHoleRequestHandler::new()))
         }
@@ -139,7 +139,7 @@ cfg_if! {
         #[allow(missing_docs)]
         pub fn create_request_handler(
                 gpg_key_handler: &mut GpgKeyHandler,
-                remote_server: Box<GlobalSendServer>,
+                remote_server: Arc<GlobalSendServer>,
                 args: &clap::ArgMatches) -> Result<Arc<RequestHandler>> {
             Err(ErrorKind::ConfigError(
                 "A request handler feature was not selected".into()).into())
@@ -154,16 +154,16 @@ cfg_if! {
         /// Create a `LocalSendServer`
         pub fn create_local_send_server(
                 data_transformer: Arc<DataTransformer>,
-                args: &clap::ArgMatches) -> Result<Box<LocalSendServer>> {
+                args: &clap::ArgMatches) -> Result<Arc<LocalSendServer>> {
             let socket_path = args.value_of("socket_path").unwrap();
-            Ok(Box::new(UnixSocketLocalSendServer::new(
+            Ok(Arc::new(UnixSocketLocalSendServer::new(
                 data_transformer, &String::from(socket_path))))
         }
     } else {
         #[allow(missing_docs)]
         pub fn create_local_send_server(
                 data_transformer: Arc<DataTransformer>,
-                args: &clap::ArgMatches) -> Result<Box<LocalSendServer>> {
+                args: &clap::ArgMatches) -> Result<Arc<LocalSendServer>> {
             Err(ErrorKind::ConfigError(
                 "A local server feature was not selected".into()).into())
         }
