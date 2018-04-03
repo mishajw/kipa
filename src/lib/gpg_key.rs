@@ -26,14 +26,14 @@ impl GpgKeyHandler {
     pub fn get_key(&mut self, key_id: String) -> Result<Key> {
         trace!("Requested key ID: {}", key_id);
 
-        let key = self.context.find_key(key_id)
+        let key = self.context.find_key(key_id.clone())
             .chain_err(|| "Error on finding key")?;
         let mut buffer = Vec::new();
         self.context.export_keys(
                 &[key], gpgme::ExportMode::empty(), &mut buffer)
             .chain_err(|| "Error on exporting key")?;
 
-        Ok(Key::new(buffer))
+        Ok(Key::new(key_id, buffer))
     }
 }
 

@@ -60,7 +60,7 @@ impl DataTransformer for ProtobufDataTransformer {
             let key = request.get_query_request().get_key().clone().into();
             Ok(Request::QueryRequest(key))
         } else if request.has_search_request() {
-            let key = request.get_query_request().get_key().clone().into();
+            let key = request.get_search_request().get_key().clone().into();
             Ok(Request::SearchRequest(key))
         } else {
             Err(ErrorKind::ParseError("Unrecognized request".into()).into())
@@ -122,6 +122,7 @@ impl DataTransformer for ProtobufDataTransformer {
 impl Into<proto_api::Key> for Key {
     fn into(self) -> proto_api::Key {
         let mut kipa_key = proto_api::Key::new();
+        kipa_key.set_key_id(self.get_key_id().clone());
         kipa_key.set_data(self.get_data().clone());
         kipa_key
     }
@@ -129,7 +130,7 @@ impl Into<proto_api::Key> for Key {
 
 impl From<proto_api::Key> for Key {
     fn from(kipa_key: proto_api::Key) -> Key {
-        Key::new(kipa_key.data.clone())
+        Key::new(kipa_key.get_key_id().into(), kipa_key.data.clone())
     }
 }
 

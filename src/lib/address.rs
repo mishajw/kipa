@@ -4,7 +4,7 @@ use std::fmt;
 use std::net::{SocketAddr, IpAddr, Ipv4Addr};
 
 /// An address of a node.
-#[derive(Clone)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Address {
     /// The IP address data.
     ///
@@ -55,11 +55,12 @@ impl fmt::Display for Address {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.ip_data.len() == 4 {
             write!(
-                f, "{}.{}.{}.{}",
+                f, "{}.{}.{}.{}:{}",
                 self.ip_data[0],
                 self.ip_data[1],
                 self.ip_data[2],
-                self.ip_data[3])
+                self.ip_data[3],
+                self.port)
         } else {
             unimplemented!();
         }

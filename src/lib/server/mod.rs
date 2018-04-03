@@ -81,7 +81,7 @@ pub trait SendServer {
         let request_bytes =
             data_transformer.request_to_bytes(request)?;
 
-        trace!("Setting up socket to another node");
+        trace!("Setting up socket to node {}", node);
         let mut socket = self.create_socket(node)?;
 
         trace!("Sending request to another node");

@@ -9,6 +9,8 @@ error_chain! {
         JoinError(s: String) { display("Join error: {}", s) }
         /// Error in configuration set up
         ConfigError(s: String) { display("Configuration error: {}", s) }
+        /// Error in the response type
+        ResponseError(s: String) { display("Response error: {}", s) }
     }
 }
 

@@ -6,7 +6,7 @@ use key::Key;
 use std::fmt;
 
 /// The information on a KIPA node.
-#[derive(Clone)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Node {
     /// The address of the node used for communicating with it.
     pub address: Address,
@@ -25,7 +25,7 @@ impl Node {
 
 impl fmt::Display for Node {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Node({})", self.address)
+        write!(f, "Node({}, {})", self.address, self.key)
     }
 }
 
