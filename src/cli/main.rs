@@ -20,8 +20,7 @@ fn main() {
              .long("socket-path")
              .short("s")
              .help("Socket to communicate with daemon")
-             .takes_value(true)
-             .required(true))
+             .takes_value(true))
         .subcommand(
             clap::SubCommand::with_name("search")
                 .about("Search for a node given a key")

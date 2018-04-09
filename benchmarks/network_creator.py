@@ -32,7 +32,6 @@ class Network:
         (exit_code, output) = self.__key_dict[from_key_id].exec_run(
             [
                 "/root/kipa_cli",
-                "--socket-path", "/tmp/kipa",
                 "search",
                 "--key-id", to_key_id])
 
@@ -117,7 +116,6 @@ def __create_docker_directory() -> str:
                 chmod +x kipa_daemon && \\
                 chmod +x kipa_cli
             CMD ./kipa_daemon \\
-                --socket-path /tmp/kipa \\
                 --key-id $KIPA_KEY_ID \\
                 $KIPA_ARGS
         """)
@@ -149,8 +147,7 @@ def __create_containers(
             environment={
                 "KIPA_KEY_ID": key_id,
                 "KIPA_ARGS":
-                    "--port 12345 "
-                    f"--initial-node-address {next_ip_address}:12345 "
+                    f"--initial-node-address {next_ip_address}:10842 "
                     f"--initial-node-key-id {key_id}"})
 
         log.debug(

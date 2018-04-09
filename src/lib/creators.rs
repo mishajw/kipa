@@ -46,7 +46,7 @@ cfg_if! {
                 request_handler: Arc<RequestHandler>,
                 data_transformer: Arc<DataTransformer>,
                 args: &clap::ArgMatches) -> Result<Box<GlobalReceiveServer>> {
-            let port = args.value_of("port").unwrap()
+            let port = args.value_of("port").unwrap_or("10842")
                 .parse::<u16>().chain_err(|| "")?;
             Ok(Box::new(TcpGlobalReceiveServer::new(
                 request_handler, data_transformer.clone(), port)?))
@@ -73,18 +73,31 @@ cfg_if! {
 
 cfg_if! {
     if #[cfg(feature = "use-unix-socket")] {
-        use local_server::unix_socket::UnixSocketLocalReceiveServer;
+        use local_server::unix_socket::{
+            UnixSocketLocalReceiveServer, UnixSocketLocalSendServer};
+        const DEFAULT_UNIX_SOCKET_PATH: &str = "/tmp/kipa";
 
         /// Create a `LocalReceiveServer`
         pub fn create_local_receive_server(
                 request_handler: Arc<RequestHandler>,
                 data_transformer: Arc<DataTransformer>,
                 args: &clap::ArgMatches) -> Result<Box<LocalReceiveServer>> {
-            let socket_path = args.value_of("socket_path").unwrap();
+            let socket_path = args.value_of("socket_path")
+                .unwrap_or(DEFAULT_UNIX_SOCKET_PATH);
             Ok(Box::new(UnixSocketLocalReceiveServer::new(
                 request_handler,
                 data_transformer,
                 &String::from(socket_path))?))
+        }
+
+        /// Create a `LocalSendServer`
+        pub fn create_local_send_server(
+                data_transformer: Arc<DataTransformer>,
+                args: &clap::ArgMatches) -> Result<Arc<LocalSendServer>> {
+            let socket_path = args.value_of("socket_path")
+                .unwrap_or(DEFAULT_UNIX_SOCKET_PATH);
+            Ok(Arc::new(UnixSocketLocalSendServer::new(
+                data_transformer, &String::from(socket_path))))
         }
     } else {
         #[allow(missing_docs)]
@@ -92,6 +105,13 @@ cfg_if! {
                 request_handler: Arc<RequestHandler>,
                 data_transformer: Arc<DataTransformer>,
                 args: &clap::ArgMatches) -> Result<Box<LocalReceiveServer>> {
+            Err(ErrorKind::ConfigError(
+                "A local server feature was not selected".into()).into())
+        }
+        #[allow(missing_docs)]
+        pub fn create_local_send_server(
+                data_transformer: Arc<DataTransformer>,
+                args: &clap::ArgMatches) -> Result<Arc<LocalSendServer>> {
             Err(ErrorKind::ConfigError(
                 "A local server feature was not selected".into()).into())
         }
@@ -143,29 +163,6 @@ cfg_if! {
                 args: &clap::ArgMatches) -> Result<Arc<RequestHandler>> {
             Err(ErrorKind::ConfigError(
                 "A request handler feature was not selected".into()).into())
-        }
-    }
-}
-
-cfg_if! {
-    if #[cfg(feature = "use-unix-socket")] {
-        use local_server::unix_socket::UnixSocketLocalSendServer;
-
-        /// Create a `LocalSendServer`
-        pub fn create_local_send_server(
-                data_transformer: Arc<DataTransformer>,
-                args: &clap::ArgMatches) -> Result<Arc<LocalSendServer>> {
-            let socket_path = args.value_of("socket_path").unwrap();
-            Ok(Arc::new(UnixSocketLocalSendServer::new(
-                data_transformer, &String::from(socket_path))))
-        }
-    } else {
-        #[allow(missing_docs)]
-        pub fn create_local_send_server(
-                data_transformer: Arc<DataTransformer>,
-                args: &clap::ArgMatches) -> Result<Arc<LocalSendServer>> {
-            Err(ErrorKind::ConfigError(
-                "A local server feature was not selected".into()).into())
         }
     }
 }
