@@ -27,7 +27,7 @@ impl TcpGlobalReceiveServer {
             data_transformer: Arc<DataTransformer>,
             port: u16) -> Result<Self> {
         let local_address = SocketAddr::new(
-            IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), port);
+            IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), port);
         let listener = TcpListener::bind(&local_address)
             .chain_err(|| "Error on bind to TCP socket")?;
         trace!("Setting up server on port {}", port);
