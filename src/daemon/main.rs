@@ -12,7 +12,7 @@ use error_chain::ChainedError;
 
 fn main() {
     simple_logger::init().unwrap();
-    error!("Starting servers");
+    info!("Starting servers");
 
     let args = clap::App::new("kipa_daemon")
         .arg(clap::Arg::with_name("port")
