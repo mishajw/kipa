@@ -7,7 +7,7 @@ extern crate simple_logger;
 use kipa_lib::creators::*;
 use kipa_lib::error::*;
 use kipa_lib::gpg_key::GpgKeyHandler;
-use kipa_lib::request_handler::{Request, Response};
+use kipa_lib::api::{Request, Response};
 
 use error_chain::ChainedError;
 

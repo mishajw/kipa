@@ -2,7 +2,7 @@
 
 use error::*;
 use node::Node;
-use request_handler::{Request, Response};
+use api::{Request, Response};
 
 #[cfg(feature = "use-tcp")]
 pub mod tcp;

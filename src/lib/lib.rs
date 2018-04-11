@@ -17,6 +17,7 @@ extern crate clap;
 extern crate gpgme;
 extern crate protobuf;
 
+pub mod api;
 pub mod creators;
 pub mod data_transformer;
 pub mod error;

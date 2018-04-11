@@ -1,7 +1,7 @@
 //! Traits for sending and receiving requests on a local machine.
 
 use error::*;
-use request_handler::{Request, Response};
+use api::{Request, Response};
 
 #[cfg(feature = "use-unix-socket")]
 pub mod unix_socket;

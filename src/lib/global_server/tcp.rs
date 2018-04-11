@@ -1,11 +1,12 @@
 //! Implementation of servers using TCP sockets.
 
+use api::{Request, Response};
 use data_transformer::DataTransformer;
 use error::*;
-use node::Node;
-use request_handler::{RequestHandler, Request, Response};
-use server::{ReceiveServer, SendServer};
 use global_server::{GlobalReceiveServer, GlobalSendServer};
+use node::Node;
+use request_handler::RequestHandler;
+use server::{ReceiveServer, SendServer};
 
 use std::mem::swap;
 use std::net::{SocketAddr, Ipv4Addr, IpAddr, TcpListener, TcpStream};

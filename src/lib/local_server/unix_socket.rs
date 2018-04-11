@@ -2,7 +2,8 @@
 //! such as the CLI.
 
 use error::*;
-use request_handler::{RequestHandler, Response, Request};
+use request_handler::RequestHandler;
+use api::{Response, Request};
 use data_transformer::DataTransformer;
 use local_server::{LocalReceiveServer, LocalSendServer};
 use server::{ReceiveServer, send_data, receive_data};

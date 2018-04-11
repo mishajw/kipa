@@ -2,7 +2,7 @@
 //! the wire between KIPA nodes/interfaces.
 
 use error::*;
-use request_handler::{Request, Response};
+use api::{Request, Response};
 
 #[cfg(feature = "use-protobuf")]
 pub mod protobuf;

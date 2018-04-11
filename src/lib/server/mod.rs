@@ -6,7 +6,8 @@
 
 use error::*;
 use node::Node;
-use request_handler::{RequestHandler, Request, Response};
+use api::{Request, Response};
+use request_handler::RequestHandler;
 use data_transformer::DataTransformer;
 
 use byteorder::{NetworkEndian, ReadBytesExt, WriteBytesExt};

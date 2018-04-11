@@ -13,7 +13,7 @@ use data_transformer::{DataTransformer, proto_api};
 use error::*;
 use key::Key;
 use node::Node;
-use request_handler::{Request, Response};
+use api::{Request, Response};
 
 use byteorder::{NetworkEndian, ReadBytesExt, WriteBytesExt};
 use protobuf::*;
