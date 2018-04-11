@@ -33,6 +33,7 @@ cfg_if! {
     if #[cfg(feature = "use-tcp")] {
         use global_server::tcp::{
             TcpGlobalReceiveServer, TcpGlobalSendServer};
+        use server::DEFAULT_PORT;
 
         /// Create a `GlobalSendServer`
         pub fn create_global_send_server(
@@ -46,7 +47,8 @@ cfg_if! {
                 request_handler: Arc<RequestHandler>,
                 data_transformer: Arc<DataTransformer>,
                 args: &clap::ArgMatches) -> Result<Box<GlobalReceiveServer>> {
-            let port = args.value_of("port").unwrap_or("10842")
+            let port = args.value_of("port")
+                .unwrap_or(&DEFAULT_PORT.to_string())
                 .parse::<u16>().chain_err(|| "")?;
             Ok(Box::new(TcpGlobalReceiveServer::new(
                 request_handler, data_transformer.clone(), port)?))
@@ -74,8 +76,9 @@ cfg_if! {
 cfg_if! {
     if #[cfg(feature = "use-unix-socket")] {
         use local_server::unix_socket::{
-            UnixSocketLocalReceiveServer, UnixSocketLocalSendServer};
-        const DEFAULT_UNIX_SOCKET_PATH: &str = "/tmp/kipa";
+            UnixSocketLocalReceiveServer,
+            UnixSocketLocalSendServer,
+            DEFAULT_UNIX_SOCKET_PATH};
 
         /// Create a `LocalReceiveServer`
         pub fn create_local_receive_server(

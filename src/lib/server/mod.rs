@@ -17,6 +17,9 @@ use std::io::{Read, Write};
 use std::mem::{size_of};
 use std::sync::Arc;
 
+/// The default port for server communication.
+pub const DEFAULT_PORT: u16 = 10842;
+
 /// Create a server that can listen for requests and pass onto a
 /// `RequestHandler`.
 pub trait ReceiveServer {

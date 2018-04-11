@@ -13,6 +13,9 @@ use std::thread;
 use std::sync::Arc;
 use std::mem::swap;
 
+/// The default unix socket path.
+pub const DEFAULT_UNIX_SOCKET_PATH: &str = "/tmp/kipa";
+
 /// Listens for local requests on a unix socket file.
 pub struct UnixSocketLocalReceiveServer {
     thread: Option<thread::JoinHandle<()>>
