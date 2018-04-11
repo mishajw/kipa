@@ -120,8 +120,6 @@ cfg_if! {
 
 cfg_if! {
     if #[cfg(feature = "use-graph")] {
-        use address::Address;
-        use node::Node;
         use request_handler::graph::GraphRequestHandler;
 
         /// Create a `RequestHandler`
@@ -133,18 +131,8 @@ cfg_if! {
             // Get local key
             let local_key = gpg_key_handler.get_key(
                 String::from(args.value_of("key_id").unwrap()))?;
-
-            // Set up initial node
-            let initial_node_key =
-                gpg_key_handler.get_key(String::from(
-                    args.value_of("initial_node_key_id").unwrap()))?;
-            let initial_node_address = Address::from_string(
-                args.value_of("initial_node_address").unwrap())?;
-            let initial_node = Node::new(
-                initial_node_address, initial_node_key);
-
             Ok(Arc::new(GraphRequestHandler::new(
-                local_key, remote_server, initial_node)))
+                local_key, remote_server)))
         }
     } else if #[cfg(feature = "use-black-hole")] {
         use request_handler::black_hole::BlackHoleRequestHandler;

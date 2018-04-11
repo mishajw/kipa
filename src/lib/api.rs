@@ -14,7 +14,10 @@ pub enum Request {
     ///
     /// This returns the [`Node`]s that the local node is connected to, that are
     /// closest to the [`Key`] given.
-    QueryRequest(Key)
+    QueryRequest(Key),
+    /// Connect to a `Node`, and search for potential neighbours in the node's
+    /// network.
+    ConnectRequest(Node),
 }
 
 /// The response for a given request.
@@ -22,6 +25,8 @@ pub enum Response {
     /// Response for a [`Request::SearchRequest`].
     SearchResponse(Option<Node>),
     /// Response for a [`Request::QueryRequest`].
-    QueryResponse(Vec<Node>)
+    QueryResponse(Vec<Node>),
+    /// Response for a [`Request::ConnectRequest`]
+    ConnectResponse()
 }
 

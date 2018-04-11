@@ -8,6 +8,7 @@ use kipa_lib::creators::*;
 use kipa_lib::error::*;
 use kipa_lib::gpg_key::GpgKeyHandler;
 use kipa_lib::api::{Request, Response};
+use kipa_lib::{Address, Node};
 
 use error_chain::ChainedError;
 
@@ -28,6 +29,21 @@ fn main() {
                      .long("key-id")
                      .short("k")
                      .help("The key to search for")
+                     .takes_value(true)
+                     .required(true)))
+        .subcommand(
+            clap::SubCommand::with_name("connect")
+                .about("Connect to a node with a key and IP address")
+                .arg(clap::Arg::with_name("key_id")
+                     .long("key-id")
+                     .short("k")
+                     .help("The key to connect to")
+                     .takes_value(true)
+                     .required(true))
+                .arg(clap::Arg::with_name("address")
+                     .long("address")
+                     .short("a")
+                     .help("The IP address to connect to")
                      .takes_value(true)
                      .required(true)))
         .get_matches();
@@ -63,6 +79,27 @@ fn message_daemon(args: &clap::ArgMatches) -> Result<()> {
             _ => Err(ErrorKind::ParseError(
                 "Unrecognized response".into()).into())
         }
+    } else if let Some(connect_args) = args.subcommand_matches("connect") {
+        // Get node from arguments
+        let node_key =
+            gpg_key_handler.get_key(String::from(
+                connect_args.value_of("key_id").unwrap()))?;
+        let node_address = Address::from_string(
+            connect_args.value_of("address").unwrap())?;
+        let node = Node::new(node_address, node_key);
+
+        let response = local_send_server.receive(
+            &Request::ConnectRequest(node))?;
+
+        match response {
+            Response::ConnectResponse() => {
+                println!("Connecct successful");
+                Ok(())
+            }
+            _ => Err(ErrorKind::ParseError(
+                "Unrecognized response".into()).into())
+        }
+
     } else {
         Err(ErrorKind::ParseError("No commmand given".into()).into())
     }

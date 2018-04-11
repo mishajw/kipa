@@ -18,11 +18,13 @@ message Node {
 message GeneralRequest {
   QueryRequest query_request = 1;
   SearchRequest search_request = 2;
+  ConnectRequest connect_request = 3;
 }
 
 message GeneralResponse {
   QueryResponse query_response = 1;
   SearchResponse search_response = 2;
+  ConnectResponse connect_response = 3;
 }
 
 message QueryRequest {
@@ -40,4 +42,10 @@ message SearchRequest {
 message SearchResponse {
   Node node = 1;
 }
+
+message ConnectRequest {
+  Node node = 1;
+}
+
+message ConnectResponse {}
 

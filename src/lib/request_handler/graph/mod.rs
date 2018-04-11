@@ -7,7 +7,6 @@ mod key_space;
 use error::*;
 use global_server::GlobalSendServer;
 use key::Key;
-use node::Node;
 use request_handler::graph::neighbours_store::NeighboursStore;
 use request_handler::graph::search::GraphSearch;
 use request_handler::{RequestHandler, Request, Response};
@@ -28,8 +27,7 @@ impl GraphRequestHandler {
     /// - `initial_node` is the initial other node in KIPA network.
     pub fn new(
             key: Key,
-            remote_server: Arc<GlobalSendServer>,
-            initial_node: Node) -> Self {
+            remote_server: Arc<GlobalSendServer>) -> Self {
 
         let remote_server_clone = remote_server.clone();
         let graph_search = GraphSearch::new(Arc::new(move |n, k: &Key| {
@@ -43,8 +41,7 @@ impl GraphRequestHandler {
             }
         }));
 
-        let mut neighbours_store = NeighboursStore::new(key.clone(), 3);
-        neighbours_store.consider_candidate(&initial_node);
+        let neighbours_store = NeighboursStore::new(key.clone(), 3);
 
         GraphRequestHandler {
             neighbours_store: Arc::new(Mutex::new(neighbours_store)),
@@ -70,6 +67,11 @@ impl RequestHandler for GraphRequestHandler {
                         key,
                         self.neighbours_store
                             .lock().unwrap().get_all())?))
+            }
+            &Request::ConnectRequest(ref node) => {
+                trace!("Received connect request for node {}", node);
+                self.neighbours_store.lock().unwrap().consider_candidate(node);
+                Ok(Response::ConnectResponse())
             }
         }
     }

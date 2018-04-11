@@ -36,8 +36,8 @@ class Network:
                 "--key-id", to_key_id])
 
         log.info(
-                f"Returned exit code {exit_code}, "
-                f"and output:\n{output.decode()}")
+            f"Returned exit code {exit_code}, "
+            f"and output:\n{output.decode()}")
 
         return False
 
@@ -131,7 +131,8 @@ def __create_containers(
         ip_address = f"{IPV4_PREFIX}.{i + 1}"
 
         # Every kipa node is connected to the next
-        next_ip_address = f"{IPV4_PREFIX}.{((i + 1) % len(key_ids)) + 1}"
+        next_ip_address = \
+            f"{IPV4_PREFIX}.{((i + 1) % len(key_ids)) + 1}:10842"
 
         log.info(f"Creating container with name {name}")
         container = client.containers.run(
@@ -144,11 +145,13 @@ def __create_containers(
                     target="/root/.gnupg",
                     type="bind",
                     read_only=True)],
-            environment={
-                "KIPA_KEY_ID": key_id,
-                "KIPA_ARGS":
-                    f"--initial-node-address {next_ip_address}:10842 "
-                    f"--initial-node-key-id {key_id}"})
+            environment={"KIPA_KEY_ID": key_id})
+
+        container.exec_run([
+            "/root/kipa_cli",
+            "connect",
+            "--key-id", key_id,
+            "--address", next_ip_address])
 
         log.debug(
             f"Adding container {name} "

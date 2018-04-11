@@ -31,16 +31,6 @@ fn main() {
              .help("Key read from GPG")
              .takes_value(true)
              .required(true))
-        .arg(clap::Arg::with_name("initial_node_key_id")
-             .long("initial-node-key-id")
-             .help("Key ID of the initial node to connect to")
-             .takes_value(true)
-             .required(true))
-        .arg(clap::Arg::with_name("initial_node_address")
-             .long("initial-node-address")
-             .help("Address of the initial node to connect to")
-             .takes_value(true)
-             .required(true))
         .get_matches();
 
     if let Err(err) = run_servers(&args) {

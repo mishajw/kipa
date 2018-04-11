@@ -44,6 +44,12 @@ impl DataTransformer for ProtobufDataTransformer {
                 search.set_key(key.clone().into());
                 general_request.set_search_request(search);
             }
+            &Request::ConnectRequest(ref node) => {
+                let mut connect = proto_api::ConnectRequest::new();
+                let kipa_node: Result<proto_api::Node> = node.clone().into();
+                connect.set_node(kipa_node?);
+                general_request.set_connect_request(connect);
+            }
         };
 
         general_request
@@ -62,6 +68,10 @@ impl DataTransformer for ProtobufDataTransformer {
         } else if request.has_search_request() {
             let key = request.get_search_request().get_key().clone().into();
             Ok(Request::SearchRequest(key))
+        } else if request.has_connect_request() {
+            let node: Result<Node> = request.get_connect_request()
+                .get_node().clone().into();
+            Ok(Request::ConnectRequest(node?))
         } else {
             Err(ErrorKind::ParseError("Unrecognized request".into()).into())
         }
@@ -89,6 +99,9 @@ impl DataTransformer for ProtobufDataTransformer {
                 }
                 general_response.set_search_response(search);
             }
+            &Response::ConnectResponse() =>
+                general_response.set_connect_response(
+                    proto_api::ConnectResponse::new())
         };
 
         general_response.write_to_bytes()
@@ -113,6 +126,8 @@ impl DataTransformer for ProtobufDataTransformer {
             } else {
                 Ok(Response::SearchResponse(None))
             }
+        } else if response.has_connect_response() {
+            Ok(Response::ConnectResponse())
         } else {
             Err(ErrorKind::ParseError("Unrecognized response".into()).into())
         }
