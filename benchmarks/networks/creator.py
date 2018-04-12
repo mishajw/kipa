@@ -12,8 +12,8 @@ from typing import Iterator, List
 import docker
 
 from benchmarks.networks import Node
-from ..key_creator import create_keys, GPG_HOME
-from ..networks import Network
+from benchmarks.key_creator import create_keys, GPG_HOME
+from benchmarks.networks import Network
 
 log = logging.getLogger(__name__)
 

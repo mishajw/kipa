@@ -1,7 +1,7 @@
 import itertools
 import logging
 
-from ..networks import Network
+from benchmarks.networks import Network
 
 log = logging.getLogger(__name__)
 
