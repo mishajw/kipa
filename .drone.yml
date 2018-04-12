@@ -1,0 +1,23 @@
+pipeline:
+  main:
+    image: alpine:edge
+    environment:
+      # Fail build if there are warnings
+      - RUSTFLAGS=-D warnings
+    commands:
+      # Get packages needed for building
+      - >-
+         apk -U add
+         rust cargo gnupg gettext file make automake autoconf protobuf
+      # Install rust-fmt for checking if code is formatted correctly
+      - cargo install rustfmt && export PATH=$PATH:/root/.cargo/bin
+      # Check we can build the project
+      - cargo build
+      # Check all test pass
+      - cargo test
+      # Check that there is no formatting to be done by `cargo fmt`
+      - '[ -z $("cargo fmt -- --write-mode diff") ]'
+      # Check we can build with no default features
+      - cargo build --no-default-features
+      # TODO: Run python end-to-end tests
+
