@@ -8,11 +8,12 @@ log = logging.getLogger(__name__)
 def connect_node(
         network: Network, connector_key_id: str, connectee_key_id: str) -> None:
     log.debug(f"Connecting {connector_key_id} to {connectee_key_id}")
-    network.exec_command(connector_key_id, [
+    output = network.exec_command(connector_key_id, [
         "/root/kipa_cli",
         "connect",
         "--key-id", connectee_key_id,
         "--address", network.get_address(connectee_key_id)])
+    assert "Connect successful" in output
 
 
 def connect_nodes_to_one(network: Network, root_key_id: str) -> None:
