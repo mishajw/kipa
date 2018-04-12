@@ -14,4 +14,3 @@ pub trait RequestHandler: Send + Sync {
     /// Process a `Request` and return the correct `Response`.
     fn receive(&self, req: &Request) -> Result<Response>;
 }
-

@@ -13,4 +13,3 @@ error_chain! {
         ResponseError(s: String) { display("Response error: {}", s) }
     }
 }
-

@@ -24,4 +24,3 @@ pub trait DataTransformer: Send + Sync {
     /// Convert a bytes to a `Response`.
     fn bytes_to_response(&self, data: &Vec<u8>) -> Result<Response>;
 }
-

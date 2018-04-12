@@ -9,12 +9,15 @@
 
 #![warn(missing_docs)]
 
-#[macro_use] extern crate cfg_if;
-#[macro_use] extern crate error_chain;
-#[macro_use] extern crate log;
 extern crate byteorder;
+#[macro_use]
+extern crate cfg_if;
 extern crate clap;
+#[macro_use]
+extern crate error_chain;
 extern crate gpgme;
+#[macro_use]
+extern crate log;
 extern crate protobuf;
 
 pub mod api;
@@ -35,4 +38,3 @@ pub use key::Key;
 
 mod node;
 pub use node::Node;
-

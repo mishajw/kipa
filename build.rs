@@ -10,7 +10,6 @@ fn main() {
     protoc_rust::run(protoc_rust::Args {
         out_dir: output_proto_directory,
         input: &["resources/proto/proto_api.proto"],
-        includes: &["resources/proto"]
+        includes: &["resources/proto"],
     }).expect("Error on protobuf generation");
 }
-

@@ -21,4 +21,3 @@ pub trait GlobalSendServer: Send + Sync {
     /// Send a request to another `Node` and get the `Response`.
     fn receive<'a>(&self, node: &Node, request: &Request) -> Result<Response>;
 }
-

@@ -1,7 +1,7 @@
 //! Implement `RequestHandler` but never return anything. Used for testing.
 
 use error::*;
-use request_handler::{RequestHandler, Request, Response};
+use request_handler::{Request, RequestHandler, Response};
 
 pub struct BlackHoleRequestHandler {}
 
@@ -18,7 +18,7 @@ impl RequestHandler for BlackHoleRequestHandler {
             &Request::QueryRequest(_) => {
                 trace!("Received query request");
                 Ok(Response::QueryResponse(vec![]))
-            },
+            }
             &Request::SearchRequest(_) => {
                 trace!("Received search request");
                 Ok(Response::SearchResponse(None))
@@ -26,4 +26,3 @@ impl RequestHandler for BlackHoleRequestHandler {
         }
     }
 }
-

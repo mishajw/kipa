@@ -4,9 +4,9 @@
 
 use data_transformer::DataTransformer;
 use error::*;
-use global_server::{GlobalSendServer, GlobalReceiveServer};
+use global_server::{GlobalReceiveServer, GlobalSendServer};
 use gpg_key::GpgKeyHandler;
-use local_server::{LocalSendServer, LocalReceiveServer};
+use local_server::{LocalReceiveServer, LocalSendServer};
 use request_handler::RequestHandler;
 
 use std::sync::Arc;
@@ -157,4 +157,3 @@ cfg_if! {
         }
     }
 }
-

@@ -9,14 +9,14 @@ use global_server::GlobalSendServer;
 use key::Key;
 use request_handler::graph::neighbours_store::NeighboursStore;
 use request_handler::graph::search::GraphSearch;
-use request_handler::{RequestHandler, Request, Response};
+use request_handler::{Request, RequestHandler, Response};
 
 use std::sync::{Arc, Mutex};
 
 /// Contains graph search information.
 pub struct GraphRequestHandler {
     neighbours_store: Arc<Mutex<NeighboursStore>>,
-    graph_search: Arc<GraphSearch>
+    graph_search: Arc<GraphSearch>,
 }
 
 impl GraphRequestHandler {
@@ -25,10 +25,7 @@ impl GraphRequestHandler {
     /// - `key` is the key for the local node.
     /// - `remote_server` is used for communicating with other nodes.
     /// - `initial_node` is the initial other node in KIPA network.
-    pub fn new(
-            key: Key,
-            remote_server: Arc<GlobalSendServer>) -> Self {
-
+    pub fn new(key: Key, remote_server: Arc<GlobalSendServer>) -> Self {
         let remote_server_clone = remote_server.clone();
         let graph_search = GraphSearch::new(Arc::new(move |n, k: &Key| {
             let response = remote_server_clone
@@ -37,7 +34,8 @@ impl GraphRequestHandler {
             match response {
                 Response::QueryResponse(ref nodes) => Ok(nodes.clone()),
                 _ => Err(ErrorKind::ResponseError(
-                        "Incorrect response for query request".into()).into())
+                    "Incorrect response for query request".into(),
+                ).into()),
             }
         }));
 
@@ -45,7 +43,7 @@ impl GraphRequestHandler {
 
         GraphRequestHandler {
             neighbours_store: Arc::new(Mutex::new(neighbours_store)),
-            graph_search: Arc::new(graph_search)
+            graph_search: Arc::new(graph_search),
         }
     }
 }
@@ -56,10 +54,9 @@ impl RequestHandler for GraphRequestHandler {
             &Request::QueryRequest(ref key) => {
                 trace!("Received query request");
                 Ok(Response::QueryResponse(
-                    self.neighbours_store
-                        .lock().unwrap()
-                        .get_n_closest(key, 1)))
-            },
+                    self.neighbours_store.lock().unwrap().get_n_closest(key, 1),
+                ))
+            }
             &Request::SearchRequest(ref key) => {
                 trace!("Received search request for key {}", key);
                 let initial_nodes =
@@ -69,10 +66,12 @@ impl RequestHandler for GraphRequestHandler {
             }
             &Request::ConnectRequest(ref node) => {
                 trace!("Received connect request for node {}", node);
-                self.neighbours_store.lock().unwrap().consider_candidate(node);
+                self.neighbours_store
+                    .lock()
+                    .unwrap()
+                    .consider_candidate(node);
                 Ok(Response::ConnectResponse())
             }
         }
     }
 }
-

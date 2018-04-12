@@ -9,7 +9,7 @@
 //! files are placed.
 
 use address::Address;
-use data_transformer::{DataTransformer, proto_api};
+use data_transformer::{proto_api, DataTransformer};
 use error::*;
 use key::Key;
 use node::Node;
@@ -26,7 +26,7 @@ pub struct ProtobufDataTransformer {}
 impl ProtobufDataTransformer {
     /// Create a new protobuf data transformer
     pub fn new() -> Self {
-        ProtobufDataTransformer{}
+        ProtobufDataTransformer {}
     }
 }
 
@@ -59,8 +59,8 @@ impl DataTransformer for ProtobufDataTransformer {
 
     fn bytes_to_request(&self, data: &Vec<u8>) -> Result<Request> {
         // Parse the request to the protobuf type
-        let request: proto_api::GeneralRequest = parse_from_bytes(data)
-            .chain_err(|| "Error on parsing request")?;
+        let request: proto_api::GeneralRequest =
+            parse_from_bytes(data).chain_err(|| "Error on parsing request")?;
 
         if request.has_query_request() {
             let key = request.get_query_request().get_key().clone().into();
@@ -69,8 +69,8 @@ impl DataTransformer for ProtobufDataTransformer {
             let key = request.get_search_request().get_key().clone().into();
             Ok(Request::SearchRequest(key))
         } else if request.has_connect_request() {
-            let node: Result<Node> = request.get_connect_request()
-                .get_node().clone().into();
+            let node: Result<Node> =
+                request.get_connect_request().get_node().clone().into();
             Ok(Request::ConnectRequest(node?))
         } else {
             Err(ErrorKind::ParseError("Unrecognized request".into()).into())
@@ -99,24 +99,27 @@ impl DataTransformer for ProtobufDataTransformer {
                 }
                 general_response.set_search_response(search);
             }
-            &Response::ConnectResponse() =>
-                general_response.set_connect_response(
-                    proto_api::ConnectResponse::new())
+            &Response::ConnectResponse() => general_response
+                .set_connect_response(proto_api::ConnectResponse::new()),
         };
 
-        general_response.write_to_bytes()
+        general_response
+            .write_to_bytes()
             .chain_err(|| "Error on write response to bytes")
     }
 
     fn bytes_to_response(&self, data: &Vec<u8>) -> Result<Response> {
         // Parse the request to the protobuf type
-        let response: proto_api::GeneralResponse = parse_from_bytes(data)
-            .chain_err(|| "Error on parsing response")?;
+        let response: proto_api::GeneralResponse =
+            parse_from_bytes(data).chain_err(|| "Error on parsing response")?;
 
         if response.has_query_response() {
-            let nodes: Result<Vec<Node>> = response.get_query_response()
+            let nodes: Result<Vec<Node>> = response
+                .get_query_response()
                 .get_nodes()
-                .iter().map(|n| n.clone().into()).collect();
+                .iter()
+                .map(|n| n.clone().into())
+                .collect();
             Ok(Response::QueryResponse(nodes?))
         } else if response.has_search_response() {
             if response.get_search_response().has_node() {
@@ -152,7 +155,8 @@ impl From<proto_api::Key> for Key {
 impl Into<Result<proto_api::Address>> for Address {
     fn into(self) -> Result<proto_api::Address> {
         let mut cursor = Cursor::new(self.ip_data.clone());
-        let ipv4 = cursor.read_u32::<NetworkEndian>()
+        let ipv4 = cursor
+            .read_u32::<NetworkEndian>()
             .chain_err(|| "Error casting address IP data to IPv4")?;
         let mut kipa_address = proto_api::Address::new();
         kipa_address.set_ipv4(ipv4);
@@ -164,7 +168,8 @@ impl Into<Result<proto_api::Address>> for Address {
 impl Into<Result<Address>> for proto_api::Address {
     fn into(self) -> Result<Address> {
         let mut ip_data = vec![];
-        ip_data.write_u32::<NetworkEndian>(self.get_ipv4())
+        ip_data
+            .write_u32::<NetworkEndian>(self.get_ipv4())
             .chain_err(|| "Error reading IP data to bytes")?;
         Ok(Address::new(ip_data, self.get_port() as u16))
     }
@@ -187,4 +192,3 @@ impl Into<Result<Node>> for proto_api::Node {
         Ok(Node::new(address?, self.get_key().clone().into()))
     }
 }
-

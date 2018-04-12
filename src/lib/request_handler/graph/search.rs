@@ -13,13 +13,13 @@ type GetNeighboursFn = Arc<Fn(&Node, &Key) -> Result<Vec<Node>> + Send + Sync>;
 
 /// Contains data for graph search
 pub struct GraphSearch {
-    get_neighbours_fn: GetNeighboursFn
+    get_neighbours_fn: GetNeighboursFn,
 }
 
 #[derive(PartialEq)]
 struct SearchNode {
     node: Node,
-    cost: f32
+    cost: f32,
 }
 impl Eq for SearchNode {}
 
@@ -40,15 +40,16 @@ impl GraphSearch {
     /// of the node.
     pub fn new(get_neighbours_fn: GetNeighboursFn) -> Self {
         GraphSearch {
-            get_neighbours_fn: get_neighbours_fn
+            get_neighbours_fn: get_neighbours_fn,
         }
     }
 
     /// Search for a key using the `GetNeighboursFn`.
     pub fn search(
-            &self, key: &Key, start_nodes: Vec<Node>)
-            -> Result<Option<Node>> {
-
+        &self,
+        key: &Key,
+        start_nodes: Vec<Node>,
+    ) -> Result<Option<Node>> {
         info!("Starting graph search for key {}", key);
 
         let key_space = KeySpace::from_key(key, 2);
@@ -61,7 +62,8 @@ impl GraphSearch {
         let insert = |heap: &mut BinaryHeap<SearchNode>, n: Node| {
             let cost = &KeySpace::from_key(&n.key, 2) - &key_space;
             heap.push(SearchNode {
-                node: n, cost: cost
+                node: n,
+                cost: cost,
             });
         };
 
@@ -90,7 +92,7 @@ impl GraphSearch {
                 // If we've found the key, return the node
                 if &n.key == key {
                     trace!("Found key {} at {}", key, n);
-                    return Ok(Some(n))
+                    return Ok(Some(n));
                 }
 
                 // Otherwise, add it to the explore list
@@ -104,4 +106,3 @@ impl GraphSearch {
         Ok(None)
     }
 }
-

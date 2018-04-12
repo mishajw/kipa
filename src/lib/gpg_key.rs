@@ -7,7 +7,7 @@ use gpgme;
 
 /// Provide wrapped GPGME functionality.
 pub struct GpgKeyHandler {
-    context: gpgme::Context
+    context: gpgme::Context,
 }
 
 impl GpgKeyHandler {
@@ -16,9 +16,7 @@ impl GpgKeyHandler {
         let context = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)
             .chain_err(|| "Error on creating GPGME context")?;
         trace!("Created GPG key handler");
-        Ok(GpgKeyHandler {
-            context: context
-        })
+        Ok(GpgKeyHandler { context: context })
     }
 
     /// Get the key for a key ID string. The string must be eight characters
@@ -26,14 +24,14 @@ impl GpgKeyHandler {
     pub fn get_key(&mut self, key_id: String) -> Result<Key> {
         trace!("Requested key ID: {}", key_id);
 
-        let key = self.context.find_key(key_id.clone())
+        let key = self.context
+            .find_key(key_id.clone())
             .chain_err(|| "Error on finding key")?;
         let mut buffer = Vec::new();
-        self.context.export_keys(
-                &[key], gpgme::ExportMode::empty(), &mut buffer)
+        self.context
+            .export_keys(&[key], gpgme::ExportMode::empty(), &mut buffer)
             .chain_err(|| "Error on exporting key")?;
 
         Ok(Key::new(key_id, buffer))
     }
 }
-

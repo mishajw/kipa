@@ -9,13 +9,13 @@ use request_handler::RequestHandler;
 use server::{ReceiveServer, SendServer};
 
 use std::mem::swap;
-use std::net::{SocketAddr, Ipv4Addr, IpAddr, TcpListener, TcpStream};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener, TcpStream};
 use std::sync::Arc;
 use std::thread;
 
 /// Server that listens for global requests on a specified TCP socket.
 pub struct TcpGlobalReceiveServer {
-    thread: Option<thread::JoinHandle<()>>
+    thread: Option<thread::JoinHandle<()>>,
 }
 
 impl TcpGlobalReceiveServer {
@@ -24,26 +24,27 @@ impl TcpGlobalReceiveServer {
     /// - `data_transformer` used to decode requests.
     /// - `port` the port used to listen on.
     pub fn new(
-            request_handler: Arc<RequestHandler>,
-            data_transformer: Arc<DataTransformer>,
-            port: u16) -> Result<Self> {
-        let local_address = SocketAddr::new(
-            IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), port);
+        request_handler: Arc<RequestHandler>,
+        data_transformer: Arc<DataTransformer>,
+        port: u16,
+    ) -> Result<Self> {
+        let local_address =
+            SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), port);
         let listener = TcpListener::bind(&local_address)
             .chain_err(|| "Error on bind to TCP socket")?;
         trace!("Setting up server on port {}", port);
 
         let t = thread::spawn(move || {
-            listener.incoming()
-                .for_each(|s| Self::handle_socket_result(
+            listener.incoming().for_each(|s| {
+                Self::handle_socket_result(
                     s.chain_err(|| "Error on creating socket"),
                     request_handler.clone(),
-                    data_transformer.clone()));
+                    data_transformer.clone(),
+                )
+            });
         });
 
-        Ok(TcpGlobalReceiveServer {
-            thread: Some(t)
-        })
+        Ok(TcpGlobalReceiveServer { thread: Some(t) })
     }
 }
 
@@ -54,9 +55,11 @@ impl GlobalReceiveServer for TcpGlobalReceiveServer {
         match thread.map(|t| t.join()) {
             Some(Ok(())) => Ok(()),
             Some(Err(_)) => Err(ErrorKind::JoinError(
-                "Error on joining server thread".into()).into()),
-            None => Err(ErrorKind::JoinError(
-                "Thread already joined".into()).into())
+                "Error on joining server thread".into(),
+            ).into()),
+            None => {
+                Err(ErrorKind::JoinError("Thread already joined".into()).into())
+            }
         }
     }
 }
@@ -67,7 +70,7 @@ impl ReceiveServer for TcpGlobalReceiveServer {
 
 /// Implementation of sending global requests to TCP servers.
 pub struct TcpGlobalSendServer {
-    data_transformer: Arc<DataTransformer>
+    data_transformer: Arc<DataTransformer>,
 }
 
 impl TcpGlobalSendServer {
@@ -75,7 +78,7 @@ impl TcpGlobalSendServer {
     /// before going on the line.
     pub fn new(data_transformer: Arc<DataTransformer>) -> Self {
         TcpGlobalSendServer {
-            data_transformer: data_transformer
+            data_transformer: data_transformer,
         }
     }
 }
@@ -94,4 +97,3 @@ impl GlobalSendServer for TcpGlobalSendServer {
         SendServer::receive(self, node, request, &*self.data_transformer)
     }
 }
-

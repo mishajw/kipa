@@ -20,4 +20,3 @@ pub trait LocalSendServer: Send + Sync {
     /// Send a request to local KIPA daemon
     fn receive<'a>(&self, request: &Request) -> Result<Response>;
 }
-

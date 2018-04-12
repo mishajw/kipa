@@ -7,14 +7,17 @@ use std::fmt;
 pub struct Key {
     // TODO: Change from String to [u8]
     key_id: String,
-    data: Vec<u8>
+    data: Vec<u8>,
 }
 
 impl Key {
     /// Create a new key for some data.
     pub fn new(key_id: String, data: Vec<u8>) -> Self {
         assert!(key_id.len() == 8);
-        Key { key_id: key_id, data: data }
+        Key {
+            key_id: key_id,
+            data: data,
+        }
     }
 
     /// Get the data of some key.
@@ -33,4 +36,3 @@ impl fmt::Display for Key {
         write!(f, "Key({})", self.key_id)
     }
 }
-

@@ -27,6 +27,5 @@ pub enum Response {
     /// Response for a [`Request::QueryRequest`].
     QueryResponse(Vec<Node>),
     /// Response for a [`Request::ConnectRequest`]
-    ConnectResponse()
+    ConnectResponse(),
 }
-
