@@ -2,17 +2,19 @@
 Code for creating networks of docker containers.
 """
 
-from benchmarks.key_creator import create_keys, GPG_HOME
-from docker.models.containers import Container
-from docker.models.networks import Network
-from typing import Iterator, List
-import docker
 import logging
 import os
-import random
 import shutil
 import subprocess
 import tempfile
+import time
+from typing import Iterator, List
+
+import docker
+from docker.models.containers import Container
+
+from ..networks import Network
+from ..key_creator import create_keys, GPG_HOME
 
 log = logging.getLogger(__name__)
 
@@ -21,34 +23,8 @@ IMAGE_NAME = DOCKER_PREFIX
 NETWORK_NAME = f"{DOCKER_PREFIX}_network"
 IPV4_PREFIX = "192.168.123"
 
-class Network:
-    def __init__(self, key_ids: List[str], containers: list) -> None:
-        self.__containers = containers
-        self.__key_ids = key_ids
-        self.__key_dict = dict(zip(self.__key_ids, self.__containers))
 
-    def test_search(self, from_key_id: str, to_key_id: str) -> bool:
-        log.info(f"Testing search between {from_key_id} and {to_key_id}")
-        (exit_code, output) = self.__key_dict[from_key_id].exec_run(
-            [
-                "/root/kipa_cli",
-                "search",
-                "--key-id", to_key_id])
-
-        log.info(
-            f"Returned exit code {exit_code}, "
-            f"and output:\n{output.decode()}")
-
-        return False
-
-    def get_random_keys(self, num: int) -> List[str]:
-        return random.sample(self.__key_ids, num)
-
-    def get_all_keys(self) -> List[str]:
-        return self.__key_ids
-
-
-def create_network(size: int) -> Network:
+def create(size: int) -> Network:
     """Create a network of the specified size"""
 
     key_ids = create_keys(size)
@@ -125,7 +101,6 @@ def __create_docker_directory() -> str:
 
 def __create_containers(
         client, key_ids: List[str], network: Network) -> Iterator[Container]:
-
     for i, key_id in enumerate(key_ids):
         name = f"{DOCKER_PREFIX}_{i}_{key_id}"
         ip_address = f"{IPV4_PREFIX}.{i + 1}"
@@ -147,11 +122,14 @@ def __create_containers(
                     read_only=True)],
             environment={"KIPA_KEY_ID": key_id})
 
-        container.exec_run([
+        time.sleep(2)
+        (exit_code, output) = container.exec_run([
             "/root/kipa_cli",
             "connect",
             "--key-id", key_id,
             "--address", next_ip_address])
+        print(output.decode())
+        assert exit_code == 0
 
         log.debug(
             f"Adding container {name} "
@@ -174,4 +152,3 @@ def __delete_old(client) -> None:
             continue
         log.debug(f"Removing network {network.name}")
         network.remove()
-

@@ -1,15 +1,15 @@
 """Create, run, and manage collections of KIPA nodes in a KIPA network."""
 
-from benchmarks.network_creator import create_network
-import itertools
 import logging
+
+from benchmarks import networks
+
 
 def main():
     """Test that each node can be search from every other node."""
-    network = create_network(3)
-    keys = network.get_all_keys()
-    for k1, k2 in itertools.permutations(keys, 2):
-        network.test_search(k1, k2)
+    network = networks.creator.create(2)
+    assert networks.tester.test_all_searches(network)
+
 
 if __name__ == "__main__":
     logging.basicConfig()
@@ -17,4 +17,3 @@ if __name__ == "__main__":
     logging.getLogger("docker").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     main()
-

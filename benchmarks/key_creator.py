@@ -1,8 +1,8 @@
-from typing import List
-import os
 import logging
+import os
 import subprocess
 import tempfile
+from typing import List
 
 log = logging.getLogger(__name__)
 
