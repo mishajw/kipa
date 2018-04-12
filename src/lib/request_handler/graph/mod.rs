@@ -62,11 +62,10 @@ impl RequestHandler for GraphRequestHandler {
             },
             &Request::SearchRequest(ref key) => {
                 trace!("Received search request for key {}", key);
+                let initial_nodes =
+                    self.neighbours_store.lock().unwrap().get_all();
                 Ok(Response::SearchResponse(
-                    self.graph_search.search(
-                        key,
-                        self.neighbours_store
-                            .lock().unwrap().get_all())?))
+                    self.graph_search.search(key, initial_nodes)?))
             }
             &Request::ConnectRequest(ref node) => {
                 trace!("Received connect request for node {}", node);
