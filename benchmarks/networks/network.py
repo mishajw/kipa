@@ -1,12 +1,22 @@
 import random
-from typing import List
+from typing import List, Dict
+
+from docker.models.containers import Container
+
+
+class Node:
+    def __init__(self, key_id: str, address: str, container: Container):
+        self.key_id = key_id
+        self.address = address
+        self.container = container
 
 
 class Network:
-    def __init__(self, key_ids: List[str], containers: list) -> None:
-        self.__containers = containers
-        self.__key_ids = key_ids
-        self.__key_dict = dict(zip(self.__key_ids, self.__containers))
+    def __init__(self, nodes: List[Node]) -> None:
+        self.__nodes = nodes
+        self.__key_ids = [n.key_id for n in self.__nodes]
+        self.__key_dict: Dict[str, Node] = dict(
+            [(n.key_id, n) for n in self.__nodes])
 
     def get_random_keys(self, num: int) -> List[str]:
         return random.sample(self.__key_ids, num)
@@ -14,8 +24,12 @@ class Network:
     def get_all_keys(self) -> List[str]:
         return self.__key_ids
 
+    def get_address(self, key_id: str) -> str:
+        return self.__key_dict[key_id].address
+
     def exec_command(self, key_id: str, command: List[str]) -> str:
-        (exit_code, output) = self.__key_dict[key_id].exec_run(command)
+        (exit_code, output) = \
+            self.__key_dict[key_id].container.exec_run(command)
         output = output.decode()
         assert exit_code == 0, \
             f"Bad return code when executing command: {command}. " \

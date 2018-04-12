@@ -1,2 +1,2 @@
-from benchmarks.networks.network import Network
-from benchmarks.networks import creator, tester
+from benchmarks.networks.network import Node, Network
+from benchmarks.networks import creator, tester, modifier

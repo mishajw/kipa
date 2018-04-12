@@ -6,8 +6,9 @@ from benchmarks import networks
 
 
 def main():
-    """Test that each node can be search from every other node."""
+    """Test that each node can be searched from every other node."""
     network = networks.creator.create(2)
+    networks.modifier.connect_nodes_cyclically(network)
     assert networks.tester.test_all_searches(network)
 
 

@@ -7,14 +7,13 @@ import os
 import shutil
 import subprocess
 import tempfile
-import time
 from typing import Iterator, List
 
 import docker
-from docker.models.containers import Container
 
-from ..networks import Network
+from benchmarks.networks import Node
 from ..key_creator import create_keys, GPG_HOME
+from ..networks import Network
 
 log = logging.getLogger(__name__)
 
@@ -54,9 +53,8 @@ def create(size: int) -> Network:
                 gateway=f"{IPV4_PREFIX}.123")]))
 
     log.info(f"Creating {len(key_ids)} containers")
-    containers = list(__create_containers(client, key_ids, network))
-
-    return Network(key_ids, containers)
+    containers = list(__create_nodes(client, key_ids, network))
+    return Network(containers)
 
 
 def __create_docker_directory() -> str:
@@ -99,15 +97,15 @@ def __create_docker_directory() -> str:
     return docker_directory
 
 
-def __create_containers(
-        client, key_ids: List[str], network: Network) -> Iterator[Container]:
+def __create_nodes(
+        client,
+        key_ids: List[str],
+        network: docker.models.networks.Network) -> Iterator[Node]:
+    assert len(key_ids) < 256, "No support for more than 256 nodes"
+
     for i, key_id in enumerate(key_ids):
         name = f"{DOCKER_PREFIX}_{i}_{key_id}"
         ip_address = f"{IPV4_PREFIX}.{i + 1}"
-
-        # Every kipa node is connected to the next
-        next_ip_address = \
-            f"{IPV4_PREFIX}.{((i + 1) % len(key_ids)) + 1}:10842"
 
         log.info(f"Creating container with name {name}")
         container = client.containers.run(
@@ -122,22 +120,13 @@ def __create_containers(
                     read_only=True)],
             environment={"KIPA_KEY_ID": key_id})
 
-        time.sleep(2)
-        (exit_code, output) = container.exec_run([
-            "/root/kipa_cli",
-            "connect",
-            "--key-id", key_id,
-            "--address", next_ip_address])
-        print(output.decode())
-        assert exit_code == 0
-
         log.debug(
             f"Adding container {name} "
             f"to network {network.name} "
             f"with IP address {ip_address}")
         network.connect(container, ipv4_address=ip_address)
 
-        yield container
+        yield Node(key_id, f"{ip_address}:10842", container)
 
 
 def __delete_old(client) -> None:
