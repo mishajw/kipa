@@ -64,7 +64,14 @@ impl GraphSearch {
                 node: n, cost: cost
             });
         };
+
+        // Check if search key is in `start_nodes`.
+        // If not, add to `to_explore`
         for n in start_nodes {
+            if &n.key == key {
+                trace!("Found key {} at {} in start nodes", key, n);
+                return Ok(Some(n))
+            }
             insert(&mut to_explore, n);
         }
 
