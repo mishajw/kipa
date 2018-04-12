@@ -7,8 +7,9 @@ mod key_space;
 use error::*;
 use global_server::GlobalSendServer;
 use key::Key;
+use node::Node;
 use request_handler::graph::neighbours_store::NeighboursStore;
-use request_handler::graph::search::GraphSearch;
+use request_handler::graph::search::{GraphSearch, SearchCallbackReturn};
 use request_handler::{Request, RequestHandler, Response};
 
 use std::sync::{Arc, Mutex};
@@ -58,6 +59,25 @@ impl GraphRequestHandler {
             graph_search: Arc::new(graph_search),
         }
     }
+
+    fn search(&self, key: &Key) -> Result<Option<Node>> {
+        let initial_nodes = self.neighbours_store.lock().unwrap().get_all();
+        let callback_key = key.clone();
+        let found_callback = move |n: &Node| {
+            if n.key == callback_key {
+                Ok(SearchCallbackReturn::Return(n.clone()))
+            } else {
+                Ok(SearchCallbackReturn::Continue())
+            }
+        };
+
+        self.graph_search.search(
+            &key,
+            initial_nodes,
+            Arc::new(found_callback),
+            Arc::new(|_| Ok(SearchCallbackReturn::Continue())),
+        )
+    }
 }
 
 impl RequestHandler for GraphRequestHandler {
@@ -71,10 +91,7 @@ impl RequestHandler for GraphRequestHandler {
             }
             &Request::SearchRequest(ref key) => {
                 trace!("Received search request for key {}", key);
-                let initial_nodes =
-                    self.neighbours_store.lock().unwrap().get_all();
-                let found_key = self.graph_search.search(key, initial_nodes)?;
-                Ok(Response::SearchResponse(found_key))
+                Ok(Response::SearchResponse(self.search(&key)?))
             }
             &Request::ConnectRequest(ref node) => {
                 trace!("Received connect request for node {}", node);

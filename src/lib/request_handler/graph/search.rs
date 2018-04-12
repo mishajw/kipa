@@ -9,7 +9,28 @@ use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashSet};
 use std::sync::Arc;
 
+pub enum SearchCallbackReturn<T> {
+    Continue(),
+    Return(T),
+    #[allow(unused)]
+    Exit(),
+}
+
 type GetNeighboursFn = Arc<Fn(&Node, &Key) -> Result<Vec<Node>> + Send + Sync>;
+type FoundNodeCallback<T> =
+    Arc<Fn(&Node) -> Result<SearchCallbackReturn<T>> + Send + Sync>;
+type ExploredNodeCallback<T> =
+    Arc<Fn(&Node) -> Result<SearchCallbackReturn<T>> + Send + Sync>;
+
+macro_rules! return_callback {
+    ($callback_value:expr) => {
+        match $callback_value {
+            SearchCallbackReturn::Continue() => {},
+            SearchCallbackReturn::Return(t) => return Ok(Some(t)),
+            SearchCallbackReturn::Exit() => return Ok(None),
+        }
+    }
+}
 
 /// Contains data for graph search
 pub struct GraphSearch {
@@ -45,11 +66,13 @@ impl GraphSearch {
     }
 
     /// Search for a key using the `GetNeighboursFn`.
-    pub fn search(
+    pub fn search<T>(
         &self,
         key: &Key,
         start_nodes: Vec<Node>,
-    ) -> Result<Option<Node>> {
+        found_node_callback: FoundNodeCallback<T>,
+        explored_node_callback: ExploredNodeCallback<T>,
+    ) -> Result<Option<T>> {
         info!("Starting graph search for key {}", key);
 
         let key_space = KeySpace::from_key(key, 2);
@@ -70,10 +93,7 @@ impl GraphSearch {
         // Check if search key is in `start_nodes`.
         // If not, add to `to_explore`
         for n in start_nodes {
-            if &n.key == key {
-                trace!("Found key {} at {} in start nodes", key, n);
-                return Ok(Some(n));
-            }
+            return_callback!(found_node_callback(&n)?);
             insert(&mut to_explore, n);
         }
 
@@ -89,16 +109,13 @@ impl GraphSearch {
                     continue;
                 }
 
-                // If we've found the key, return the node
-                if &n.key == key {
-                    trace!("Found key {} at {}", key, n);
-                    return Ok(Some(n));
-                }
-
+                // Handle returning callback values
+                return_callback!(found_node_callback(&n)?);
                 // Otherwise, add it to the explore list
                 insert(&mut to_explore, n.clone());
             }
 
+            return_callback!(explored_node_callback(&next_node.node)?);
             explored.insert(next_node.node);
         }
 
