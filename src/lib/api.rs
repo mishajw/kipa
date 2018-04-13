@@ -4,7 +4,7 @@ use key::Key;
 use node::Node;
 
 /// A request for the request handler.
-pub enum Request {
+pub enum RequestPayload {
     /// Request a search for some key.
     ///
     /// This prompts the node to perform a search in the KIPA network it is
@@ -21,7 +21,7 @@ pub enum Request {
 }
 
 /// The response for a given request.
-pub enum Response {
+pub enum ResponsePayload {
     /// Response for a [`Request::SearchRequest`].
     SearchResponse(Option<Node>),
     /// Response for a [`Request::QueryRequest`].
@@ -29,3 +29,37 @@ pub enum Response {
     /// Response for a [`Request::ConnectRequest`]
     ConnectResponse(),
 }
+
+/// Store the sender of a request
+pub enum MessageSender {
+    /// The request was sent from an external node
+    Node(Node),
+    /// The request was sent from the command line argument tool
+    Cli(),
+    /// Unknown sender. TODO: Remove this case.
+    Unknown(),
+}
+
+/// Generic message type that holds a payload and a sender.
+pub struct Message<T> {
+    /// The payload of the message.
+    pub payload: T,
+    /// The sender of the message.
+    pub sender: MessageSender,
+}
+
+impl<T> Message<T> {
+    /// Construct a new message with a payload and sender.
+    pub fn new(payload: T, sender: MessageSender) -> Self {
+        Message {
+            payload: payload,
+            sender: sender,
+        }
+    }
+}
+
+/// Messages for requests with request payloads
+pub type RequestMessage = Message<RequestPayload>;
+
+/// Messages for responses with response payloads
+pub type ResponseMessage = Message<ResponsePayload>;

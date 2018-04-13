@@ -6,7 +6,7 @@
 
 use error::*;
 use node::Node;
-use api::{Request, Response};
+use api::{MessageSender, RequestMessage, RequestPayload, ResponseMessage};
 use request_handler::RequestHandler;
 use data_transformer::DataTransformer;
 
@@ -59,7 +59,9 @@ pub trait ReceiveServer {
             data_transformer.bytes_to_request(&request_data.to_vec())?;
 
         trace!("Sending response");
-        let response = request_handler.receive(&request)?;
+        let response_payload = request_handler.receive(&request)?;
+        let response =
+            ResponseMessage::new(response_payload, MessageSender::Unknown());
         let response_data = data_transformer.response_to_bytes(&response)?;
         send_data(&response_data, socket)?;
         trace!("Sent response bytes");
@@ -79,10 +81,12 @@ pub trait SendServer {
     fn receive<'a>(
         &self,
         node: &Node,
-        request: &Request,
+        request_payload: RequestPayload,
         data_transformer: &DataTransformer,
-    ) -> Result<Response> {
-        let request_bytes = data_transformer.request_to_bytes(request)?;
+    ) -> Result<ResponseMessage> {
+        let request =
+            RequestMessage::new(request_payload, MessageSender::Unknown());
+        let request_bytes = data_transformer.request_to_bytes(&request)?;
 
         trace!("Setting up socket to node {}", node);
         let mut socket = self.create_socket(node)?;

@@ -2,7 +2,7 @@
 
 use error::*;
 use node::Node;
-use api::{Request, Response};
+use api::{RequestPayload, ResponseMessage};
 
 #[cfg(feature = "use-tcp")]
 pub mod tcp;
@@ -19,5 +19,9 @@ pub trait GlobalReceiveServer {
 /// Listen for requests from other KIPA nodes.
 pub trait GlobalSendServer: Send + Sync {
     /// Send a request to another `Node` and get the `Response`.
-    fn receive<'a>(&self, node: &Node, request: &Request) -> Result<Response>;
+    fn receive<'a>(
+        &self,
+        node: &Node,
+        request: RequestPayload,
+    ) -> Result<ResponseMessage>;
 }

@@ -1,6 +1,6 @@
 //! Implementation of servers using TCP sockets.
 
-use api::{Request, Response};
+use api::{RequestPayload, ResponseMessage};
 use data_transformer::DataTransformer;
 use error::*;
 use global_server::{GlobalReceiveServer, GlobalSendServer};
@@ -93,7 +93,11 @@ impl SendServer for TcpGlobalSendServer {
 }
 
 impl GlobalSendServer for TcpGlobalSendServer {
-    fn receive<'a>(&self, node: &Node, request: &Request) -> Result<Response> {
+    fn receive<'a>(
+        &self,
+        node: &Node,
+        request: RequestPayload,
+    ) -> Result<ResponseMessage> {
         SendServer::receive(self, node, request, &*self.data_transformer)
     }
 }

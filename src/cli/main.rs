@@ -8,7 +8,7 @@ extern crate simple_logger;
 use kipa_lib::creators::*;
 use kipa_lib::error::*;
 use kipa_lib::gpg_key::GpgKeyHandler;
-use kipa_lib::api::{Request, Response};
+use kipa_lib::api::{RequestPayload, ResponsePayload};
 use kipa_lib::{Address, Node};
 
 use error_chain::ChainedError;
@@ -75,15 +75,15 @@ fn message_daemon(args: &clap::ArgMatches) -> Result<()> {
     if let Some(search_args) = args.subcommand_matches("search") {
         let search_key = gpg_key_handler
             .get_key(String::from(search_args.value_of("key_id").unwrap()))?;
-        let response =
-            local_send_server.receive(&Request::SearchRequest(search_key))?;
+        let response = local_send_server
+            .receive(RequestPayload::SearchRequest(search_key))?;
 
-        match response {
-            Response::SearchResponse(Some(ref node)) => {
+        match response.payload {
+            ResponsePayload::SearchResponse(Some(ref node)) => {
                 println!("Search success: {}.", node);
                 Ok(())
             }
-            Response::SearchResponse(None) => {
+            ResponsePayload::SearchResponse(None) => {
                 println!("Search unsuccessful.");
                 Ok(())
             }
@@ -98,10 +98,10 @@ fn message_daemon(args: &clap::ArgMatches) -> Result<()> {
         let node = Node::new(node_address, node_key);
 
         let response =
-            local_send_server.receive(&Request::ConnectRequest(node))?;
+            local_send_server.receive(RequestPayload::ConnectRequest(node))?;
 
-        match response {
-            Response::ConnectResponse() => {
+        match response.payload {
+            ResponsePayload::ConnectResponse() => {
                 println!("Connect successful");
                 Ok(())
             }

@@ -1,7 +1,7 @@
 //! Traits for sending and receiving requests on a local machine.
 
 use error::*;
-use api::{Request, Response};
+use api::{RequestPayload, ResponseMessage};
 
 #[cfg(feature = "use-unix-socket")]
 pub mod unix_socket;
@@ -18,5 +18,5 @@ pub trait LocalReceiveServer {
 /// Trait for sending requests to local KIPA daemon.
 pub trait LocalSendServer: Send + Sync {
     /// Send a request to local KIPA daemon
-    fn receive<'a>(&self, request: &Request) -> Result<Response>;
+    fn receive<'a>(&self, request: RequestPayload) -> Result<ResponseMessage>;
 }

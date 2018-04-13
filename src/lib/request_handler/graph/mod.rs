@@ -10,7 +10,8 @@ use key::Key;
 use node::Node;
 use request_handler::graph::neighbours_store::NeighboursStore;
 use request_handler::graph::search::{GraphSearch, SearchCallbackReturn};
-use request_handler::{Request, RequestHandler, Response};
+use api::{RequestMessage, RequestPayload, ResponsePayload};
+use request_handler::RequestHandler;
 
 use std::sync::{Arc, Mutex};
 
@@ -41,10 +42,10 @@ impl GraphRequestHandler {
         let remote_server_clone = remote_server.clone();
         let graph_search = GraphSearch::new(Arc::new(move |n, k: &Key| {
             let response = remote_server_clone
-                .receive(n, &Request::QueryRequest(k.clone()))?;
+                .receive(n, RequestPayload::QueryRequest(k.clone()))?;
 
-            match response {
-                Response::QueryResponse(ref nodes) => Ok(nodes.clone()),
+            match response.payload {
+                ResponsePayload::QueryResponse(ref nodes) => Ok(nodes.clone()),
                 _ => Err(ErrorKind::ResponseError(
                     "Incorrect response for query request".into(),
                 ).into()),
@@ -81,25 +82,25 @@ impl GraphRequestHandler {
 }
 
 impl RequestHandler for GraphRequestHandler {
-    fn receive(&self, request: &Request) -> Result<Response> {
-        match request {
-            &Request::QueryRequest(ref key) => {
+    fn receive(&self, request: &RequestMessage) -> Result<ResponsePayload> {
+        match &request.payload {
+            &RequestPayload::QueryRequest(ref key) => {
                 trace!("Received query request");
-                Ok(Response::QueryResponse(
+                Ok(ResponsePayload::QueryResponse(
                     self.neighbours_store.lock().unwrap().get_n_closest(key, 1),
                 ))
             }
-            &Request::SearchRequest(ref key) => {
+            &RequestPayload::SearchRequest(ref key) => {
                 trace!("Received search request for key {}", key);
-                Ok(Response::SearchResponse(self.search(&key)?))
+                Ok(ResponsePayload::SearchResponse(self.search(&key)?))
             }
-            &Request::ConnectRequest(ref node) => {
+            &RequestPayload::ConnectRequest(ref node) => {
                 trace!("Received connect request for node {}", node);
                 self.neighbours_store
                     .lock()
                     .unwrap()
                     .consider_candidate(node);
-                Ok(Response::ConnectResponse())
+                Ok(ResponsePayload::ConnectResponse())
             }
         }
     }

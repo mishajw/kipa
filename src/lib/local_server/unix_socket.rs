@@ -3,7 +3,7 @@
 
 use error::*;
 use request_handler::RequestHandler;
-use api::{Request, Response};
+use api::{MessageSender, RequestMessage, RequestPayload, ResponseMessage};
 use data_transformer::DataTransformer;
 use local_server::{LocalReceiveServer, LocalSendServer};
 use server::{receive_data, send_data, ReceiveServer};
@@ -89,8 +89,13 @@ impl UnixSocketLocalSendServer {
 }
 
 impl LocalSendServer for UnixSocketLocalSendServer {
-    fn receive<'a>(&self, request: &Request) -> Result<Response> {
-        let request_bytes = self.data_transformer.request_to_bytes(request)?;
+    fn receive<'a>(
+        &self,
+        request_payload: RequestPayload,
+    ) -> Result<ResponseMessage> {
+        let request =
+            RequestMessage::new(request_payload, MessageSender::Unknown());
+        let request_bytes = self.data_transformer.request_to_bytes(&request)?;
 
         trace!("Setting up socket to daemon");
         let mut socket = UnixStream::connect(&self.socket_path)

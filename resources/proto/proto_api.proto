@@ -15,16 +15,23 @@ message Node {
   Address address = 2;
 }
 
+message MessageSender {
+  // If node is not set, assume command line interface sender.
+  Node node = 1;
+}
+
 message GeneralRequest {
   QueryRequest query_request = 1;
   SearchRequest search_request = 2;
   ConnectRequest connect_request = 3;
+  MessageSender sender =  4;
 }
 
 message GeneralResponse {
   QueryResponse query_response = 1;
   SearchResponse search_response = 2;
   ConnectResponse connect_response = 3;
+  MessageSender sender =  4;
 }
 
 message QueryRequest {

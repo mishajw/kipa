@@ -2,7 +2,7 @@
 //! the wire between KIPA nodes/interfaces.
 
 use error::*;
-use api::{Request, Response};
+use api::{RequestMessage, ResponseMessage};
 
 #[cfg(feature = "use-protobuf")]
 pub mod protobuf;
@@ -13,14 +13,14 @@ mod proto_api;
 /// bytes.
 pub trait DataTransformer: Send + Sync {
     /// Convert a `Request` to bytes.
-    fn request_to_bytes(&self, request: &Request) -> Result<Vec<u8>>;
+    fn request_to_bytes(&self, request: &RequestMessage) -> Result<Vec<u8>>;
 
     /// Convert a bytes to a `Request`.
-    fn bytes_to_request(&self, data: &Vec<u8>) -> Result<Request>;
+    fn bytes_to_request(&self, data: &Vec<u8>) -> Result<RequestMessage>;
 
     /// Convert a `Response` to bytes.
-    fn response_to_bytes(&self, response: &Response) -> Result<Vec<u8>>;
+    fn response_to_bytes(&self, response: &ResponseMessage) -> Result<Vec<u8>>;
 
     /// Convert a bytes to a `Response`.
-    fn bytes_to_response(&self, data: &Vec<u8>) -> Result<Response>;
+    fn bytes_to_response(&self, data: &Vec<u8>) -> Result<ResponseMessage>;
 }
