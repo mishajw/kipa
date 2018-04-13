@@ -54,3 +54,20 @@ impl<'a, 'b> Sub<&'b KeySpace> for &'a KeySpace {
         (total as f32).powf(self.coords.len() as f32)
     }
 }
+
+pub fn sort_key_relative<T>(
+    v: &mut Vec<T>,
+    get_key_space_fn: &Fn(&T) -> KeySpace,
+    key_space: &KeySpace,
+) {
+    // TODO: Can we use lifetimes to avoid `get_key_space_fn` returning a value,
+    // and instead a reference?
+    // Related: https://github.com/rust-lang/rust/issues/22340
+    v.sort_by(|a: &T, b: &T| {
+        let a_ks: KeySpace = get_key_space_fn(a);
+        let b_ks: KeySpace = get_key_space_fn(b);
+        (&a_ks - key_space)
+            .partial_cmp(&(&b_ks - key_space))
+            .unwrap()
+    })
+}

@@ -2,7 +2,7 @@
 
 use key::Key;
 use node::Node;
-use request_handler::graph::key_space::KeySpace;
+use request_handler::graph::key_space::{sort_key_relative, KeySpace};
 
 /// Holds the neighbour store data
 pub struct NeighboursStore {
@@ -25,9 +25,10 @@ impl NeighboursStore {
     /// Get the `n` closest neighbours to some key.
     pub fn get_n_closest(&self, key: &Key, n: usize) -> Vec<Node> {
         let mut neighbours = self.neighbours.clone();
-        Self::sort_key_relative(
+        sort_key_relative(
             &mut neighbours,
-            KeySpace::from_key(key, self.local_key_space.get_size()),
+            &|&(_, ref ks)| ks.clone(),
+            &KeySpace::from_key(key, self.local_key_space.get_size()),
         );
         neighbours
             .iter()
@@ -50,21 +51,14 @@ impl NeighboursStore {
             node.clone(),
             KeySpace::from_key(&node.key, self.local_key_space.get_size()),
         ));
-        Self::sort_key_relative(
+        sort_key_relative(
             &mut self.neighbours,
-            self.local_key_space.clone(),
+            &|&(_, ref ks)| ks.clone(),
+            &self.local_key_space,
         );
 
         while self.neighbours.len() > self.size {
             self.neighbours.pop();
         }
-    }
-
-    fn sort_key_relative(v: &mut Vec<(Node, KeySpace)>, key_space: KeySpace) {
-        v.sort_by(|&(_, ref a_ks), &(_, ref b_ks)| {
-            (a_ks - &key_space)
-                .partial_cmp(&(b_ks - &key_space))
-                .unwrap()
-        })
     }
 }
