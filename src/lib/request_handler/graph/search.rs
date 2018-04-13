@@ -72,7 +72,7 @@ impl GraphSearch {
         for n in start_nodes {
             if &n.key == key {
                 trace!("Found key {} at {} in start nodes", key, n);
-                return Ok(Some(n))
+                return Ok(Some(n));
             }
             insert(&mut to_explore, n);
         }

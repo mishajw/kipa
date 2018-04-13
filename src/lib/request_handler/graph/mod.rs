@@ -13,6 +13,12 @@ use request_handler::{Request, RequestHandler, Response};
 
 use std::sync::{Arc, Mutex};
 
+/// The default size of the neighbours store
+pub const DEFAULT_NEIGHBOURS_SIZE: usize = 3;
+
+/// The default dimension size for key space
+pub const DEFAULT_KEY_SPACE_SIZE: usize = 2;
+
 /// Contains graph search information.
 pub struct GraphRequestHandler {
     neighbours_store: Arc<Mutex<NeighboursStore>>,
@@ -25,7 +31,12 @@ impl GraphRequestHandler {
     /// - `key` is the key for the local node.
     /// - `remote_server` is used for communicating with other nodes.
     /// - `initial_node` is the initial other node in KIPA network.
-    pub fn new(key: Key, remote_server: Arc<GlobalSendServer>) -> Self {
+    pub fn new(
+        key: Key,
+        remote_server: Arc<GlobalSendServer>,
+        neighbours_size: usize,
+        key_space_size: usize,
+    ) -> Self {
         let remote_server_clone = remote_server.clone();
         let graph_search = GraphSearch::new(Arc::new(move |n, k: &Key| {
             let response = remote_server_clone
@@ -39,7 +50,8 @@ impl GraphRequestHandler {
             }
         }));
 
-        let neighbours_store = NeighboursStore::new(key.clone(), 3);
+        let neighbours_store =
+            NeighboursStore::new(key.clone(), neighbours_size, key_space_size);
 
         GraphRequestHandler {
             neighbours_store: Arc::new(Mutex::new(neighbours_store)),
@@ -61,8 +73,8 @@ impl RequestHandler for GraphRequestHandler {
                 trace!("Received search request for key {}", key);
                 let initial_nodes =
                     self.neighbours_store.lock().unwrap().get_all();
-                Ok(Response::SearchResponse(
-                    self.graph_search.search(key, initial_nodes)?))
+                let found_key = self.graph_search.search(key, initial_nodes)?;
+                Ok(Response::SearchResponse(found_key))
             }
             &Request::ConnectRequest(ref node) => {
                 trace!("Received connect request for node {}", node);

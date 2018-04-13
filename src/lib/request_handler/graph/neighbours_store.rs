@@ -13,8 +13,8 @@ pub struct NeighboursStore {
 
 impl NeighboursStore {
     /// Create a new neighbour store with a size and the key of the local node.
-    pub fn new(local_key: Key, size: usize) -> Self {
-        let local_key_space = KeySpace::from_key(&local_key, 2);
+    pub fn new(local_key: Key, size: usize, key_space_size: usize) -> Self {
+        let local_key_space = KeySpace::from_key(&local_key, key_space_size);
         NeighboursStore {
             local_key_space: local_key_space,
             size: size,
@@ -25,7 +25,10 @@ impl NeighboursStore {
     /// Get the `n` closest neighbours to some key.
     pub fn get_n_closest(&self, key: &Key, n: usize) -> Vec<Node> {
         let mut neighbours = self.neighbours.clone();
-        Self::sort_key_relative(&mut neighbours, KeySpace::from_key(key, 2));
+        Self::sort_key_relative(
+            &mut neighbours,
+            KeySpace::from_key(key, self.local_key_space.get_size()),
+        );
         neighbours
             .iter()
             .take(n)
@@ -43,8 +46,10 @@ impl NeighboursStore {
 
     /// Given a node, consider keeping it as a neighbour.
     pub fn consider_candidate(&mut self, node: &Node) {
-        self.neighbours
-            .push((node.clone(), KeySpace::from_key(&node.key, 2)));
+        self.neighbours.push((
+            node.clone(),
+            KeySpace::from_key(&node.key, self.local_key_space.get_size()),
+        ));
         Self::sort_key_relative(
             &mut self.neighbours,
             self.local_key_space.clone(),

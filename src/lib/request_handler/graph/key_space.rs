@@ -33,6 +33,10 @@ impl KeySpace {
             .collect();
         KeySpace { coords: coords }
     }
+
+    pub fn get_size(&self) -> usize {
+        self.coords.len()
+    }
 }
 
 impl<'a, 'b> Sub<&'b KeySpace> for &'a KeySpace {

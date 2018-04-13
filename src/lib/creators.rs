@@ -123,7 +123,10 @@ cfg_if! {
 
 cfg_if! {
     if #[cfg(feature = "use-graph")] {
-        use request_handler::graph::GraphRequestHandler;
+        use request_handler::graph::{
+            GraphRequestHandler,
+            DEFAULT_NEIGHBOURS_SIZE,
+            DEFAULT_KEY_SPACE_SIZE};
 
         /// Create a `RequestHandler`
         pub fn create_request_handler(
@@ -134,8 +137,19 @@ cfg_if! {
             // Get local key
             let local_key = gpg_key_handler.get_key(
                 String::from(args.value_of("key_id").unwrap()))?;
+
+            let neighbours_size = args.value_of("neighbours_size")
+                .unwrap_or(&DEFAULT_NEIGHBOURS_SIZE.to_string())
+                .parse::<usize>()
+                .chain_err(|| "Error on parsing neighbour size")?;
+
+            let key_space_size = args.value_of("key_space_size")
+                .unwrap_or(&DEFAULT_KEY_SPACE_SIZE.to_string())
+                .parse::<usize>()
+                .chain_err(|| "Error on parsing key space size")?;
+
             Ok(Arc::new(GraphRequestHandler::new(
-                local_key, remote_server)))
+                local_key, remote_server, neighbours_size, key_space_size)))
         }
     } else if #[cfg(feature = "use-black-hole")] {
         use request_handler::black_hole::BlackHoleRequestHandler;
