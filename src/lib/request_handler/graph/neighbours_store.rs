@@ -47,6 +47,8 @@ impl NeighboursStore {
 
     /// Given a node, consider keeping it as a neighbour.
     pub fn consider_candidate(&mut self, node: &Node) {
+        trace!("Considering candidate neighbour: {}", node);
+
         self.neighbours.push((
             node.clone(),
             KeySpace::from_key(&node.key, self.local_key_space.get_size()),

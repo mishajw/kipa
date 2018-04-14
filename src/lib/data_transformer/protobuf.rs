@@ -53,6 +53,10 @@ impl DataTransformer for ProtobufDataTransformer {
             }
         };
 
+        let sender: Result<proto_api::MessageSender> =
+            request.sender.clone().into();
+        general_request.set_sender(sender?);
+
         general_request
             .write_to_bytes()
             .chain_err(|| "Error on write request to bytes")
@@ -107,6 +111,10 @@ impl DataTransformer for ProtobufDataTransformer {
             &ResponsePayload::ConnectResponse() => general_response
                 .set_connect_response(proto_api::ConnectResponse::new()),
         };
+
+        let sender: Result<proto_api::MessageSender> =
+            response.sender.clone().into();
+        general_response.set_sender(sender?);
 
         general_response
             .write_to_bytes()
@@ -212,7 +220,6 @@ impl Into<Result<proto_api::MessageSender>> for MessageSender {
                 kipa_sender.set_node(node?)
             }
             MessageSender::Cli() => {}
-            MessageSender::Unknown() => {}
         }
         Ok(kipa_sender)
     }

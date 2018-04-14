@@ -70,7 +70,7 @@ fn message_daemon(args: &clap::ArgMatches) -> Result<()> {
     let data_transformer = create_data_transformer()?;
 
     let local_send_server =
-        create_local_send_server(data_transformer.clone(), args)?;
+        create_local_client(data_transformer.clone(), args)?;
 
     if let Some(search_args) = args.subcommand_matches("search") {
         let search_key = gpg_key_handler

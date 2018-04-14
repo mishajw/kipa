@@ -3,6 +3,8 @@ use error::*;
 use std::fmt;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
+use pnet::datalink;
+
 /// An address of a node.
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Address {
@@ -35,6 +37,46 @@ impl Address {
             }),
             SocketAddr::V6(_) => unimplemented!(),
         }
+    }
+
+    /// Get the local address on a specified interface
+    pub fn get_local(
+        port: u16,
+        interface_name: Option<&str>,
+    ) -> Result<Address> {
+        for interface in datalink::interfaces() {
+            if interface_name.is_none() && interface.name == "lo" {
+                // Ignore loopback interfaces
+                continue;
+            }
+
+            if interface_name.is_some()
+                && interface.name != interface_name.unwrap()
+            {
+                continue;
+            }
+
+            if interface.ips.len() < 1 {
+                return Err(ErrorKind::IpAddressError(format!(
+                    "Could not find exactly 1 IP address, found: {:?}",
+                    interface.ips
+                )).into());
+            }
+
+            match interface.ips[0].ip() {
+                IpAddr::V4(addr) => {
+                    return Ok(Address {
+                        ip_data: addr.octets().to_vec(),
+                        port: port,
+                    })
+                }
+                _ => unimplemented!(),
+            }
+        }
+
+        Err(ErrorKind::IpAddressError(
+            "Could not find matching interface name".into(),
+        ).into())
     }
 
     /// Get the `SocketAddr` for the address.

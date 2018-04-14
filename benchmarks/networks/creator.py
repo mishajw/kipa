@@ -103,15 +103,18 @@ def __create_nodes(
         network: docker.models.networks.Network) -> Iterator[Node]:
     assert len(key_ids) < 256, "No support for more than 256 nodes"
 
+    # Used to get a container's IP address
+    api_client = docker.APIClient()
+
     for i, key_id in enumerate(key_ids):
         name = f"{DOCKER_PREFIX}_{i}_{key_id}"
-        ip_address = f"{IPV4_PREFIX}.{i + 1}"
 
         log.info(f"Creating container with name {name}")
         container = client.containers.run(
             image=IMAGE_NAME,
             detach=True,
             name=name,
+            network=network.name,
             mounts=[
                 docker.types.Mount(
                     source=GPG_HOME,
@@ -120,11 +123,9 @@ def __create_nodes(
                     read_only=True)],
             environment={"KIPA_KEY_ID": key_id})
 
-        log.debug(
-            f"Adding container {name} "
-            f"to network {network.name} "
-            f"with IP address {ip_address}")
-        network.connect(container, ipv4_address=ip_address)
+        ip_address = api_client.inspect_container(container.name)\
+            ["NetworkSettings"]["Networks"][network.name]["IPAddress"]
+        log.debug(f"Created container with IP address {ip_address}")
 
         yield Node(key_id, f"{ip_address}:10842", container)
 

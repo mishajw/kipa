@@ -3,6 +3,8 @@
 use key::Key;
 use node::Node;
 
+use std::fmt;
+
 /// A request for the request handler.
 pub enum RequestPayload {
     /// Request a search for some key.
@@ -31,13 +33,21 @@ pub enum ResponsePayload {
 }
 
 /// Store the sender of a request
+#[derive(Clone)]
 pub enum MessageSender {
     /// The request was sent from an external node
     Node(Node),
     /// The request was sent from the command line argument tool
     Cli(),
-    /// Unknown sender. TODO: Remove this case.
-    Unknown(),
+}
+
+impl fmt::Display for MessageSender {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            &MessageSender::Node(ref n) => n.fmt(f),
+            &MessageSender::Cli() => write!(f, "CLI"),
+        }
+    }
 }
 
 /// Generic message type that holds a payload and a sender.

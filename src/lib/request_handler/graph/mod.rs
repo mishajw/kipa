@@ -5,13 +5,13 @@ mod neighbours_store;
 mod key_space;
 
 use error::*;
-use global_server::GlobalSendServer;
+use server::Client;
 use key::Key;
 use node::Node;
 use request_handler::graph::neighbours_store::NeighboursStore;
 use request_handler::graph::key_space::{sort_key_relative, KeySpace};
 use request_handler::graph::search::{GraphSearch, SearchCallbackReturn};
-use api::{RequestMessage, RequestPayload, ResponsePayload};
+use api::{MessageSender, RequestMessage, RequestPayload, ResponsePayload};
 use request_handler::RequestHandler;
 
 use std::sync::{Arc, Mutex};
@@ -41,7 +41,7 @@ impl GraphRequestHandler {
     /// - `initial_node` is the initial other node in KIPA network.
     pub fn new(
         key: Key,
-        remote_server: Arc<GlobalSendServer>,
+        remote_server: Arc<Client>,
         neighbours_size: usize,
         key_space_size: usize,
     ) -> Self {
@@ -73,6 +73,7 @@ impl GraphRequestHandler {
         let initial_nodes = self.neighbours_store.lock().unwrap().get_all();
         let callback_key = key.clone();
         let found_callback = move |n: &Node| {
+            trace!("Found node when searching: {}", n);
             if n.key == callback_key {
                 Ok(SearchCallbackReturn::Return(n.clone()))
             } else {
@@ -84,7 +85,10 @@ impl GraphRequestHandler {
             &key,
             initial_nodes,
             Arc::new(found_callback),
-            Arc::new(|_| Ok(SearchCallbackReturn::Continue())),
+            Arc::new(|n| {
+                trace!("Found node when searching: {}", n);
+                Ok(SearchCallbackReturn::Continue())
+           }),
         )
     }
 
@@ -163,6 +167,14 @@ impl GraphRequestHandler {
 
 impl RequestHandler for GraphRequestHandler {
     fn receive(&self, request: &RequestMessage) -> Result<ResponsePayload> {
+        info!("Received request from {}", request.sender);
+
+        match &request.sender {
+            &MessageSender::Node(ref n) =>
+                self.neighbours_store.lock().unwrap().consider_candidate(&n),
+            &MessageSender::Cli() => {},
+        };
+
         match &request.payload {
             &RequestPayload::QueryRequest(ref key) => {
                 trace!("Received query request");

@@ -4,12 +4,10 @@
 
 use data_transformer::DataTransformer;
 use error::*;
-use global_server::{GlobalReceiveServer, GlobalSendServer};
-use gpg_key::GpgKeyHandler;
-use local_server::{LocalReceiveServer, LocalSendServer};
+use server::{Client, LocalClient, Server};
 use request_handler::RequestHandler;
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use clap;
 
 cfg_if! {
@@ -31,32 +29,29 @@ cfg_if! {
 
 cfg_if! {
     if #[cfg(feature = "use-tcp")] {
-        use global_server::tcp::{
-            TcpGlobalReceiveServer, TcpGlobalSendServer};
-        use server::DEFAULT_PORT;
+        use server::tcp::{
+            TcpGlobalServer, TcpGlobalClient};
+        use node::Node;
 
         /// Create a `GlobalSendServer`
-        pub fn create_global_send_server(
-                data_transformer: Arc<DataTransformer>) ->
-                Result<Arc<GlobalSendServer>> {
-            Ok(Arc::new(TcpGlobalSendServer::new(data_transformer)))
+        pub fn create_global_client(
+                data_transformer: Arc<DataTransformer>,
+                local_node: Node) -> Result<Arc<Client>> {
+            Ok(Arc::new(TcpGlobalClient::new(data_transformer, local_node)))
         }
 
         /// Create a `GlobalRecieveServer`
-        pub fn create_global_receive_server(
+        pub fn create_global_server(
                 request_handler: Arc<RequestHandler>,
                 data_transformer: Arc<DataTransformer>,
-                args: &clap::ArgMatches) -> Result<Box<GlobalReceiveServer>> {
-            let port = args.value_of("port")
-                .unwrap_or(&DEFAULT_PORT.to_string())
-                .parse::<u16>().chain_err(|| "")?;
-            Ok(Box::new(TcpGlobalReceiveServer::new(
-                request_handler, data_transformer.clone(), port)?))
+                local_node: Node) -> Result<Arc<Mutex<Server>>> {
+            Ok(Arc::new(Mutex::new(TcpGlobalServer::new(
+                request_handler, data_transformer.clone(), local_node))))
         }
     } else {
         #[allow(missing_docs)]
         pub fn create_send_server(
-                data_transformer: Arc<DataTransformer>) ->
+                data_transformer: Arc<DataTransformer>, local_node: Node) ->
                 Result<Arc<GlobalSendServer>> {
             Err(ErrorKind::ConfigError(
                 "A server feature was not selected".into()).into())
@@ -64,9 +59,9 @@ cfg_if! {
 
         #[allow(missing_docs)]
         pub fn create_receive_server(
-                request_handler: Arc<RequestHandler>,
-                data_transformer: Arc<DataTransformer>,
-                args: &clap::ArgMatches) -> Result<Box<GlobalReceiveServer>> {
+            request_handler: Arc<RequestHandler>,
+            data_transformer: Arc<DataTransformer>
+        ) -> Result<Arc<GlobalReceiveServer>> {
             Err(ErrorKind::ConfigError(
                 "A server feature was not selected".into()).into())
         }
@@ -75,36 +70,36 @@ cfg_if! {
 
 cfg_if! {
     if #[cfg(feature = "use-unix-socket")] {
-        use local_server::unix_socket::{
-            UnixSocketLocalReceiveServer,
-            UnixSocketLocalSendServer,
+        use server::unix_socket::{
+            UnixSocketLocalServer,
+            UnixSocketLocalClient,
             DEFAULT_UNIX_SOCKET_PATH};
 
         /// Create a `LocalReceiveServer`
-        pub fn create_local_receive_server(
+        pub fn create_local_server(
                 request_handler: Arc<RequestHandler>,
                 data_transformer: Arc<DataTransformer>,
-                args: &clap::ArgMatches) -> Result<Box<LocalReceiveServer>> {
+                args: &clap::ArgMatches) -> Result<Arc<Mutex<Server>>> {
             let socket_path = args.value_of("socket_path")
                 .unwrap_or(DEFAULT_UNIX_SOCKET_PATH);
-            Ok(Box::new(UnixSocketLocalReceiveServer::new(
+            Ok(Arc::new(Mutex::new(UnixSocketLocalServer::new(
                 request_handler,
                 data_transformer,
-                &String::from(socket_path))?))
+                String::from(socket_path))?)))
         }
 
         /// Create a `LocalSendServer`
-        pub fn create_local_send_server(
+        pub fn create_local_client(
                 data_transformer: Arc<DataTransformer>,
-                args: &clap::ArgMatches) -> Result<Arc<LocalSendServer>> {
+                args: &clap::ArgMatches) -> Result<Arc<LocalClient>> {
             let socket_path = args.value_of("socket_path")
                 .unwrap_or(DEFAULT_UNIX_SOCKET_PATH);
-            Ok(Arc::new(UnixSocketLocalSendServer::new(
+            Ok(Arc::new(UnixSocketLocalClient::new(
                 data_transformer, &String::from(socket_path))))
         }
     } else {
         #[allow(missing_docs)]
-        pub fn create_local_receive_server(
+        pub fn create_local_server(
                 request_handler: Arc<RequestHandler>,
                 data_transformer: Arc<DataTransformer>,
                 args: &clap::ArgMatches) -> Result<Box<LocalReceiveServer>> {
@@ -112,7 +107,7 @@ cfg_if! {
                 "A local server feature was not selected".into()).into())
         }
         #[allow(missing_docs)]
-        pub fn create_local_send_server(
+        pub fn create_local_client(
                 data_transformer: Arc<DataTransformer>,
                 args: &clap::ArgMatches) -> Result<Arc<LocalSendServer>> {
             Err(ErrorKind::ConfigError(
@@ -130,13 +125,9 @@ cfg_if! {
 
         /// Create a `RequestHandler`
         pub fn create_request_handler(
-                gpg_key_handler: &mut GpgKeyHandler,
-                remote_server: Arc<GlobalSendServer>,
+                local_node: Node,
+                client: Arc<Client>,
                 args: &clap::ArgMatches) -> Result<Arc<RequestHandler>> {
-
-            // Get local key
-            let local_key = gpg_key_handler.get_key(
-                String::from(args.value_of("key_id").unwrap()))?;
 
             let neighbours_size = args.value_of("neighbours_size")
                 .unwrap_or(&DEFAULT_NEIGHBOURS_SIZE.to_string())
@@ -149,7 +140,10 @@ cfg_if! {
                 .chain_err(|| "Error on parsing key space size")?;
 
             Ok(Arc::new(GraphRequestHandler::new(
-                local_key, remote_server, neighbours_size, key_space_size)))
+                local_node.key,
+                client,
+                neighbours_size,
+                key_space_size)))
         }
     } else if #[cfg(feature = "use-black-hole")] {
         use request_handler::black_hole::BlackHoleRequestHandler;

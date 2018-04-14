@@ -3,98 +3,101 @@
 
 use error::*;
 use request_handler::RequestHandler;
-use api::{MessageSender, RequestMessage, RequestPayload, ResponseMessage};
+use api::{MessageSender, RequestMessage, RequestPayload, ResponseMessage,
+          ResponsePayload};
 use data_transformer::DataTransformer;
-use local_server::{LocalReceiveServer, LocalSendServer};
-use server::{receive_data, send_data, ReceiveServer};
+use server::{LocalClient, Server};
+use socket_server::{receive_data, send_data, SocketServer};
 
 use std::os::unix::net::{UnixListener, UnixStream};
-use std::thread;
 use std::sync::Arc;
-use std::mem::swap;
 
 /// The default unix socket path.
 pub const DEFAULT_UNIX_SOCKET_PATH: &str = "/tmp/kipa";
 
 /// Listens for local requests on a unix socket file.
-pub struct UnixSocketLocalReceiveServer {
-    thread: Option<thread::JoinHandle<()>>,
+pub struct UnixSocketLocalServer {
+    request_handler: Arc<RequestHandler>,
+    data_transformer: Arc<DataTransformer>,
+    socket_path: String,
 }
 
-impl UnixSocketLocalReceiveServer {
+impl UnixSocketLocalServer {
     /// Create a new unix socket local receive server that listens on some file
     /// `socket_path`.
     pub fn new(
         request_handler: Arc<RequestHandler>,
         data_transformer: Arc<DataTransformer>,
-        socket_path: &String,
+        socket_path: String,
     ) -> Result<Self> {
-        let listener = UnixListener::bind(socket_path).chain_err(|| {
-            format!("Error on binding to socket path: {}", socket_path)
-        })?;
-        trace!("Started listening on unix socket at path {}", socket_path);
+        Ok(UnixSocketLocalServer {
+            request_handler: request_handler,
+            data_transformer: data_transformer,
+            socket_path: socket_path,
+        })
+    }
+}
 
-        let t = thread::spawn(move || {
-            listener.incoming().for_each(|s| {
-                Self::handle_socket_result(
-                    s.chain_err(|| "Error on local unix socket connection"),
-                    request_handler.clone(),
-                    data_transformer.clone(),
-                )
-            })
+impl Server for UnixSocketLocalServer {
+    fn start(&self) -> Result<()> {
+        let listener = UnixListener::bind(&self.socket_path).chain_err(|| {
+            format!("Error on binding to socket path: {}", self.socket_path)
+        })?;
+        trace!(
+            "Started listening on unix socket at path {}",
+            self.socket_path
+        );
+
+        listener.incoming().for_each(|socket| {
+            self.handle_socket_result(
+                socket.chain_err(|| "Failed to create socket"),
+                self.request_handler.clone(),
+                self.data_transformer.clone(),
+            )
         });
 
-        Ok(UnixSocketLocalReceiveServer { thread: Some(t) })
+        Ok(())
     }
 }
 
-impl LocalReceiveServer for UnixSocketLocalReceiveServer {
-    fn join(&mut self) -> Result<()> {
-        let mut thread: Option<thread::JoinHandle<()>> = None;
-        swap(&mut self.thread, &mut thread);
-        match thread.map(|t| t.join()) {
-            Some(Ok(())) => Ok(()),
-            Some(Err(_)) => Err(ErrorKind::JoinError(
-                "Error on joining server thread".into(),
-            ).into()),
-            None => {
-                Err(ErrorKind::JoinError("Thread already joined".into()).into())
-            }
-        }
-    }
-}
-
-impl ReceiveServer for UnixSocketLocalReceiveServer {
+impl SocketServer for UnixSocketLocalServer {
     type SocketType = UnixStream;
+
+    fn payload_to_response(
+        &self,
+        response_payload: ResponsePayload,
+    ) -> ResponseMessage {
+        ResponseMessage::new(response_payload, MessageSender::Cli())
+    }
 }
 
 /// Send requests to a local KIPA daemon through a unix socket file.
-pub struct UnixSocketLocalSendServer {
+pub struct UnixSocketLocalClient {
     data_transformer: Arc<DataTransformer>,
     socket_path: String,
 }
 
-impl UnixSocketLocalSendServer {
+impl UnixSocketLocalClient {
     /// Create a new sender, which uses a `DataTransformer` to serialize packets
     /// before going on the line.
     pub fn new(
         data_transformer: Arc<DataTransformer>,
         socket_path: &String,
     ) -> Self {
-        UnixSocketLocalSendServer {
+        UnixSocketLocalClient {
             socket_path: socket_path.clone(),
             data_transformer: data_transformer,
         }
     }
 }
 
-impl LocalSendServer for UnixSocketLocalSendServer {
+impl LocalClient for UnixSocketLocalClient {
     fn receive<'a>(
         &self,
         request_payload: RequestPayload,
     ) -> Result<ResponseMessage> {
         let request =
-            RequestMessage::new(request_payload, MessageSender::Unknown());
+            RequestMessage::new(request_payload, MessageSender::Cli());
         let request_bytes = self.data_transformer.request_to_bytes(&request)?;
 
         trace!("Setting up socket to daemon");

@@ -11,5 +11,7 @@ error_chain! {
         ConfigError(s: String) { display("Configuration error: {}", s) }
         /// Error in the response type
         ResponseError(s: String) { display("Response error: {}", s) }
+        /// Error in retrieving IP address
+        IpAddressError(s: String) { display("IP address error: {}", s) }
     }
 }

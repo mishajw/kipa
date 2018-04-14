@@ -18,17 +18,17 @@ extern crate error_chain;
 extern crate gpgme;
 #[macro_use]
 extern crate log;
+extern crate pnet;
 extern crate protobuf;
 
 pub mod api;
 pub mod creators;
 pub mod data_transformer;
 pub mod error;
-pub mod global_server;
-pub mod gpg_key;
-pub mod local_server;
-pub mod request_handler;
 pub mod server;
+pub mod gpg_key;
+pub mod request_handler;
+pub mod socket_server;
 
 mod address;
 pub use address::Address;
