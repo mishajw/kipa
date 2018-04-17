@@ -11,6 +11,9 @@ GPG_EXECUTABLE = "gpg"
 GPG_ARGS = ["--homedir", GPG_HOME]
 
 def create_keys(num: int) -> List[str]:
+    if not os.path.isdir(GPG_HOME):
+        os.mkdir(GPG_HOME, 700)
+
     existing_key_ids = __get_existing_key_ids()
     num_keys_to_create = num - len(existing_key_ids)
 
@@ -18,9 +21,6 @@ def create_keys(num: int) -> List[str]:
         f"Found {len(existing_key_ids)}, "
         f"asked for {num} keys, "
         f"creating {num_keys_to_create}")
-
-    if not os.path.isdir(GPG_HOME):
-        os.mkdir(GPG_HOME, 700)
 
     log.debug("Writing GPG commands to temp file")
     gpg_commands = tempfile.NamedTemporaryFile(mode="w")
@@ -67,11 +67,15 @@ def __get_existing_key_ids() -> List[str]:
         stdout=subprocess.PIPE)
 
     key_ids: List[str] = []
+    seen_sec = False
     while True:
         line = gpg_process.stdout.readline().decode()
         if line == "":
             break
-        if line.startswith("fpr"):
+        if line.startswith("sec"):
+            seen_sec = True
+        if line.startswith("fpr") and seen_sec:
+            seen_sec = False
             # Fingerprint is in the second to last column
             full_fingerprint = line.split(":")[-2].strip()
             # Key ID is the last eight characters for the fingerprint

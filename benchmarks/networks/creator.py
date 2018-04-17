@@ -120,7 +120,7 @@ def __create_nodes(
                     source=GPG_HOME,
                     target="/root/.gnupg",
                     type="bind",
-                    read_only=True)],
+                    read_only=False)],
             environment={"KIPA_KEY_ID": key_id})
 
         ip_address = api_client.inspect_container(container.name)\
