@@ -8,7 +8,7 @@ use std::mem::size_of;
 use std::ops::{BitXor, Deref, Sub};
 
 /// A key space value with a set of coordinates.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct KeySpace {
     coords: Vec<i32>,
 }
@@ -69,5 +69,62 @@ pub fn sort_key_relative<T>(
         (&a_ks - key_space)
             .partial_cmp(&(&b_ks - key_space))
             .unwrap()
-    })
+    });
+}
+
+/// Remove elements from a vector that contain the same key.
+pub fn remove_duplicate_keys<T>(
+    v: &mut Vec<T>,
+    get_key_space_fn: &Fn(&T) -> KeySpace,
+) {
+    if v.len() <= 1 {
+        return;
+    }
+
+    let sort_key = &get_key_space_fn(&v[0]);
+    sort_key_relative(v, &get_key_space_fn, sort_key);
+
+    for i in (1..v.len()).rev() {
+        let k1 = get_key_space_fn(&v[i]);
+        let k2 = get_key_space_fn(&v[i - 1]);
+        if k1 == k2 {
+            v.swap_remove(i);
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_remove_duplicate_keys_small() {
+        let mut ks =
+            vec![KeySpace { coords: vec![1] }, KeySpace { coords: vec![1] }];
+        remove_duplicate_keys(&mut ks, &|k: &KeySpace| k.clone());
+        assert_eq!(ks.len(), 1);
+        let mut nums = ks.iter().map(|k| k.coords[0]).collect::<Vec<i32>>();
+        nums.sort();
+        assert_eq!(nums, vec![1]);
+    }
+
+    #[test]
+    fn test_remove_duplicate_keys() {
+        let mut ks = vec![
+            KeySpace { coords: vec![1] },
+            KeySpace { coords: vec![1] },
+            KeySpace { coords: vec![2] },
+            KeySpace { coords: vec![4] },
+            KeySpace { coords: vec![1] },
+            KeySpace { coords: vec![4] },
+            KeySpace { coords: vec![4] },
+            KeySpace { coords: vec![6] },
+            KeySpace { coords: vec![5] },
+        ];
+        remove_duplicate_keys(&mut ks, &|k: &KeySpace| k.clone());
+        assert_eq!(ks.len(), 5);
+        let mut nums = ks.iter().map(|k| k.coords[0]).collect::<Vec<i32>>();
+        nums.sort();
+        assert_eq!(nums, vec![1, 2, 4, 5, 6]);
+    }
 }
