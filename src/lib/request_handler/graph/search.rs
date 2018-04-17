@@ -37,11 +37,18 @@ pub struct GraphSearch {
     get_neighbours_fn: GetNeighboursFn,
 }
 
-#[derive(PartialEq)]
+#[derive(Clone)]
 struct SearchNode {
     node: Node,
     cost: f32,
 }
+
+impl PartialEq for SearchNode {
+    fn eq(&self, other: &SearchNode) -> bool {
+        self.node.key == other.node.key
+    }
+}
+
 impl Eq for SearchNode {}
 
 impl Ord for SearchNode {
@@ -78,45 +85,69 @@ impl GraphSearch {
         let key_space = KeySpace::from_key(key, 2);
         // Create structures for the search.
         let mut to_explore = BinaryHeap::new();
-        let mut explored: HashSet<Node> = HashSet::new();
+        let mut found: HashSet<Key> = HashSet::new();
 
-        // Wrapper around `BinaryHeap::push` so that the node is wrapped in a
-        // search node type.
-        let insert = |heap: &mut BinaryHeap<SearchNode>, n: Node| {
+        let into_search_node = |n: Node| -> SearchNode {
             let cost = &KeySpace::from_key(&n.key, 2) - &key_space;
-            heap.push(SearchNode {
+            SearchNode {
                 node: n,
                 cost: cost,
-            });
+            }
         };
 
         // Check if search key is in `start_nodes`.
         // If not, add to `to_explore`
         for n in start_nodes {
             return_callback!(found_node_callback(&n)?);
-            insert(&mut to_explore, n);
+            let search_node = into_search_node(n);
+            found.insert(search_node.node.key.clone());
+            to_explore.push(search_node);
         }
 
         while let Some(next_node) = to_explore.pop() {
-            trace!("Current node is {}", next_node.node);
+            trace!(
+                "found: {:?}",
+                found
+                    .iter()
+                    .map(|k| k.get_key_id())
+                    .collect::<Vec<&String>>()
+            );
+            trace!(
+                "Current node is {}, have {} to explore",
+                next_node.node,
+                to_explore.len()
+            );
 
             // Get the neighbours of the node
             let neighbours = (*self.get_neighbours_fn)(&next_node.node, key)?;
+            trace!(
+                "Found neighbours for node {}: {:?}",
+                next_node.node,
+                neighbours
+                    .iter()
+                    .map(|n| n.key.get_key_id())
+                    .collect::<Vec<&String>>()
+            );
 
             for n in neighbours {
+                let search_node = into_search_node(n);
+
                 // If we've seen it before, ignore it
-                if explored.contains(&n) {
+                if found.contains(&search_node.node.key) {
+                    trace!("seen {} before", search_node.node.key);
                     continue;
                 }
 
+                trace!("first encounter with {}", search_node.node.key);
+                found.insert(search_node.node.key.clone());
+
                 // Handle returning callback values
-                return_callback!(found_node_callback(&n)?);
+                return_callback!(found_node_callback(&search_node.node)?);
                 // Otherwise, add it to the explore list
-                insert(&mut to_explore, n.clone());
+                to_explore.push(search_node);
             }
 
             return_callback!(explored_node_callback(&next_node.node)?);
-            explored.insert(next_node.node);
         }
 
         trace!("Failed to find key {}", key);

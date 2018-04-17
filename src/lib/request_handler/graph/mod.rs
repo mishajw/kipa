@@ -8,6 +8,7 @@ use error::*;
 use server::Client;
 use key::Key;
 use node::Node;
+use address::Address;
 use request_handler::graph::neighbours_store::NeighboursStore;
 use request_handler::graph::key_space::{sort_key_relative, KeySpace};
 use request_handler::graph::search::{GraphSearch, SearchCallbackReturn};
@@ -46,7 +47,23 @@ impl GraphRequestHandler {
         key_space_size: usize,
     ) -> Self {
         let remote_server_clone = remote_server.clone();
+
+        let neighbours_store = Arc::new(Mutex::new(NeighboursStore::new(
+            key.clone(),
+            neighbours_size,
+            key_space_size,
+        )));
+
+        let graph_search_key = key.clone();
+        let graph_search_neighbours_store = neighbours_store.clone();
         let graph_search = GraphSearch::new(Arc::new(move |n, k: &Key| {
+            if n.key == graph_search_key {
+                return Ok(graph_search_neighbours_store
+                    .lock()
+                    .unwrap()
+                    .get_all());
+            }
+
             let response = remote_server_clone
                 .receive(n, RequestPayload::QueryRequest(k.clone()))?;
 
@@ -58,19 +75,15 @@ impl GraphRequestHandler {
             }
         }));
 
-        let neighbours_store =
-            NeighboursStore::new(key.clone(), neighbours_size, key_space_size);
-
         GraphRequestHandler {
             key: key,
-            neighbours_store: Arc::new(Mutex::new(neighbours_store)),
+            neighbours_store: neighbours_store,
             graph_search: Arc::new(graph_search),
             key_space_size: key_space_size,
         }
     }
 
     fn search(&self, key: &Key) -> Result<Option<Node>> {
-        let initial_nodes = self.neighbours_store.lock().unwrap().get_all();
         let callback_key = key.clone();
         let found_callback = move |n: &Node| {
             trace!("Found node when searching: {}", n);
@@ -83,7 +96,12 @@ impl GraphRequestHandler {
 
         self.graph_search.search(
             &key,
-            initial_nodes,
+            vec![
+                Node::new(
+                    Address::new(vec![0, 0, 0, 0], 10842),
+                    self.key.clone(),
+                ),
+            ],
             Arc::new(found_callback),
             Arc::new(|n| {
                 trace!("Found node when searching: {}", n);
@@ -126,7 +144,9 @@ impl GraphRequestHandler {
                 &|&(ref n, _)| KeySpace::from_key(&n.key, found_key_space_size),
                 &local_key_space,
             );
-            n_closest_local.pop();
+            while n_closest_local.len() > DEFAULT_CONNECT_SEARCH_SIZE {
+                n_closest_local.pop();
+            }
 
             Ok(SearchCallbackReturn::Continue())
         };
@@ -148,7 +168,9 @@ impl GraphRequestHandler {
             // Check if all of the `n_closest` has been explored
             let all_explored = n_closest_local.iter().all(&|&(_, ref e)| *e);
 
-            if all_explored {
+            if all_explored
+                && n_closest_local.len() == DEFAULT_CONNECT_SEARCH_SIZE
+            {
                 Ok(SearchCallbackReturn::Return(()))
             } else {
                 Ok(SearchCallbackReturn::Continue())
