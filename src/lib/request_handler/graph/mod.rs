@@ -104,9 +104,9 @@ impl GraphRequestHandler {
             ],
             Arc::new(found_callback),
             Arc::new(|n| {
-                trace!("Found node when searching: {}", n);
+                trace!("Explored node when searching: {}", n);
                 Ok(SearchCallbackReturn::Continue())
-           }),
+            }),
         )
     }
 
@@ -192,17 +192,26 @@ impl RequestHandler for GraphRequestHandler {
         info!("Received request from {}", request.sender);
 
         match &request.sender {
-            &MessageSender::Node(ref n) =>
-                self.neighbours_store.lock().unwrap().consider_candidate(&n),
-            &MessageSender::Cli() => {},
+            &MessageSender::Node(ref n) => {
+                self.neighbours_store.lock().unwrap().consider_candidate(&n)
+            }
+            &MessageSender::Cli() => {}
         };
 
         match &request.payload {
             &RequestPayload::QueryRequest(ref key) => {
                 trace!("Received query request");
-                Ok(ResponsePayload::QueryResponse(
-                    self.neighbours_store.lock().unwrap().get_n_closest(key, 1),
-                ))
+                let nodes =
+                    self.neighbours_store.lock().unwrap().get_n_closest(key, 3);
+                trace!(
+                    "Replying with nodes: {:?}",
+                    nodes
+                        .iter()
+                        .map(|n| n.key.get_key_id())
+                        .collect::<Vec<&String>>()
+                );
+
+                Ok(ResponsePayload::QueryResponse(nodes))
             }
             &RequestPayload::SearchRequest(ref key) => {
                 trace!("Received search request for key {}", key);

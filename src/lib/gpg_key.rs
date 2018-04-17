@@ -27,6 +27,7 @@ impl GpgKeyHandler {
         let key = self.context
             .find_key(key_id.clone())
             .chain_err(|| "Error on finding key")?;
+        assert!(key.id().unwrap().ends_with(key_id.as_str()));
         let mut buffer = Vec::new();
         self.context
             .export_keys(&[key], gpgme::ExportMode::empty(), &mut buffer)

@@ -58,8 +58,9 @@ impl Address {
 
             if interface.ips.len() < 1 {
                 return Err(ErrorKind::IpAddressError(format!(
-                    "Could not find exactly 1 IP address, found: {:?}",
-                    interface.ips
+                    "Could not find exactly 1 IP address on interface {}, \
+                     found: {:?}",
+                    interface.name, interface.ips
                 )).into());
             }
 
