@@ -20,6 +20,8 @@ pub enum RequestPayload {
     /// Connect to a `Node`, and search for potential neighbours in the node's
     /// network.
     ConnectRequest(Node),
+    /// List all of the neighbour `Node`s.
+    ListNeighboursRequest(),
 }
 
 /// The visibility of an API call.
@@ -40,6 +42,8 @@ pub enum ResponsePayload {
     QueryResponse(Vec<Node>),
     /// Response for a [`Request::ConnectRequest`]
     ConnectResponse(),
+    /// Response for a [`Request::ListNeighboursRequest`].
+    ListNeighboursResponse(Vec<Node>),
 }
 
 impl RequestPayload {
@@ -53,6 +57,9 @@ impl RequestPayload {
                 visibility == &ApiVisibility::Global()
             }
             &RequestPayload::ConnectRequest(_) => {
+                visibility == &ApiVisibility::Local()
+            }
+            &RequestPayload::ListNeighboursRequest() => {
                 visibility == &ApiVisibility::Local()
             }
         }

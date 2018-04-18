@@ -3,8 +3,8 @@
 
 use error::*;
 use request_handler::RequestHandler;
-use api::{MessageSender, RequestMessage, RequestPayload, ResponseMessage,
-          ResponsePayload, ApiVisibility};
+use api::{ApiVisibility, MessageSender, RequestMessage, RequestPayload,
+          ResponseMessage, ResponsePayload};
 use data_transformer::DataTransformer;
 use server::{LocalClient, Server};
 use socket_server::{receive_data, send_data, SocketServer};

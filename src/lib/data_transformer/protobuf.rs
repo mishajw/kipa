@@ -51,6 +51,10 @@ impl DataTransformer for ProtobufDataTransformer {
                 connect.set_node(kipa_node?);
                 general_request.set_connect_request(connect);
             }
+            &RequestPayload::ListNeighboursRequest() => {
+                let mut list = proto_api::ListNeighboursRequest::new();
+                general_request.set_list_neighbours_request(list);
+            }
         };
 
         let sender: Result<proto_api::MessageSender> =
@@ -77,6 +81,8 @@ impl DataTransformer for ProtobufDataTransformer {
             let node: Result<Node> =
                 request.get_connect_request().get_node().clone().into();
             RequestPayload::ConnectRequest(node?)
+        } else if request.has_list_neighbours_request() {
+            RequestPayload::ListNeighboursRequest()
         } else {
             return Err(ErrorKind::ParseError("Unrecognized request".into()).into());
         };
@@ -110,6 +116,13 @@ impl DataTransformer for ProtobufDataTransformer {
             }
             &ResponsePayload::ConnectResponse() => general_response
                 .set_connect_response(proto_api::ConnectResponse::new()),
+            &ResponsePayload::ListNeighboursResponse(ref nodes) => {
+                let mut list = proto_api::ListNeighboursResponse::new();
+                let kipa_nodes: Result<Vec<proto_api::Node>> =
+                    nodes.iter().map(|n| n.clone().into()).collect();
+                list.set_nodes(RepeatedField::from_vec(kipa_nodes?));
+                general_response.set_list_neighbours_response(list);
+            }
         };
 
         let sender: Result<proto_api::MessageSender> =
@@ -144,6 +157,14 @@ impl DataTransformer for ProtobufDataTransformer {
             }
         } else if response.has_connect_response() {
             ResponsePayload::ConnectResponse()
+        } else if response.has_list_neighbours_response() {
+            let nodes: Result<Vec<Node>> = response
+                .get_list_neighbours_response()
+                .get_nodes()
+                .iter()
+                .map(|n| n.clone().into())
+                .collect();
+            ResponsePayload::ListNeighboursResponse(nodes?)
         } else {
             return Err(ErrorKind::ParseError("Unrecognized response".into()).into());
         };

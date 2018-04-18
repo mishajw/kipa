@@ -24,14 +24,16 @@ message GeneralRequest {
   QueryRequest query_request = 1;
   SearchRequest search_request = 2;
   ConnectRequest connect_request = 3;
-  MessageSender sender =  4;
+  ListNeighboursRequest list_neighbours_request = 4;
+  MessageSender sender =  5;
 }
 
 message GeneralResponse {
   QueryResponse query_response = 1;
   SearchResponse search_response = 2;
   ConnectResponse connect_response = 3;
-  MessageSender sender =  4;
+  ListNeighboursResponse list_neighbours_response = 4;
+  MessageSender sender =  5;
 }
 
 message QueryRequest {
@@ -55,4 +57,10 @@ message ConnectRequest {
 }
 
 message ConnectResponse {}
+
+message ListNeighboursRequest {}
+
+message ListNeighboursResponse {
+  repeated Node nodes = 1;
+}
 

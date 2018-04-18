@@ -119,8 +119,8 @@ mod test {
             Key::new("00000007".to_string(), vec![7]),
         ];
 
-        let mut ns = NeighboursStore::new(
-            keys[keys.len() - 1].clone(), 3, 2, test_log);
+        let mut ns =
+            NeighboursStore::new(keys[keys.len() - 1].clone(), 3, 2, test_log);
         for i in 0..keys.len() - 1 {
             ns.consider_candidate(&Node::new(
                 Address::new(vec![0, 0, 0, 0], 0),

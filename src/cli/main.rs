@@ -59,6 +59,10 @@ fn main() {
                         .required(true),
                 ),
         )
+        .subcommand(
+            clap::SubCommand::with_name("list-neighbours")
+                .about("List all neighbours"),
+        )
         .get_matches();
 
     if let Err(err) = message_daemon(&args, &log) {
@@ -108,6 +112,19 @@ fn message_daemon(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
         match response.payload {
             ResponsePayload::ConnectResponse() => {
                 println!("Connect successful");
+                Ok(())
+            }
+            _ => Err(ErrorKind::ParseError("Unrecognized response".into()).into()),
+        }
+    } else if let Some(_) = args.subcommand_matches("list-neighbours") {
+        let response =
+            local_client.receive(RequestPayload::ListNeighboursRequest())?;
+        match response.payload {
+            ResponsePayload::ListNeighboursResponse(neighbours) => {
+                println!("Found neighbours:");
+                for n in neighbours {
+                    println!("{}", n);
+                }
                 Ok(())
             }
             _ => Err(ErrorKind::ParseError("Unrecognized response".into()).into()),

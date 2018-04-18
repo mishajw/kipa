@@ -33,6 +33,10 @@ impl RequestHandler for BlackHoleRequestHandler {
                 trace!(self.log, "Received connect request");
                 Ok(ResponsePayload::ConnectResponse())
             }
+            RequestPayload::ListNeighboursRequest() => {
+                trace!(self.log, "Received list neighbours request");
+                Ok(ResponsePayload::ListNeighboursResponse(vec![]))
+            }
         }
     }
 }

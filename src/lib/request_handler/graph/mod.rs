@@ -261,6 +261,22 @@ impl RequestHandler for GraphRequestHandler {
                 self.connect(node)?;
                 Ok(ResponsePayload::ConnectResponse())
             }
+            &RequestPayload::ListNeighboursRequest() => {
+                trace!(self.log, "Replying recieved list neigbours request");
+                let neighbours =
+                    self.neighbours_store.lock().unwrap().get_all();
+                trace!(
+                    self.log,
+                    "Replying to list neighbours request";
+                    "list-neighbours" => true,
+                    "reply" => true,
+                    "neighbours" => neighbours
+                        .iter()
+                        .map(|n| n.key.get_key_id().clone())
+                        .collect::<Vec<String>>()
+                        .join(", "));
+                Ok(ResponsePayload::ListNeighboursResponse(neighbours))
+            }
         }
     }
 }
