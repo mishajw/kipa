@@ -4,7 +4,7 @@
 use error::*;
 use request_handler::RequestHandler;
 use api::{MessageSender, RequestMessage, RequestPayload, ResponseMessage,
-          ResponsePayload};
+          ResponsePayload, ApiVisibility};
 use data_transformer::DataTransformer;
 use server::{LocalClient, Server};
 use socket_server::{receive_data, send_data, SocketServer};
@@ -78,6 +78,16 @@ impl SocketServer for UnixSocketLocalServer {
         response_payload: ResponsePayload,
     ) -> ResponseMessage {
         ResponseMessage::new(response_payload, MessageSender::Cli())
+    }
+
+    fn check_request(&self, request: &RequestMessage) -> Result<()> {
+        if !request.payload.is_visible(&ApiVisibility::Local()) {
+            Err(ErrorKind::RequestError(
+                "Request is not locally available".into(),
+            ).into())
+        } else {
+            Ok(())
+        }
     }
 }
 

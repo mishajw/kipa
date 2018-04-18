@@ -1,7 +1,7 @@
 //! Implementation of servers using TCP sockets.
 
-use api::{MessageSender, RequestMessage, RequestPayload, ResponseMessage,
-          ResponsePayload};
+use api::{ApiVisibility, MessageSender, RequestMessage, RequestPayload,
+          ResponseMessage, ResponsePayload};
 use data_transformer::DataTransformer;
 use error::*;
 use server::{Client, Server};
@@ -81,6 +81,16 @@ impl SocketServer for TcpGlobalServer {
             response_payload,
             MessageSender::Node(self.local_node.clone()),
         )
+    }
+
+    fn check_request(&self, request: &RequestMessage) -> Result<()> {
+        if !request.payload.is_visible(&ApiVisibility::Global()) {
+            Err(ErrorKind::RequestError(
+                "Request is not globally available".into(),
+            ).into())
+        } else {
+            Ok(())
+        }
     }
 }
 

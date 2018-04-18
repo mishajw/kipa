@@ -22,6 +22,16 @@ pub enum RequestPayload {
     ConnectRequest(Node),
 }
 
+/// The visibility of an API call.
+#[derive(PartialEq)]
+pub enum ApiVisibility {
+    /// The API call is available for local connections from the CLI.
+    Local(),
+    /// The API call is available for remote connections from other KIPA nodes.
+    Global(),
+}
+impl Eq for ApiVisibility {}
+
 /// The response for a given request.
 pub enum ResponsePayload {
     /// Response for a [`Request::SearchRequest`].
@@ -30,6 +40,23 @@ pub enum ResponsePayload {
     QueryResponse(Vec<Node>),
     /// Response for a [`Request::ConnectRequest`]
     ConnectResponse(),
+}
+
+impl RequestPayload {
+    /// Check if the request is visible in a API visibility.
+    pub fn is_visible(&self, visibility: &ApiVisibility) -> bool {
+        match self {
+            &RequestPayload::SearchRequest(_) => {
+                visibility == &ApiVisibility::Local()
+            }
+            &RequestPayload::QueryRequest(_) => {
+                visibility == &ApiVisibility::Global()
+            }
+            &RequestPayload::ConnectRequest(_) => {
+                visibility == &ApiVisibility::Local()
+            }
+        }
+    }
 }
 
 /// Store the sender of a request

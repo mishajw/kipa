@@ -82,6 +82,9 @@ pub trait SocketServer: Send + Sync {
         &self,
         response_payload: ResponsePayload,
     ) -> ResponseMessage;
+
+    /// Check that the request is OK to process.
+    fn check_request(&self, request: &RequestMessage) -> Result<()>;
 }
 
 /// Functionality for sending requests to other KIPA servers on a socket.
