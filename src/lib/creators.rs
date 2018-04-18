@@ -4,9 +4,12 @@
 
 use data_transformer::DataTransformer;
 use error::*;
+#[allow(unused)]
 use server::{Client, LocalClient, Server};
 use request_handler::RequestHandler;
+use node::Node;
 
+#[allow(unused)]
 use std::sync::{Arc, Mutex};
 use clap;
 
@@ -31,7 +34,6 @@ cfg_if! {
     if #[cfg(feature = "use-tcp")] {
         use server::tcp::{
             TcpGlobalServer, TcpGlobalClient};
-        use node::Node;
 
         /// Create a `GlobalSendServer`
         pub fn create_global_client(
@@ -50,18 +52,19 @@ cfg_if! {
         }
     } else {
         #[allow(missing_docs)]
-        pub fn create_send_server(
-                data_transformer: Arc<DataTransformer>, local_node: Node) ->
-                Result<Arc<GlobalSendServer>> {
+        pub fn create_global_client(
+                _data_transformer: Arc<DataTransformer>, _local_node: Node) ->
+                Result<Arc<Client>> {
             Err(ErrorKind::ConfigError(
                 "A server feature was not selected".into()).into())
         }
 
         #[allow(missing_docs)]
-        pub fn create_receive_server(
-            request_handler: Arc<RequestHandler>,
-            data_transformer: Arc<DataTransformer>
-        ) -> Result<Arc<GlobalReceiveServer>> {
+        pub fn create_global_server(
+            _request_handler: Arc<RequestHandler>,
+            _data_transformer: Arc<DataTransformer>,
+            _local_node: Node
+        ) -> Result<Arc<Mutex<Server>>> {
             Err(ErrorKind::ConfigError(
                 "A server feature was not selected".into()).into())
         }
@@ -100,16 +103,17 @@ cfg_if! {
     } else {
         #[allow(missing_docs)]
         pub fn create_local_server(
-                request_handler: Arc<RequestHandler>,
-                data_transformer: Arc<DataTransformer>,
-                args: &clap::ArgMatches) -> Result<Box<LocalReceiveServer>> {
+                _request_handler: Arc<RequestHandler>,
+                _data_transformer: Arc<DataTransformer>,
+                _args: &clap::ArgMatches) -> Result<Arc<Mutex<Server>>> {
             Err(ErrorKind::ConfigError(
                 "A local server feature was not selected".into()).into())
         }
+
         #[allow(missing_docs)]
         pub fn create_local_client(
-                data_transformer: Arc<DataTransformer>,
-                args: &clap::ArgMatches) -> Result<Arc<LocalSendServer>> {
+                _data_transformer: Arc<DataTransformer>,
+                _args: &clap::ArgMatches) -> Result<Arc<LocalClient>> {
             Err(ErrorKind::ConfigError(
                 "A local server feature was not selected".into()).into())
         }
@@ -149,17 +153,17 @@ cfg_if! {
         use request_handler::black_hole::BlackHoleRequestHandler;
 
         pub fn create_request_handler(
-                gpg_key_handler: &mut GpgKeyHandler,
-                remote_server: Arc<GlobalSendServer>,
-                args: &clap::ArgMatches) -> Result<Arc<RequestHandler>> {
+                _local_node: Node,
+                _client: Arc<Client>,
+                _args: &clap::ArgMatches) -> Result<Arc<RequestHandler>> {
             Ok(Arc::new(BlackHoleRequestHandler::new()))
         }
     } else {
         #[allow(missing_docs)]
         pub fn create_request_handler(
-                gpg_key_handler: &mut GpgKeyHandler,
-                remote_server: Arc<GlobalSendServer>,
-                args: &clap::ArgMatches) -> Result<Arc<RequestHandler>> {
+                _local_node: Node,
+                _client: Arc<Client>,
+                _args: &clap::ArgMatches) -> Result<Arc<RequestHandler>> {
             Err(ErrorKind::ConfigError(
                 "A request handler feature was not selected".into()).into())
         }

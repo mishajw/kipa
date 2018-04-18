@@ -1,8 +1,10 @@
 //! Implement `RequestHandler` but never return anything. Used for testing.
 
 use error::*;
-use request_handler::{Request, RequestHandler, Response};
+use api::{RequestPayload, ResponsePayload, RequestMessage};
+use request_handler::RequestHandler;
 
+/// The request handler that returns nothing.
 pub struct BlackHoleRequestHandler {}
 
 impl BlackHoleRequestHandler {
@@ -13,15 +15,19 @@ impl BlackHoleRequestHandler {
 }
 
 impl RequestHandler for BlackHoleRequestHandler {
-    fn receive(&self, request: &Request) -> Result<Response> {
-        match request {
-            &Request::QueryRequest(_) => {
+    fn receive(&self, request: &RequestMessage) -> Result<ResponsePayload> {
+        match request.payload {
+            RequestPayload::QueryRequest(_) => {
                 trace!("Received query request");
-                Ok(Response::QueryResponse(vec![]))
+                Ok(ResponsePayload::QueryResponse(vec![]))
             }
-            &Request::SearchRequest(_) => {
+            RequestPayload::SearchRequest(_) => {
                 trace!("Received search request");
-                Ok(Response::SearchResponse(None))
+                Ok(ResponsePayload::SearchResponse(None))
+            }
+            RequestPayload::ConnectRequest(_) => {
+                trace!("Received connect request");
+                Ok(ResponsePayload::ConnectResponse())
             }
         }
     }
