@@ -16,10 +16,13 @@ extern crate clap;
 #[macro_use]
 extern crate error_chain;
 extern crate gpgme;
-#[macro_use]
-extern crate log;
 extern crate pnet;
 extern crate protobuf;
+#[macro_use]
+extern crate slog;
+extern crate slog_async;
+extern crate slog_json;
+extern crate slog_term;
 
 pub mod api;
 pub mod creators;

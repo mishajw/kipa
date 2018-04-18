@@ -12,6 +12,8 @@ use socket_server::{receive_data, send_data, SocketServer};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync::Arc;
 
+use slog::Logger;
+
 /// The default unix socket path.
 pub const DEFAULT_UNIX_SOCKET_PATH: &str = "/tmp/kipa";
 
@@ -20,6 +22,7 @@ pub struct UnixSocketLocalServer {
     request_handler: Arc<RequestHandler>,
     data_transformer: Arc<DataTransformer>,
     socket_path: String,
+    log: Logger,
 }
 
 impl UnixSocketLocalServer {
@@ -29,11 +32,13 @@ impl UnixSocketLocalServer {
         request_handler: Arc<RequestHandler>,
         data_transformer: Arc<DataTransformer>,
         socket_path: String,
+        log: Logger,
     ) -> Result<Self> {
         Ok(UnixSocketLocalServer {
             request_handler: request_handler,
             data_transformer: data_transformer,
             socket_path: socket_path,
+            log: log,
         })
     }
 }
@@ -43,9 +48,10 @@ impl Server for UnixSocketLocalServer {
         let listener = UnixListener::bind(&self.socket_path).chain_err(|| {
             format!("Error on binding to socket path: {}", self.socket_path)
         })?;
-        trace!(
-            "Started listening on unix socket at path {}",
-            self.socket_path
+        debug!(
+            self.log,
+            "Started listening on unix socket";
+            "path" => &self.socket_path
         );
 
         listener.incoming().for_each(|socket| {
@@ -63,6 +69,10 @@ impl Server for UnixSocketLocalServer {
 impl SocketServer for UnixSocketLocalServer {
     type SocketType = UnixStream;
 
+    fn get_log(&self) -> &Logger {
+        &self.log
+    }
+
     fn payload_to_response(
         &self,
         response_payload: ResponsePayload,
@@ -75,6 +85,7 @@ impl SocketServer for UnixSocketLocalServer {
 pub struct UnixSocketLocalClient {
     data_transformer: Arc<DataTransformer>,
     socket_path: String,
+    log: Logger,
 }
 
 impl UnixSocketLocalClient {
@@ -83,10 +94,12 @@ impl UnixSocketLocalClient {
     pub fn new(
         data_transformer: Arc<DataTransformer>,
         socket_path: &String,
+        log: Logger,
     ) -> Self {
         UnixSocketLocalClient {
             socket_path: socket_path.clone(),
             data_transformer: data_transformer,
+            log: log,
         }
     }
 }
@@ -100,17 +113,17 @@ impl LocalClient for UnixSocketLocalClient {
             RequestMessage::new(request_payload, MessageSender::Cli());
         let request_bytes = self.data_transformer.request_to_bytes(&request)?;
 
-        trace!("Setting up socket to daemon");
+        trace!(self.log, "Setting up socket to daemon");
         let mut socket = UnixStream::connect(&self.socket_path)
             .chain_err(|| "Error on trying to connect to node")?;
 
-        trace!("Sending request to daemon");
+        trace!(self.log, "Sending request to daemon");
         send_data(&request_bytes, &mut socket)?;
 
-        trace!("Reading response from daemon");
+        trace!(self.log, "Reading response from daemon");
         let response_data = receive_data(&mut socket)?;
 
-        trace!("Got response bytes");
+        trace!(self.log, "Got response bytes");
         self.data_transformer.bytes_to_response(&response_data)
     }
 }

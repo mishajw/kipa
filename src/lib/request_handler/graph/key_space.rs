@@ -6,6 +6,7 @@ use byteorder::{BigEndian, ReadBytesExt};
 use std::io::Cursor;
 use std::mem::size_of;
 use std::ops::{BitXor, Deref, Sub};
+use std::fmt;
 
 /// A key space value with a set of coordinates.
 #[derive(Clone, PartialEq)]
@@ -52,6 +53,20 @@ impl<'a, 'b> Sub<&'b KeySpace> for &'a KeySpace {
             .fold(0 as i64, |a, b| a + (b as i64));
 
         (total as f32).powf(self.coords.len() as f32)
+    }
+}
+
+impl fmt::Display for KeySpace {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "KeySpace({})",
+            self.coords
+                .iter()
+                .map(|i| i.to_string())
+                .collect::<Vec<String>>()
+                .join(", ")
+        )
     }
 }
 

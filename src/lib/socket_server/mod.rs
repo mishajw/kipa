@@ -17,6 +17,8 @@ use std::io::{Read, Write};
 use std::mem::size_of;
 use std::sync::Arc;
 
+use slog::Logger;
+
 /// The default port for server communication.
 pub const DEFAULT_PORT: u16 = 10842;
 
@@ -25,6 +27,9 @@ pub const DEFAULT_PORT: u16 = 10842;
 pub trait SocketServer: Send + Sync {
     /// The type of the socket to use for sending/receiveing data
     type SocketType: Read + Write;
+
+    /// Get the logger for this instance
+    fn get_log(&self) -> &Logger;
 
     /// Handle a socket that the server has receieved wrapped in a result.
     fn handle_socket_result(
@@ -42,7 +47,10 @@ pub trait SocketServer: Send + Sync {
         });
 
         if let Err(err) = result {
-            error!("Exception when handling socket: {}", err.display_chain());
+            error!(
+                self.get_log(),
+                "Exception when handling socket";
+                "exception" => %err.display_chain());
         }
     }
 
@@ -53,19 +61,19 @@ pub trait SocketServer: Send + Sync {
         request_handler: &RequestHandler,
         data_transformer: &DataTransformer,
     ) -> Result<()> {
-        trace!("Reading request from socket");
+        trace!(self.get_log(), "Reading request from socket");
         let request_data = receive_data(socket)?;
 
-        trace!("Processing request");
+        trace!(self.get_log(), "Processing request");
         let request =
             data_transformer.bytes_to_request(&request_data.to_vec())?;
 
-        trace!("Sending response");
+        trace!(self.get_log(), "Sending response");
         let response_payload = request_handler.receive(&request)?;
         let response = self.payload_to_response(response_payload);
         let response_data = data_transformer.response_to_bytes(&response)?;
         send_data(&response_data, socket)?;
-        trace!("Sent response bytes");
+        trace!(self.get_log(), "Sent response bytes");
         Ok(())
     }
 
@@ -81,6 +89,9 @@ pub trait SocketClient {
     /// The socket type to send/receive data from.
     type SocketType: Read + Write;
 
+    /// Get the logger for this instance
+    fn get_log(&self) -> &Logger;
+
     /// Create a socket to connect to the `node`.
     fn create_socket(&self, node: &Node) -> Result<Self::SocketType>;
 
@@ -93,16 +104,20 @@ pub trait SocketClient {
     ) -> Result<ResponseMessage> {
         let request_bytes = data_transformer.request_to_bytes(&request)?;
 
-        trace!("Setting up socket to node {}", node);
+        trace!(
+            self.get_log(),
+            "Setting up socket";
+            "node" => %node
+        );
         let mut socket = self.create_socket(node)?;
 
-        trace!("Sending request to another node");
+        trace!(self.get_log(), "Sending request to another node");
         send_data(&request_bytes, &mut socket)?;
 
-        trace!("Reading response from another node");
+        trace!(self.get_log(), "Reading response from another node");
         let response_data = receive_data(&mut socket)?;
 
-        trace!("Got response bytes");
+        trace!(self.get_log(), "Got response bytes");
         data_transformer.bytes_to_response(&response_data)
     }
 }

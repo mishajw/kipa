@@ -5,21 +5,34 @@ use node::Node;
 use request_handler::graph::key_space::{remove_duplicate_keys,
                                         sort_key_relative, KeySpace};
 
+use slog::Logger;
+
 /// Holds the neighbour store data
 pub struct NeighboursStore {
     local_key_space: KeySpace,
     size: usize,
     neighbours: Vec<(Node, KeySpace)>,
+    log: Logger,
 }
 
 impl NeighboursStore {
     /// Create a new neighbour store with a size and the key of the local node.
-    pub fn new(local_key: Key, size: usize, key_space_size: usize) -> Self {
+    pub fn new(
+        local_key: Key,
+        size: usize,
+        key_space_size: usize,
+        log: Logger,
+    ) -> Self {
         let local_key_space = KeySpace::from_key(&local_key, key_space_size);
+        info!(
+            log,
+            "Creating neighbours store";
+            "local_key_space" => local_key_space.to_string());
         NeighboursStore {
             local_key_space: local_key_space,
             size: size,
             neighbours: vec![],
+            log: log,
         }
     }
 
@@ -48,7 +61,10 @@ impl NeighboursStore {
 
     /// Given a node, consider keeping it as a neighbour.
     pub fn consider_candidate(&mut self, node: &Node) {
-        trace!("Considering candidate neighbour: {}", node);
+        info!(
+            self.log,
+            "Considering candidate neighbour";
+            "node" => %node);
 
         let key_space =
             KeySpace::from_key(&node.key, self.local_key_space.get_size());
@@ -87,9 +103,12 @@ mod test {
     use super::*;
     use key::Key;
     use address::Address;
+    use slog;
 
     #[test]
     fn test_consider_candidates() {
+        let test_log = Logger::root(slog::Discard, o!());
+
         let keys = vec![
             Key::new("00000001".to_string(), vec![1]),
             Key::new("00000002".to_string(), vec![2]),
@@ -100,10 +119,11 @@ mod test {
             Key::new("00000007".to_string(), vec![7]),
         ];
 
-        let mut ns = NeighboursStore::new(keys[keys.len() - 1].clone(), 3, 2);
+        let mut ns = NeighboursStore::new(
+            keys[keys.len() - 1].clone(), 3, 2, test_log);
         for i in 0..keys.len() - 1 {
             ns.consider_candidate(&Node::new(
-                Address::new(vec![], 0),
+                Address::new(vec![0, 0, 0, 0], 0),
                 keys[i].clone(),
             ));
         }

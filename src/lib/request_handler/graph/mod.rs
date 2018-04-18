@@ -16,6 +16,7 @@ use api::{MessageSender, RequestMessage, RequestPayload, ResponsePayload};
 use request_handler::RequestHandler;
 
 use std::sync::{Arc, Mutex};
+use slog::Logger;
 
 /// The default size of the neighbours store
 pub const DEFAULT_NEIGHBOURS_SIZE: usize = 3;
@@ -32,6 +33,7 @@ pub struct GraphRequestHandler {
     neighbours_store: Arc<Mutex<NeighboursStore>>,
     graph_search: Arc<GraphSearch>,
     key_space_size: usize,
+    log: Logger,
 }
 
 impl GraphRequestHandler {
@@ -45,6 +47,7 @@ impl GraphRequestHandler {
         remote_server: Arc<Client>,
         neighbours_size: usize,
         key_space_size: usize,
+        log: Logger,
     ) -> Self {
         let remote_server_clone = remote_server.clone();
 
@@ -52,47 +55,58 @@ impl GraphRequestHandler {
             key.clone(),
             neighbours_size,
             key_space_size,
+            log.new(o!("neighbours-store" => true)),
         )));
 
         let graph_search_key = key.clone();
         let graph_search_neighbours_store = neighbours_store.clone();
-        let graph_search = GraphSearch::new(Arc::new(move |n, k: &Key| {
-            if n.key == graph_search_key {
-                return Ok(graph_search_neighbours_store
-                    .lock()
-                    .unwrap()
-                    .get_all());
-            }
+        let graph_search = GraphSearch::new(
+            Arc::new(move |n, k: &Key| {
+                if n.key == graph_search_key {
+                    return Ok(graph_search_neighbours_store
+                        .lock()
+                        .unwrap()
+                        .get_all());
+                }
 
-            let response = remote_server_clone
-                .receive(n, RequestPayload::QueryRequest(k.clone()))?;
+                let response = remote_server_clone
+                    .receive(n, RequestPayload::QueryRequest(k.clone()))?;
 
-            match response.payload {
-                ResponsePayload::QueryResponse(ref nodes) => Ok(nodes.clone()),
-                _ => Err(ErrorKind::ResponseError(
-                    "Incorrect response for query request".into(),
-                ).into()),
-            }
-        }));
+                match response.payload {
+                    ResponsePayload::QueryResponse(ref nodes) => {
+                        Ok(nodes.clone())
+                    }
+                    _ => Err(ErrorKind::ResponseError(
+                        "Incorrect response for query request".into(),
+                    ).into()),
+                }
+            }),
+            log.new(o!("search" => true)),
+        );
 
         GraphRequestHandler {
             key: key,
             neighbours_store: neighbours_store,
             graph_search: Arc::new(graph_search),
             key_space_size: key_space_size,
+            log: log,
         }
     }
 
     fn search(&self, key: &Key) -> Result<Option<Node>> {
         let callback_key = key.clone();
+        let found_log = self.log.new(o!());
         let found_callback = move |n: &Node| {
-            trace!("Found node when searching: {}", n);
+            trace!(
+                found_log, "Found node when searching"; "node" => %n);
             if n.key == callback_key {
                 Ok(SearchCallbackReturn::Return(n.clone()))
             } else {
                 Ok(SearchCallbackReturn::Continue())
             }
         };
+
+        let explored_log = self.log.new(o!());
 
         self.graph_search.search(
             &key,
@@ -103,8 +117,11 @@ impl GraphRequestHandler {
                 ),
             ],
             Arc::new(found_callback),
-            Arc::new(|n| {
-                trace!("Explored node when searching: {}", n);
+            Arc::new(move |n| {
+                trace!(
+                    explored_log,
+                    "Explored node when searching";
+                    "node" => %n);
                 Ok(SearchCallbackReturn::Continue())
             }),
         )
@@ -126,8 +143,12 @@ impl GraphRequestHandler {
         let found_n_closest = n_closest.clone();
         let found_key_space_size = self.key_space_size.clone();
         let found_neighbours_store = self.neighbours_store.clone();
+        let found_log = self.log.new(o!());
         let found_callback = move |n: &Node| {
-            trace!("Found node when connecting: {}", n);
+            trace!(
+                found_log,
+                "Found node when connecting";
+                "node" => %n);
             // Consider the connected node as a candidate
             found_neighbours_store
                 .lock()
@@ -152,8 +173,12 @@ impl GraphRequestHandler {
         };
 
         let explored_n_closest = n_closest.clone();
+        let explored_log = self.log.new(o!());
         let explored_callback = move |n: &Node| {
-            trace!("Explored node when connecting: {}", n);
+            trace!(
+                explored_log,
+                "Explored node when connecting";
+                "node" => %n);
 
             // Set the `n_closest` value to explored
             let mut n_closest_local = explored_n_closest
@@ -189,7 +214,10 @@ impl GraphRequestHandler {
 
 impl RequestHandler for GraphRequestHandler {
     fn receive(&self, request: &RequestMessage) -> Result<ResponsePayload> {
-        info!("Received request from {}", request.sender);
+        info!(
+            self.log,
+            "Received request";
+            "sender" => %request.sender);
 
         match &request.sender {
             &MessageSender::Node(ref n) => {
@@ -200,25 +228,36 @@ impl RequestHandler for GraphRequestHandler {
 
         match &request.payload {
             &RequestPayload::QueryRequest(ref key) => {
-                trace!("Received query request");
+                trace!(
+                    self.log,
+                    "Received query request";
+                    "key" => %key);
                 let nodes =
                     self.neighbours_store.lock().unwrap().get_n_closest(key, 3);
                 trace!(
-                    "Replying with nodes: {:?}",
-                    nodes
+                    self.log,
+                    "Replying";
+                    "response" => nodes
                         .iter()
-                        .map(|n| n.key.get_key_id())
-                        .collect::<Vec<&String>>()
+                        .map(|n| n.key.get_key_id().clone())
+                        .collect::<Vec<String>>()
+                        .join(", ")
                 );
 
                 Ok(ResponsePayload::QueryResponse(nodes))
             }
             &RequestPayload::SearchRequest(ref key) => {
-                trace!("Received search request for key {}", key);
+                trace!(
+                    self.log,
+                    "Received search request";
+                    "key" => %key);
                 Ok(ResponsePayload::SearchResponse(self.search(&key)?))
             }
             &RequestPayload::ConnectRequest(ref node) => {
-                trace!("Received connect request for node {}", node);
+                trace!(
+                    self.log,
+                    "Received connect request";
+                    "node" => %node);
                 self.connect(node)?;
                 Ok(ResponsePayload::ConnectResponse())
             }

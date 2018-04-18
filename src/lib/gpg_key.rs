@@ -4,25 +4,30 @@ use error::*;
 use key::Key;
 
 use gpgme;
+use slog::Logger;
 
 /// Provide wrapped GPGME functionality.
 pub struct GpgKeyHandler {
     context: gpgme::Context,
+    log: Logger,
 }
 
 impl GpgKeyHandler {
     /// Create a new handler. Creates a new GPGME context.
-    pub fn new() -> Result<Self> {
+    pub fn new(log: Logger) -> Result<Self> {
         let context = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)
             .chain_err(|| "Error on creating GPGME context")?;
-        trace!("Created GPG key handler");
-        Ok(GpgKeyHandler { context: context })
+        debug!(log, "Created GPG key handler");
+        Ok(GpgKeyHandler {
+            context: context,
+            log: log,
+        })
     }
 
     /// Get the key for a key ID string. The string must be eight characters
     /// long.
     pub fn get_key(&mut self, key_id: String) -> Result<Key> {
-        trace!("Requested key ID: {}", key_id);
+        trace!(self.log, "Requested key ID"; "key_id" => &key_id);
 
         let key = self.context
             .find_key(key_id.clone())

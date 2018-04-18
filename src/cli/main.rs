@@ -1,9 +1,11 @@
 extern crate clap;
 extern crate error_chain;
 extern crate kipa_lib;
+
 #[macro_use]
-extern crate log;
-extern crate simple_logger;
+extern crate slog;
+extern crate slog_async;
+extern crate slog_term;
 
 use kipa_lib::creators::*;
 use kipa_lib::error::*;
@@ -14,8 +16,8 @@ use kipa_lib::{Address, Node};
 use error_chain::ChainedError;
 
 fn main() {
-    simple_logger::init().unwrap();
-    info!("Starting CLI");
+    let log = create_logger("cli");
+    info!(log, "Starting CLI");
 
     let args = clap::App::new("kipa_daemon")
         .arg(
@@ -59,24 +61,27 @@ fn main() {
         )
         .get_matches();
 
-    if let Err(err) = message_daemon(&args) {
+    if let Err(err) = message_daemon(&args, &log) {
         println!("{}", err.display_chain().to_string());
     }
 }
 
-fn message_daemon(args: &clap::ArgMatches) -> Result<()> {
-    let mut gpg_key_handler = GpgKeyHandler::new()?;
+fn message_daemon(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
+    let mut gpg_key_handler = GpgKeyHandler::new(log.new(o!("gpg" => true)))?;
 
     let data_transformer = create_data_transformer()?;
 
-    let local_send_server =
-        create_local_client(data_transformer.clone(), args)?;
+    let local_client = create_local_client(
+        data_transformer.clone(),
+        args,
+        log.new(o!("local-client" => true)),
+    )?;
 
     if let Some(search_args) = args.subcommand_matches("search") {
         let search_key = gpg_key_handler
             .get_key(String::from(search_args.value_of("key_id").unwrap()))?;
-        let response = local_send_server
-            .receive(RequestPayload::SearchRequest(search_key))?;
+        let response =
+            local_client.receive(RequestPayload::SearchRequest(search_key))?;
 
         match response.payload {
             ResponsePayload::SearchResponse(Some(ref node)) => {
@@ -98,7 +103,7 @@ fn message_daemon(args: &clap::ArgMatches) -> Result<()> {
         let node = Node::new(node_address, node_key);
 
         let response =
-            local_send_server.receive(RequestPayload::ConnectRequest(node))?;
+            local_client.receive(RequestPayload::ConnectRequest(node))?;
 
         match response.payload {
             ResponsePayload::ConnectResponse() => {

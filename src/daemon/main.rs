@@ -2,8 +2,9 @@ extern crate clap;
 extern crate error_chain;
 extern crate kipa_lib;
 #[macro_use]
-extern crate log;
-extern crate simple_logger;
+extern crate slog;
+extern crate slog_async;
+extern crate slog_term;
 
 use kipa_lib::creators::*;
 use kipa_lib::error::*;
@@ -15,8 +16,8 @@ use error_chain::ChainedError;
 use std::thread;
 
 fn main() {
-    simple_logger::init().unwrap();
-    info!("Starting servers");
+    let log = create_logger("daemon");
+    info!(log, "Starting servers");
 
     let args = clap::App::new("kipa_daemon")
         .arg(
@@ -50,13 +51,13 @@ fn main() {
         )
         .get_matches();
 
-    if let Err(err) = run_servers(&args) {
+    if let Err(err) = run_servers(&args, &log) {
         println!("{}", err.display_chain().to_string());
     }
 }
 
-fn run_servers(args: &clap::ArgMatches) -> Result<()> {
-    let mut gpg_key_handler = GpgKeyHandler::new()?;
+fn run_servers(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
+    let mut gpg_key_handler = GpgKeyHandler::new(log.new(o!("gpg" => true)))?;
 
     // Create local node
     let port = args.value_of("port")
@@ -73,18 +74,26 @@ fn run_servers(args: &clap::ArgMatches) -> Result<()> {
     let data_transformer = create_data_transformer()?;
 
     // Set up out communication
-    let remote_server =
-        create_global_client(data_transformer.clone(), local_node.clone())?;
+    let global_client = create_global_client(
+        data_transformer.clone(),
+        local_node.clone(),
+        log.new(o!("global-client" => true)),
+    )?;
 
     // Set up request handler
-    let request_handler =
-        create_request_handler(local_node.clone(), remote_server, args)?;
+    let request_handler = create_request_handler(
+        local_node.clone(),
+        global_client,
+        args,
+        log.new(o!("request-handler" => true)),
+    )?;
 
     // Set up listening for connections
     let global_server = create_global_server(
         request_handler.clone(),
         data_transformer.clone(),
         local_node.clone(),
+        log.new(o!("global-server" => true)),
     )?;
 
     // Set up local listening for requests
@@ -92,6 +101,7 @@ fn run_servers(args: &clap::ArgMatches) -> Result<()> {
         request_handler.clone(),
         data_transformer.clone(),
         args,
+        log.new(o!("local-server" => true)),
     )?;
 
     let global_server_thread = thread::spawn(move || {

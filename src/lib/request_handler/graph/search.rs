@@ -9,6 +9,8 @@ use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashSet};
 use std::sync::Arc;
 
+use slog::Logger;
+
 pub enum SearchCallbackReturn<T> {
     Continue(),
     Return(T),
@@ -35,6 +37,7 @@ macro_rules! return_callback {
 /// Contains data for graph search
 pub struct GraphSearch {
     get_neighbours_fn: GetNeighboursFn,
+    log: Logger,
 }
 
 #[derive(Clone)]
@@ -66,9 +69,10 @@ impl PartialOrd for SearchNode {
 impl GraphSearch {
     /// Create a new graph search with a function for retrieving the neighbours
     /// of the node.
-    pub fn new(get_neighbours_fn: GetNeighboursFn) -> Self {
+    pub fn new(get_neighbours_fn: GetNeighboursFn, log: Logger) -> Self {
         GraphSearch {
             get_neighbours_fn: get_neighbours_fn,
+            log: log,
         }
     }
 
@@ -80,7 +84,7 @@ impl GraphSearch {
         found_node_callback: FoundNodeCallback<T>,
         explored_node_callback: ExploredNodeCallback<T>,
     ) -> Result<Option<T>> {
-        info!("Starting graph search for key {}", key);
+        info!(self.log, "Starting graph search"; "key" => %key);
 
         let key_space = KeySpace::from_key(key, 2);
         // Create structures for the search.
@@ -106,27 +110,28 @@ impl GraphSearch {
 
         while let Some(next_node) = to_explore.pop() {
             trace!(
-                "found: {:?}",
-                found
+                self.log,
+                "Search loop iteration";
+                "current_node" => %next_node.node,
+                "found" => found
                     .iter()
-                    .map(|k| k.get_key_id())
-                    .collect::<Vec<&String>>()
-            );
-            trace!(
-                "Current node is {}, have {} to explore",
-                next_node.node,
-                to_explore.len()
+                    .map(|k| k.get_key_id().clone())
+                    .collect::<Vec<String>>()
+                    .join(", "),
+                "left_to_explore" => to_explore.len()
             );
 
             // Get the neighbours of the node
             let neighbours = (*self.get_neighbours_fn)(&next_node.node, key)?;
             trace!(
-                "Found neighbours for node {}: {:?}",
-                next_node.node,
-                neighbours
+                self.log,
+                "Found neighbours for node";
+                "node" => %next_node.node,
+                "neigbours" => neighbours
                     .iter()
-                    .map(|n| n.key.get_key_id())
-                    .collect::<Vec<&String>>()
+                    .map(|n| n.key.get_key_id().clone())
+                    .collect::<Vec<String>>()
+                    .join(", ")
             );
 
             for n in neighbours {
@@ -134,11 +139,17 @@ impl GraphSearch {
 
                 // If we've seen it before, ignore it
                 if found.contains(&search_node.node.key) {
-                    trace!("seen {} before", search_node.node.key);
+                    trace!(
+                        self.log,
+                        "Seen before";
+                        "node" => %search_node.node.key);
                     continue;
                 }
 
-                trace!("first encounter with {}", search_node.node.key);
+                trace!(
+                    self.log,
+                    "First encounter";
+                    "node" => %search_node.node.key);
                 found.insert(search_node.node.key.clone());
 
                 // Handle returning callback values
@@ -150,7 +161,7 @@ impl GraphSearch {
             return_callback!(explored_node_callback(&next_node.node)?);
         }
 
-        trace!("Failed to find key {}", key);
+        info!(self.log, "Failed to find key"; "key" => %key);
         Ok(None)
     }
 }

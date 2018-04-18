@@ -12,11 +12,14 @@ use socket_server::{SocketClient, SocketServer};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener, TcpStream};
 use std::sync::Arc;
 
+use slog::Logger;
+
 /// Server that listens for global requests on a specified TCP socket.
 pub struct TcpGlobalServer {
     request_handler: Arc<RequestHandler>,
     data_transformer: Arc<DataTransformer>,
     local_node: Node,
+    log: Logger,
 }
 
 impl TcpGlobalServer {
@@ -28,11 +31,13 @@ impl TcpGlobalServer {
         request_handler: Arc<RequestHandler>,
         data_transformer: Arc<DataTransformer>,
         local_node: Node,
+        log: Logger,
     ) -> Self {
         TcpGlobalServer {
             request_handler: request_handler,
             data_transformer: data_transformer,
             local_node: local_node,
+            log: log,
         }
     }
 }
@@ -43,7 +48,11 @@ impl Server for TcpGlobalServer {
             IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
             self.local_node.address.port,
         )).chain_err(|| "Error on bind to TCP socket")?;
-        trace!("Setting up server on port {}", self.local_node.address.port);
+        trace!(
+            self.log,
+            "Setting up server on port {}",
+            self.local_node.address.port
+        );
 
         listener.incoming().for_each(|socket| {
             self.handle_socket_result(
@@ -60,6 +69,10 @@ impl Server for TcpGlobalServer {
 impl SocketServer for TcpGlobalServer {
     type SocketType = TcpStream;
 
+    fn get_log(&self) -> &Logger {
+        &self.log
+    }
+
     fn payload_to_response(
         &self,
         response_payload: ResponsePayload,
@@ -75,6 +88,7 @@ impl SocketServer for TcpGlobalServer {
 pub struct TcpGlobalClient {
     data_transformer: Arc<DataTransformer>,
     local_node: Node,
+    log: Logger,
 }
 
 impl TcpGlobalClient {
@@ -83,16 +97,22 @@ impl TcpGlobalClient {
     pub fn new(
         data_transformer: Arc<DataTransformer>,
         local_node: Node,
+        log: Logger,
     ) -> Self {
         TcpGlobalClient {
             data_transformer: data_transformer,
             local_node: local_node,
+            log: log,
         }
     }
 }
 
 impl SocketClient for TcpGlobalClient {
     type SocketType = TcpStream;
+
+    fn get_log(&self) -> &Logger {
+        &self.log
+    }
 
     fn create_socket(&self, node: &Node) -> Result<TcpStream> {
         TcpStream::connect(&node.address.get_socket_addr())
