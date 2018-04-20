@@ -1,5 +1,7 @@
 import random
 from typing import List, Dict
+import json
+
 
 from docker.models.containers import Container
 
@@ -35,3 +37,12 @@ class Network:
             f"Bad return code when executing command: {command}. " \
             f"Output was: {output}"
         return output
+
+    def get_logs(self, key_id: str) -> List[dict]:
+        raw_logs = self.exec_command(key_id, ["cat", "/root/log-daemon.json"])
+        logs: List[dict] = []
+        for line in (raw_logs.split("\n")):
+            if line.strip() == "":
+                continue
+            logs.append(json.loads(line))
+        return logs
