@@ -1,39 +1,44 @@
-//! Implement `RequestHandler` but never return anything. Used for testing.
+//! Implement `PayloadHandler` but never return anything. Used for testing.
 
+use api::{RequestPayload, ResponsePayload};
 use error::*;
-use api::{RequestMessage, RequestPayload, ResponsePayload};
-use request_handler::RequestHandler;
+use node::Node;
+use payload_handler::PayloadHandler;
 
 use slog::Logger;
 
 /// The request handler that returns nothing.
-pub struct BlackHoleRequestHandler {
+pub struct BlackHolePayloadHandler {
     log: Logger,
 }
 
-impl BlackHoleRequestHandler {
+impl BlackHolePayloadHandler {
     /// Create a new black hole request handler
     pub fn new(log: Logger) -> Self {
-        BlackHoleRequestHandler { log: log }
+        BlackHolePayloadHandler { log: log }
     }
 }
 
-impl RequestHandler for BlackHoleRequestHandler {
-    fn receive(&self, request: &RequestMessage) -> Result<ResponsePayload> {
-        match request.payload {
-            RequestPayload::QueryRequest(_) => {
+impl PayloadHandler for BlackHolePayloadHandler {
+    fn receive(
+        &self,
+        request: &RequestPayload,
+        _sender: Option<&Node>,
+    ) -> Result<ResponsePayload> {
+        match request {
+            &RequestPayload::QueryRequest(_) => {
                 trace!(self.log, "Received query request");
                 Ok(ResponsePayload::QueryResponse(vec![]))
             }
-            RequestPayload::SearchRequest(_) => {
+            &RequestPayload::SearchRequest(_) => {
                 trace!(self.log, "Received search request");
                 Ok(ResponsePayload::SearchResponse(None))
             }
-            RequestPayload::ConnectRequest(_) => {
+            &RequestPayload::ConnectRequest(_) => {
                 trace!(self.log, "Received connect request");
                 Ok(ResponsePayload::ConnectResponse())
             }
-            RequestPayload::ListNeighboursRequest() => {
+            &RequestPayload::ListNeighboursRequest() => {
                 trace!(self.log, "Received list neighbours request");
                 Ok(ResponsePayload::ListNeighboursResponse(vec![]))
             }

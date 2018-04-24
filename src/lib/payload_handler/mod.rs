@@ -1,6 +1,8 @@
 //! Handle providing `Response`s for `Request`s.
 
-use api::{RequestMessage, ResponsePayload};
+use api::{RequestPayload, ResponsePayload};
+use node::Node;
+
 use error::*;
 
 #[cfg(feature = "use-graph")]
@@ -10,7 +12,11 @@ pub mod graph;
 pub mod black_hole;
 
 /// Trait for any type that handles requests.
-pub trait RequestHandler: Send + Sync {
+pub trait PayloadHandler: Send + Sync {
     /// Process a `RequestMessage` and return the correct `ResponseMessage`.
-    fn receive(&self, req: &RequestMessage) -> Result<ResponsePayload>;
+    fn receive(
+        &self,
+        payload: &RequestPayload,
+        sender: Option<&Node>,
+    ) -> Result<ResponsePayload>;
 }

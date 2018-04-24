@@ -2,7 +2,7 @@
 
 use key::Key;
 use node::Node;
-use request_handler::graph::key_space::{remove_duplicate_keys,
+use payload_handler::graph::key_space::{remove_duplicate_keys,
                                         sort_key_relative, KeySpace};
 
 use slog::Logger;

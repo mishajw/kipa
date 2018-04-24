@@ -11,7 +11,7 @@ pub mod tcp;
 pub mod unix_socket;
 
 /// Create a server that can listen for requests from remote KIPA nodes and pass
-/// them to `RequestHandler`.
+/// them to `PayloadHandler`.
 pub trait Server: Send + Sync {
     /// Start the server.
     fn start(&self) -> Result<()>;

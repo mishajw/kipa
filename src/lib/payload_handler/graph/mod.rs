@@ -1,4 +1,4 @@
-//! Implement `RequestHandler` using graph based searches through KIPA net.
+//! Implement `PayloadHandler` using graph based searches through KIPA net.
 
 mod search;
 mod neighbours_store;
@@ -9,11 +9,11 @@ use server::Client;
 use key::Key;
 use node::Node;
 use address::Address;
-use request_handler::graph::neighbours_store::NeighboursStore;
-use request_handler::graph::key_space::{sort_key_relative, KeySpace};
-use request_handler::graph::search::{GraphSearch, SearchCallbackReturn};
-use api::{MessageSender, RequestMessage, RequestPayload, ResponsePayload};
-use request_handler::RequestHandler;
+use payload_handler::graph::neighbours_store::NeighboursStore;
+use payload_handler::graph::key_space::{sort_key_relative, KeySpace};
+use payload_handler::graph::search::{GraphSearch, SearchCallbackReturn};
+use api::{RequestPayload, ResponsePayload};
+use payload_handler::PayloadHandler;
 
 use std::sync::{Arc, Mutex};
 use slog::Logger;
@@ -28,7 +28,7 @@ pub const DEFAULT_KEY_SPACE_SIZE: usize = 2;
 pub const DEFAULT_CONNECT_SEARCH_SIZE: usize = 3;
 
 /// Contains graph search information.
-pub struct GraphRequestHandler {
+pub struct GraphPayloadHandler {
     key: Key,
     neighbours_store: Arc<Mutex<NeighboursStore>>,
     graph_search: Arc<GraphSearch>,
@@ -36,7 +36,7 @@ pub struct GraphRequestHandler {
     log: Logger,
 }
 
-impl GraphRequestHandler {
+impl GraphPayloadHandler {
     /// Create a new graph request handler.
     ///
     /// - `key` is the key for the local node.
@@ -84,7 +84,7 @@ impl GraphRequestHandler {
             log.new(o!("search" => true)),
         );
 
-        GraphRequestHandler {
+        GraphPayloadHandler {
             key: key,
             neighbours_store: neighbours_store,
             graph_search: Arc::new(graph_search),
@@ -212,21 +212,25 @@ impl GraphRequestHandler {
     }
 }
 
-impl RequestHandler for GraphRequestHandler {
-    fn receive(&self, request: &RequestMessage) -> Result<ResponsePayload> {
+impl PayloadHandler for GraphPayloadHandler {
+    fn receive(
+        &self,
+        payload: &RequestPayload,
+        sender: Option<&Node>,
+    ) -> Result<ResponsePayload> {
         info!(
             self.log,
             "Received request";
-            "sender" => %request.sender);
+            "sender" => sender.map(|n| n.to_string()).unwrap_or("none".into()));
 
-        match &request.sender {
-            &MessageSender::Node(ref n) => {
-                self.neighbours_store.lock().unwrap().consider_candidate(&n)
-            }
-            &MessageSender::Cli() => {}
-        };
+        if sender.is_some() {
+            self.neighbours_store
+                .lock()
+                .unwrap()
+                .consider_candidate(&sender.unwrap());
+        }
 
-        match &request.payload {
+        match payload {
             &RequestPayload::QueryRequest(ref key) => {
                 trace!(
                     self.log,

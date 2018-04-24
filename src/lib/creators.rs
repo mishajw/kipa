@@ -6,7 +6,8 @@ use data_transformer::DataTransformer;
 use error::*;
 #[allow(unused)]
 use server::{Client, LocalClient, Server};
-use request_handler::RequestHandler;
+use payload_handler::PayloadHandler;
+use message_handler::MessageHandler;
 use node::Node;
 
 #[allow(unused)]
@@ -71,12 +72,12 @@ cfg_if! {
 
         /// Create a `GlobalRecieveServer`
         pub fn create_global_server(
-                request_handler: Arc<RequestHandler>,
+                message_handler: Arc<MessageHandler>,
                 data_transformer: Arc<DataTransformer>,
                 local_node: Node,
                 log: Logger) -> Result<Arc<Mutex<Server>>> {
             Ok(Arc::new(Mutex::new(TcpGlobalServer::new(
-                request_handler,
+                message_handler,
                 data_transformer.clone(),
                 local_node,
                 log))))
@@ -94,7 +95,7 @@ cfg_if! {
 
         #[allow(missing_docs)]
         pub fn create_global_server(
-            _request_handler: Arc<RequestHandler>,
+            _message_handler: Arc<MessageHandler>,
             _data_transformer: Arc<DataTransformer>,
             _local_node: Node,
             _log: Logger,
@@ -114,14 +115,14 @@ cfg_if! {
 
         /// Create a `LocalReceiveServer`
         pub fn create_local_server(
-                request_handler: Arc<RequestHandler>,
+                message_handler: Arc<MessageHandler>,
                 data_transformer: Arc<DataTransformer>,
                 args: &clap::ArgMatches,
                 log: Logger) -> Result<Arc<Mutex<Server>>> {
             let socket_path = args.value_of("socket_path")
                 .unwrap_or(DEFAULT_UNIX_SOCKET_PATH);
             Ok(Arc::new(Mutex::new(UnixSocketLocalServer::new(
-                request_handler,
+                message_handler,
                 data_transformer,
                 String::from(socket_path),
                 log)?)))
@@ -142,7 +143,7 @@ cfg_if! {
     } else {
         #[allow(missing_docs)]
         pub fn create_local_server(
-                _request_handler: Arc<RequestHandler>,
+                _message_handler: Arc<MessageHandler>,
                 _data_transformer: Arc<DataTransformer>,
                 _args: &clap::ArgMatches,
                 _log: Logger) -> Result<Arc<Mutex<Server>>> {
@@ -161,19 +162,27 @@ cfg_if! {
     }
 }
 
+/// Create a `MessageHandler`.
+pub fn create_message_handler(
+    payload_handler: Arc<PayloadHandler>,
+    local_node: Node,
+) -> Arc<MessageHandler> {
+    Arc::new(MessageHandler::new(payload_handler, local_node))
+}
+
 cfg_if! {
     if #[cfg(feature = "use-graph")] {
-        use request_handler::graph::{
-            GraphRequestHandler,
+        use payload_handler::graph::{
+            GraphPayloadHandler,
             DEFAULT_NEIGHBOURS_SIZE,
             DEFAULT_KEY_SPACE_SIZE};
 
-        /// Create a `RequestHandler`
-        pub fn create_request_handler(
+        /// Create a `PayloadHandler`
+        pub fn create_payload_handler(
                 local_node: Node,
                 client: Arc<Client>,
                 args: &clap::ArgMatches,
-                log: Logger) -> Result<Arc<RequestHandler>> {
+                log: Logger) -> Result<Arc<PayloadHandler>> {
 
             let neighbours_size = args.value_of("neighbours_size")
                 .unwrap_or(&DEFAULT_NEIGHBOURS_SIZE.to_string())
@@ -185,7 +194,7 @@ cfg_if! {
                 .parse::<usize>()
                 .chain_err(|| "Error on parsing key space size")?;
 
-            Ok(Arc::new(GraphRequestHandler::new(
+            Ok(Arc::new(GraphPayloadHandler::new(
                 local_node.key,
                 client,
                 neighbours_size,
@@ -193,23 +202,23 @@ cfg_if! {
                 log)))
         }
     } else if #[cfg(feature = "use-black-hole")] {
-        use request_handler::black_hole::BlackHoleRequestHandler;
+        use payload_handler::black_hole::BlackHolePayloadHandler;
 
         #[allow(missing_docs)]
-        pub fn create_request_handler(
+        pub fn create_payload_handler(
                 _local_node: Node,
                 _client: Arc<Client>,
                 _args: &clap::ArgMatches,
-                log: Logger) -> Result<Arc<RequestHandler>> {
-            Ok(Arc::new(BlackHoleRequestHandler::new(log)))
+                log: Logger) -> Result<Arc<PayloadHandler>> {
+            Ok(Arc::new(BlackHolePayloadHandler::new(log)))
         }
     } else {
         #[allow(missing_docs)]
-        pub fn create_request_handler(
+        pub fn create_payload_handler(
                 _local_node: Node,
                 _client: Arc<Client>,
                 _args: &clap::ArgMatches,
-                _log: Logger) -> Result<Arc<RequestHandler>> {
+                _log: Logger) -> Result<Arc<PayloadHandler>> {
             Err(ErrorKind::ConfigError(
                 "A request handler feature was not selected".into()).into())
         }

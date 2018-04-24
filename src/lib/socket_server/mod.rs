@@ -4,11 +4,11 @@
 //! sockets, and use `DataHandler` types to convert these into `Request`s and
 //! `Response`s.
 
-use error::*;
-use node::Node;
-use api::{RequestMessage, ResponseMessage, ResponsePayload};
-use request_handler::RequestHandler;
+use api::{RequestMessage, ResponseMessage};
 use data_transformer::DataTransformer;
+use error::*;
+use message_handler::MessageHandler;
+use node::Node;
 
 use byteorder::{NetworkEndian, ReadBytesExt, WriteBytesExt};
 use error_chain::ChainedError;
@@ -23,7 +23,7 @@ use slog::Logger;
 pub const DEFAULT_PORT: u16 = 10842;
 
 /// Create a server that can listen for requests and pass onto a
-/// `RequestHandler`.
+/// `PayloadHandler`.
 pub trait SocketServer: Send + Sync {
     /// The type of the socket to use for sending/receiveing data
     type SocketType: Read + Write;
@@ -35,13 +35,13 @@ pub trait SocketServer: Send + Sync {
     fn handle_socket_result(
         &self,
         socket_result: Result<Self::SocketType>,
-        request_handler: Arc<RequestHandler>,
+        message_handler: Arc<MessageHandler>,
         data_transformer: Arc<DataTransformer>,
     ) {
         let result = socket_result.and_then(|mut socket| {
             self.handle_socket(
                 &mut socket,
-                &*request_handler,
+                &*message_handler,
                 &*data_transformer,
             )
         });
@@ -58,7 +58,7 @@ pub trait SocketServer: Send + Sync {
     fn handle_socket(
         &self,
         socket: &mut Self::SocketType,
-        request_handler: &RequestHandler,
+        message_handler: &MessageHandler,
         data_transformer: &DataTransformer,
     ) -> Result<()> {
         trace!(self.get_log(), "Reading request from socket");
@@ -69,19 +69,12 @@ pub trait SocketServer: Send + Sync {
             data_transformer.bytes_to_request(&request_data.to_vec())?;
 
         trace!(self.get_log(), "Sending response");
-        let response_payload = request_handler.receive(&request)?;
-        let response = self.payload_to_response(response_payload);
+        let response = message_handler.receive(request)?;
         let response_data = data_transformer.response_to_bytes(&response)?;
         send_data(&response_data, socket)?;
         trace!(self.get_log(), "Sent response bytes");
         Ok(())
     }
-
-    /// Convert a payload of a response into a response message.
-    fn payload_to_response(
-        &self,
-        response_payload: ResponsePayload,
-    ) -> ResponseMessage;
 
     /// Check that the request is OK to process.
     fn check_request(&self, request: &RequestMessage) -> Result<()>;

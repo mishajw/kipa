@@ -1,12 +1,12 @@
 //! Implementation of servers using TCP sockets.
 
 use api::{ApiVisibility, MessageSender, RequestMessage, RequestPayload,
-          ResponseMessage, ResponsePayload};
+          ResponseMessage};
 use data_transformer::DataTransformer;
 use error::*;
 use server::{Client, Server};
 use node::Node;
-use request_handler::RequestHandler;
+use message_handler::MessageHandler;
 use socket_server::{SocketClient, SocketServer};
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener, TcpStream};
@@ -16,7 +16,7 @@ use slog::Logger;
 
 /// Server that listens for global requests on a specified TCP socket.
 pub struct TcpGlobalServer {
-    request_handler: Arc<RequestHandler>,
+    message_handler: Arc<MessageHandler>,
     data_transformer: Arc<DataTransformer>,
     local_node: Node,
     log: Logger,
@@ -28,13 +28,13 @@ impl TcpGlobalServer {
     /// - `data_transformer` used to decode requests.
     /// - `port` the port used to listen on.
     pub fn new(
-        request_handler: Arc<RequestHandler>,
+        message_handler: Arc<MessageHandler>,
         data_transformer: Arc<DataTransformer>,
         local_node: Node,
         log: Logger,
     ) -> Self {
         TcpGlobalServer {
-            request_handler: request_handler,
+            message_handler: message_handler,
             data_transformer: data_transformer,
             local_node: local_node,
             log: log,
@@ -57,7 +57,7 @@ impl Server for TcpGlobalServer {
         listener.incoming().for_each(|socket| {
             self.handle_socket_result(
                 socket.chain_err(|| "Failed to create socket"),
-                self.request_handler.clone(),
+                self.message_handler.clone(),
                 self.data_transformer.clone(),
             )
         });
@@ -71,16 +71,6 @@ impl SocketServer for TcpGlobalServer {
 
     fn get_log(&self) -> &Logger {
         &self.log
-    }
-
-    fn payload_to_response(
-        &self,
-        response_payload: ResponsePayload,
-    ) -> ResponseMessage {
-        ResponseMessage::new(
-            response_payload,
-            MessageSender::Node(self.local_node.clone()),
-        )
     }
 
     fn check_request(&self, request: &RequestMessage) -> Result<()> {

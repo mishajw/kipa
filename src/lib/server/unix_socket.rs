@@ -2,9 +2,9 @@
 //! such as the CLI.
 
 use error::*;
-use request_handler::RequestHandler;
+use message_handler::MessageHandler;
 use api::{ApiVisibility, MessageSender, RequestMessage, RequestPayload,
-          ResponseMessage, ResponsePayload};
+          ResponseMessage};
 use data_transformer::DataTransformer;
 use server::{LocalClient, Server};
 use socket_server::{receive_data, send_data, SocketServer};
@@ -19,7 +19,7 @@ pub const DEFAULT_UNIX_SOCKET_PATH: &str = "/tmp/kipa";
 
 /// Listens for local requests on a unix socket file.
 pub struct UnixSocketLocalServer {
-    request_handler: Arc<RequestHandler>,
+    message_handler: Arc<MessageHandler>,
     data_transformer: Arc<DataTransformer>,
     socket_path: String,
     log: Logger,
@@ -29,13 +29,13 @@ impl UnixSocketLocalServer {
     /// Create a new unix socket local receive server that listens on some file
     /// `socket_path`.
     pub fn new(
-        request_handler: Arc<RequestHandler>,
+        message_handler: Arc<MessageHandler>,
         data_transformer: Arc<DataTransformer>,
         socket_path: String,
         log: Logger,
     ) -> Result<Self> {
         Ok(UnixSocketLocalServer {
-            request_handler: request_handler,
+            message_handler: message_handler,
             data_transformer: data_transformer,
             socket_path: socket_path,
             log: log,
@@ -57,7 +57,7 @@ impl Server for UnixSocketLocalServer {
         listener.incoming().for_each(|socket| {
             self.handle_socket_result(
                 socket.chain_err(|| "Failed to create socket"),
-                self.request_handler.clone(),
+                self.message_handler.clone(),
                 self.data_transformer.clone(),
             )
         });
@@ -71,13 +71,6 @@ impl SocketServer for UnixSocketLocalServer {
 
     fn get_log(&self) -> &Logger {
         &self.log
-    }
-
-    fn payload_to_response(
-        &self,
-        response_payload: ResponsePayload,
-    ) -> ResponseMessage {
-        ResponseMessage::new(response_payload, MessageSender::Cli())
     }
 
     fn check_request(&self, request: &RequestMessage) -> Result<()> {

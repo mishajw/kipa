@@ -3,7 +3,7 @@
 use error::*;
 use key::Key;
 use node::Node;
-use request_handler::graph::key_space::KeySpace;
+use payload_handler::graph::key_space::KeySpace;
 
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashSet};

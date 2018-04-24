@@ -1,6 +1,6 @@
 //! Library to create and interface with KIPA daemons and other KIPA nodes.
 //!
-//! Structure for communicating between nodes is a `RequestHandler` that uses
+//! Structure for communicating between nodes is a `PayloadHandler` that uses
 //! `server::PublicServer` and `server::PrivateServer` to receive and send
 //! messages between nodes.
 //!
@@ -28,9 +28,10 @@ pub mod api;
 pub mod creators;
 pub mod data_transformer;
 pub mod error;
-pub mod server;
 pub mod gpg_key;
-pub mod request_handler;
+pub mod message_handler;
+pub mod payload_handler;
+pub mod server;
 pub mod socket_server;
 
 mod address;
