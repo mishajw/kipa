@@ -70,7 +70,7 @@ impl GraphPayloadHandler {
                 }
 
                 let response = remote_server_clone
-                    .receive(n, RequestPayload::QueryRequest(k.clone()))?;
+                    .send(n, RequestPayload::QueryRequest(k.clone()))?;
 
                 match response.payload {
                     ResponsePayload::QueryResponse(ref nodes) => {

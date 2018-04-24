@@ -121,7 +121,7 @@ impl SocketClient for TcpGlobalClient {
 }
 
 impl Client for TcpGlobalClient {
-    fn receive<'a>(
+    fn send<'a>(
         &self,
         node: &Node,
         request_payload: RequestPayload,

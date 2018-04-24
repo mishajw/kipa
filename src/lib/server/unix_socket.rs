@@ -108,7 +108,7 @@ impl UnixSocketLocalClient {
 }
 
 impl LocalClient for UnixSocketLocalClient {
-    fn receive<'a>(
+    fn send<'a>(
         &self,
         request_payload: RequestPayload,
     ) -> Result<ResponseMessage> {

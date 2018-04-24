@@ -85,7 +85,7 @@ fn message_daemon(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
         let search_key = gpg_key_handler
             .get_key(String::from(search_args.value_of("key_id").unwrap()))?;
         let response =
-            local_client.receive(RequestPayload::SearchRequest(search_key))?;
+            local_client.send(RequestPayload::SearchRequest(search_key))?;
 
         match response.payload {
             ResponsePayload::SearchResponse(Some(ref node)) => {
@@ -106,8 +106,7 @@ fn message_daemon(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
             Address::from_string(connect_args.value_of("address").unwrap())?;
         let node = Node::new(node_address, node_key);
 
-        let response =
-            local_client.receive(RequestPayload::ConnectRequest(node))?;
+        let response = local_client.send(RequestPayload::ConnectRequest(node))?;
 
         match response.payload {
             ResponsePayload::ConnectResponse() => {
@@ -118,7 +117,7 @@ fn message_daemon(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
         }
     } else if let Some(_) = args.subcommand_matches("list-neighbours") {
         let response =
-            local_client.receive(RequestPayload::ListNeighboursRequest())?;
+            local_client.send(RequestPayload::ListNeighboursRequest())?;
         match response.payload {
             ResponsePayload::ListNeighboursResponse(neighbours) => {
                 println!("Found neighbours:");
