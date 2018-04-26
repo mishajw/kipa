@@ -2,8 +2,10 @@
 
 use api::{RequestPayload, ResponsePayload};
 use node::Node;
-
+use message_handler::PayloadClient;
 use error::*;
+
+use std::sync::Arc;
 
 #[cfg(feature = "use-graph")]
 pub mod graph;
@@ -18,5 +20,6 @@ pub trait PayloadHandler: Send + Sync {
         &self,
         payload: &RequestPayload,
         sender: Option<&Node>,
+        payload_client: Arc<PayloadClient>,
     ) -> Result<ResponsePayload>;
 }

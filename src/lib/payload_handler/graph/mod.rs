@@ -5,15 +5,16 @@ mod neighbours_store;
 mod key_space;
 
 use error::*;
-use server::Client;
 use key::Key;
 use node::Node;
 use address::Address;
 use payload_handler::graph::neighbours_store::NeighboursStore;
 use payload_handler::graph::key_space::{sort_key_relative, KeySpace};
-use payload_handler::graph::search::{GraphSearch, SearchCallbackReturn};
+use payload_handler::graph::search::{GetNeighboursFn, GraphSearch,
+                                     SearchCallbackReturn};
 use api::{RequestPayload, ResponsePayload};
 use payload_handler::PayloadHandler;
+use message_handler::PayloadClient;
 
 use std::sync::{Arc, Mutex};
 use slog::Logger;
@@ -44,56 +45,31 @@ impl GraphPayloadHandler {
     /// - `initial_node` is the initial other node in KIPA network.
     pub fn new(
         key: Key,
-        remote_server: Arc<Client>,
         neighbours_size: usize,
         key_space_size: usize,
         log: Logger,
     ) -> Self {
-        let remote_server_clone = remote_server.clone();
-
-        let neighbours_store = Arc::new(Mutex::new(NeighboursStore::new(
-            key.clone(),
-            neighbours_size,
-            key_space_size,
-            log.new(o!("neighbours-store" => true)),
-        )));
-
-        let graph_search_key = key.clone();
-        let graph_search_neighbours_store = neighbours_store.clone();
-        let graph_search = GraphSearch::new(
-            Arc::new(move |n, k: &Key| {
-                if n.key == graph_search_key {
-                    return Ok(graph_search_neighbours_store
-                        .lock()
-                        .unwrap()
-                        .get_all());
-                }
-
-                let response = remote_server_clone
-                    .send(n, RequestPayload::QueryRequest(k.clone()))?;
-
-                match response.payload {
-                    ResponsePayload::QueryResponse(ref nodes) => {
-                        Ok(nodes.clone())
-                    }
-                    _ => Err(ErrorKind::ResponseError(
-                        "Incorrect response for query request".into(),
-                    ).into()),
-                }
-            }),
-            log.new(o!("search" => true)),
-        );
-
         GraphPayloadHandler {
-            key: key,
-            neighbours_store: neighbours_store,
-            graph_search: Arc::new(graph_search),
+            key: key.clone(),
+            neighbours_store: Arc::new(Mutex::new(NeighboursStore::new(
+                key,
+                neighbours_size,
+                key_space_size,
+                log.new(o!("neighbours-store" => true)),
+            ))),
+            graph_search: Arc::new(GraphSearch::new(log.new(
+                o!("search" => true),
+            ))),
             key_space_size: key_space_size,
             log: log,
         }
     }
 
-    fn search(&self, key: &Key) -> Result<Option<Node>> {
+    fn search(
+        &self,
+        key: &Key,
+        payload_client: Arc<PayloadClient>,
+    ) -> Result<Option<Node>> {
         let callback_key = key.clone();
         let found_log = self.log.new(o!());
         let found_callback = move |n: &Node| {
@@ -116,6 +92,7 @@ impl GraphPayloadHandler {
                     self.key.clone(),
                 ),
             ],
+            self.create_get_neighbours_fn(payload_client.clone()),
             Arc::new(found_callback),
             Arc::new(move |n| {
                 trace!(
@@ -127,7 +104,11 @@ impl GraphPayloadHandler {
         )
     }
 
-    fn connect(&self, node: &Node) -> Result<()> {
+    fn connect(
+        &self,
+        node: &Node,
+        payload_client: Arc<PayloadClient>,
+    ) -> Result<()> {
         // Continue the graph search looking for ourselves, until the `n`
         // closest nodes to ourselves have also been explored.
 
@@ -205,10 +186,34 @@ impl GraphPayloadHandler {
         self.graph_search.search(
             &self.key,
             vec![node.clone()],
+            self.create_get_neighbours_fn(payload_client.clone()),
             Arc::new(found_callback),
             Arc::new(explored_callback),
         )?;
         Ok(())
+    }
+
+    fn create_get_neighbours_fn(
+        &self,
+        payload_client: Arc<PayloadClient>,
+    ) -> GetNeighboursFn {
+        let neighbours_store = self.neighbours_store.clone();
+        let key = self.key.clone();
+        Arc::new(move |n, k: &Key| {
+            if n.key == key {
+                return Ok(neighbours_store.lock().unwrap().get_all());
+            }
+
+            let response = payload_client
+                .send(n, RequestPayload::QueryRequest(k.clone()))?;
+
+            match response {
+                ResponsePayload::QueryResponse(ref nodes) => Ok(nodes.clone()),
+                _ => Err(ErrorKind::ResponseError(
+                    "Incorrect response for query request".into(),
+                ).into()),
+            }
+        })
     }
 }
 
@@ -217,6 +222,7 @@ impl PayloadHandler for GraphPayloadHandler {
         &self,
         payload: &RequestPayload,
         sender: Option<&Node>,
+        payload_client: Arc<PayloadClient>,
     ) -> Result<ResponsePayload> {
         info!(
             self.log,
@@ -255,14 +261,17 @@ impl PayloadHandler for GraphPayloadHandler {
                     self.log,
                     "Received search request";
                     "key" => %key);
-                Ok(ResponsePayload::SearchResponse(self.search(&key)?))
+                Ok(ResponsePayload::SearchResponse(self.search(
+                    &key,
+                    payload_client,
+                )?))
             }
             &RequestPayload::ConnectRequest(ref node) => {
                 trace!(
                     self.log,
                     "Received connect request";
                     "node" => %node);
-                self.connect(node)?;
+                self.connect(node, payload_client)?;
                 Ok(ResponsePayload::ConnectResponse())
             }
             &RequestPayload::ListNeighboursRequest() => {

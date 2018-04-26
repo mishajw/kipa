@@ -1,7 +1,6 @@
 //! Implementation of servers using TCP sockets.
 
-use api::{ApiVisibility, MessageSender, RequestMessage, RequestPayload,
-          ResponseMessage};
+use api::{ApiVisibility, RequestMessage, ResponseMessage};
 use data_transformer::DataTransformer;
 use error::*;
 use server::{Client, Server};
@@ -87,21 +86,15 @@ impl SocketServer for TcpGlobalServer {
 /// Implementation of sending global requests to TCP servers.
 pub struct TcpGlobalClient {
     data_transformer: Arc<DataTransformer>,
-    local_node: Node,
     log: Logger,
 }
 
 impl TcpGlobalClient {
     /// Create a new sender, which uses a `DataTransformer` to serialize packets
     /// before going on the line.
-    pub fn new(
-        data_transformer: Arc<DataTransformer>,
-        local_node: Node,
-        log: Logger,
-    ) -> Self {
+    pub fn new(data_transformer: Arc<DataTransformer>, log: Logger) -> Self {
         TcpGlobalClient {
             data_transformer: data_transformer,
-            local_node: local_node,
             log: log,
         }
     }
@@ -124,12 +117,8 @@ impl Client for TcpGlobalClient {
     fn send<'a>(
         &self,
         node: &Node,
-        request_payload: RequestPayload,
+        request: RequestMessage,
     ) -> Result<ResponseMessage> {
-        let request = RequestMessage::new(
-            request_payload,
-            MessageSender::Node(self.local_node.clone()),
-        );
         SocketClient::receive(self, node, request, &*self.data_transformer)
     }
 }

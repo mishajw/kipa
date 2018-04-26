@@ -61,13 +61,10 @@ cfg_if! {
 
         /// Create a `GlobalSendServer`
         pub fn create_global_client(
-                data_transformer: Arc<DataTransformer>,
-                local_node: Node,
-                log: Logger) -> Result<Arc<Client>> {
-            Ok(Arc::new(TcpGlobalClient::new(
-                data_transformer,
-                local_node,
-                log)))
+            data_transformer: Arc<DataTransformer>,
+            log: Logger
+        ) -> Result<Arc<Client>> {
+            Ok(Arc::new(TcpGlobalClient::new(data_transformer, log)))
         }
 
         /// Create a `GlobalRecieveServer`
@@ -86,7 +83,6 @@ cfg_if! {
         #[allow(missing_docs)]
         pub fn create_global_client(
             _data_transformer: Arc<DataTransformer>,
-            _local_node: Node,
             _log: Logger
         ) -> Result<Arc<Client>> {
             Err(ErrorKind::ConfigError(
@@ -165,9 +161,10 @@ cfg_if! {
 /// Create a `MessageHandler`.
 pub fn create_message_handler(
     payload_handler: Arc<PayloadHandler>,
+    client: Arc<Client>,
     local_node: Node,
 ) -> Arc<MessageHandler> {
-    Arc::new(MessageHandler::new(payload_handler, local_node))
+    Arc::new(MessageHandler::new(payload_handler, local_node, client))
 }
 
 cfg_if! {
@@ -180,7 +177,6 @@ cfg_if! {
         /// Create a `PayloadHandler`
         pub fn create_payload_handler(
                 local_node: Node,
-                client: Arc<Client>,
                 args: &clap::ArgMatches,
                 log: Logger) -> Result<Arc<PayloadHandler>> {
 
@@ -196,7 +192,6 @@ cfg_if! {
 
             Ok(Arc::new(GraphPayloadHandler::new(
                 local_node.key,
-                client,
                 neighbours_size,
                 key_space_size,
                 log)))
@@ -207,7 +202,6 @@ cfg_if! {
         #[allow(missing_docs)]
         pub fn create_payload_handler(
                 _local_node: Node,
-                _client: Arc<Client>,
                 _args: &clap::ArgMatches,
                 log: Logger) -> Result<Arc<PayloadHandler>> {
             Ok(Arc::new(BlackHolePayloadHandler::new(log)))
@@ -216,7 +210,6 @@ cfg_if! {
         #[allow(missing_docs)]
         pub fn create_payload_handler(
                 _local_node: Node,
-                _client: Arc<Client>,
                 _args: &clap::ArgMatches,
                 _log: Logger) -> Result<Arc<PayloadHandler>> {
             Err(ErrorKind::ConfigError(

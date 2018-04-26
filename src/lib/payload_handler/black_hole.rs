@@ -4,8 +4,10 @@ use api::{RequestPayload, ResponsePayload};
 use error::*;
 use node::Node;
 use payload_handler::PayloadHandler;
+use message_handler::PayloadClient;
 
 use slog::Logger;
+use std::sync::Arc;
 
 /// The request handler that returns nothing.
 pub struct BlackHolePayloadHandler {
@@ -24,6 +26,7 @@ impl PayloadHandler for BlackHolePayloadHandler {
         &self,
         request: &RequestPayload,
         _sender: Option<&Node>,
+        _payload_client: Arc<PayloadClient>,
     ) -> Result<ResponsePayload> {
         match request {
             &RequestPayload::QueryRequest(_) => {

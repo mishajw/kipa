@@ -1,7 +1,7 @@
 extern crate clap;
 extern crate error_chain;
 extern crate kipa_lib;
-
+extern crate rand;
 #[macro_use]
 extern crate slog;
 extern crate slog_async;
@@ -14,6 +14,7 @@ use kipa_lib::api::{RequestPayload, ResponsePayload};
 use kipa_lib::{Address, Node};
 
 use error_chain::ChainedError;
+use rand::{thread_rng, Rng};
 
 fn main() {
     let log = create_logger("cli");
@@ -81,11 +82,13 @@ fn message_daemon(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
         log.new(o!("local-client" => true)),
     )?;
 
+    let message_id: u32 = thread_rng().gen();
+
     if let Some(search_args) = args.subcommand_matches("search") {
         let search_key = gpg_key_handler
             .get_key(String::from(search_args.value_of("key_id").unwrap()))?;
-        let response =
-            local_client.send(RequestPayload::SearchRequest(search_key))?;
+        let response = local_client
+            .send(RequestPayload::SearchRequest(search_key), message_id)?;
 
         match response.payload {
             ResponsePayload::SearchResponse(Some(ref node)) => {
@@ -106,7 +109,8 @@ fn message_daemon(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
             Address::from_string(connect_args.value_of("address").unwrap())?;
         let node = Node::new(node_address, node_key);
 
-        let response = local_client.send(RequestPayload::ConnectRequest(node))?;
+        let response = local_client
+            .send(RequestPayload::ConnectRequest(node), message_id)?;
 
         match response.payload {
             ResponsePayload::ConnectResponse() => {
@@ -116,8 +120,8 @@ fn message_daemon(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
             _ => Err(ErrorKind::ParseError("Unrecognized response".into()).into()),
         }
     } else if let Some(_) = args.subcommand_matches("list-neighbours") {
-        let response =
-            local_client.send(RequestPayload::ListNeighboursRequest())?;
+        let response = local_client
+            .send(RequestPayload::ListNeighboursRequest(), message_id)?;
         match response.payload {
             ResponsePayload::ListNeighboursResponse(neighbours) => {
                 println!("Found neighbours:");

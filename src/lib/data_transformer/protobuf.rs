@@ -60,6 +60,7 @@ impl DataTransformer for ProtobufDataTransformer {
         let sender: Result<proto_api::MessageSender> =
             request.sender.clone().into();
         general_request.set_sender(sender?);
+        general_request.set_id(request.id);
 
         general_request
             .write_to_bytes()
@@ -89,7 +90,7 @@ impl DataTransformer for ProtobufDataTransformer {
 
         let sender: Result<MessageSender> = request.get_sender().clone().into();
 
-        Ok(RequestMessage::new(payload, sender?))
+        Ok(RequestMessage::new(payload, sender?, request.get_id()))
     }
 
     fn response_to_bytes(&self, response: &ResponseMessage) -> Result<Vec<u8>> {
@@ -128,6 +129,7 @@ impl DataTransformer for ProtobufDataTransformer {
         let sender: Result<proto_api::MessageSender> =
             response.sender.clone().into();
         general_response.set_sender(sender?);
+        general_response.set_id(response.id);
 
         general_response
             .write_to_bytes()
@@ -172,7 +174,7 @@ impl DataTransformer for ProtobufDataTransformer {
         let sender: Result<MessageSender> =
             response.get_sender().clone().into();
 
-        Ok(ResponseMessage::new(payload, sender?))
+        Ok(ResponseMessage::new(payload, sender?, response.get_id()))
     }
 }
 

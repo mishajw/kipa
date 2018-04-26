@@ -18,7 +18,8 @@ pub enum SearchCallbackReturn<T> {
     Exit(),
 }
 
-type GetNeighboursFn = Arc<Fn(&Node, &Key) -> Result<Vec<Node>> + Send + Sync>;
+pub type GetNeighboursFn =
+    Arc<Fn(&Node, &Key) -> Result<Vec<Node>> + Send + Sync>;
 type FoundNodeCallback<T> =
     Arc<Fn(&Node) -> Result<SearchCallbackReturn<T>> + Send + Sync>;
 type ExploredNodeCallback<T> =
@@ -36,7 +37,6 @@ macro_rules! return_callback {
 
 /// Contains data for graph search
 pub struct GraphSearch {
-    get_neighbours_fn: GetNeighboursFn,
     log: Logger,
 }
 
@@ -69,11 +69,8 @@ impl PartialOrd for SearchNode {
 impl GraphSearch {
     /// Create a new graph search with a function for retrieving the neighbours
     /// of the node.
-    pub fn new(get_neighbours_fn: GetNeighboursFn, log: Logger) -> Self {
-        GraphSearch {
-            get_neighbours_fn: get_neighbours_fn,
-            log: log,
-        }
+    pub fn new(log: Logger) -> Self {
+        GraphSearch { log: log }
     }
 
     /// Search for a key using the `GetNeighboursFn`.
@@ -81,6 +78,7 @@ impl GraphSearch {
         &self,
         key: &Key,
         start_nodes: Vec<Node>,
+        get_neighbours_fn: GetNeighboursFn,
         found_node_callback: FoundNodeCallback<T>,
         explored_node_callback: ExploredNodeCallback<T>,
     ) -> Result<Option<T>> {
@@ -122,7 +120,7 @@ impl GraphSearch {
             );
 
             // Get the neighbours of the node
-            let neighbours = (*self.get_neighbours_fn)(&next_node.node, key)?;
+            let neighbours = (*get_neighbours_fn)(&next_node.node, key)?;
             trace!(
                 self.log,
                 "Found neighbours for node";

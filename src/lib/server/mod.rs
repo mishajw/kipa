@@ -2,7 +2,7 @@
 
 use error::*;
 use node::Node;
-use api::{RequestPayload, ResponseMessage};
+use api::{RequestMessage, RequestPayload, ResponseMessage};
 
 #[cfg(feature = "use-tcp")]
 pub mod tcp;
@@ -23,12 +23,16 @@ pub trait Client: Send + Sync {
     fn send<'a>(
         &self,
         node: &Node,
-        request: RequestPayload,
+        request: RequestMessage,
     ) -> Result<ResponseMessage>;
 }
 
 /// Trait for sending requests to local KIPA daemon.
 pub trait LocalClient: Send + Sync {
     /// Send a request to local KIPA daemon
-    fn send<'a>(&self, request: RequestPayload) -> Result<ResponseMessage>;
+    fn send<'a>(
+        &self,
+        request: RequestPayload,
+        message_id: u32,
+    ) -> Result<ResponseMessage>;
 }

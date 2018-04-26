@@ -111,9 +111,13 @@ impl LocalClient for UnixSocketLocalClient {
     fn send<'a>(
         &self,
         request_payload: RequestPayload,
+        message_id: u32,
     ) -> Result<ResponseMessage> {
-        let request =
-            RequestMessage::new(request_payload, MessageSender::Cli());
+        let request = RequestMessage::new(
+            request_payload,
+            MessageSender::Cli(),
+            message_id,
+        );
         let request_bytes = self.data_transformer.request_to_bytes(&request)?;
 
         trace!(self.log, "Setting up socket to daemon");

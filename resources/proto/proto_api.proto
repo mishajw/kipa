@@ -26,6 +26,7 @@ message GeneralRequest {
   ConnectRequest connect_request = 3;
   ListNeighboursRequest list_neighbours_request = 4;
   MessageSender sender =  5;
+  uint32 id = 6;
 }
 
 message GeneralResponse {
@@ -34,6 +35,7 @@ message GeneralResponse {
   ConnectResponse connect_response = 3;
   ListNeighboursResponse list_neighbours_response = 4;
   MessageSender sender =  5;
+  uint32 id = 6;
 }
 
 message QueryRequest {

@@ -76,20 +76,21 @@ fn run_servers(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
     // Set up out communication
     let global_client = create_global_client(
         data_transformer.clone(),
-        local_node.clone(),
         log.new(o!("global-client" => true)),
     )?;
 
     // Set up request handler
     let payload_handler = create_payload_handler(
         local_node.clone(),
-        global_client,
         args,
         log.new(o!("request-handler" => true)),
     )?;
 
-    let message_handler =
-        create_message_handler(payload_handler, local_node.clone());
+    let message_handler = create_message_handler(
+        payload_handler,
+        global_client,
+        local_node.clone(),
+    );
 
     // Set up listening for connections
     let global_server = create_global_server(
