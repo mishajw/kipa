@@ -19,5 +19,7 @@ pipeline:
       - '[ -z $("cargo fmt -- --write-mode diff") ]'
       # Check we can build with no default features
       - cargo build --no-default-features
+      # Check we can build with other features
+      - cargo build --features="use-black-hole"
       # TODO: Run python end-to-end tests
 
