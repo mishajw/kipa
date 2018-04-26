@@ -77,8 +77,9 @@ def __create_docker_directory() -> str:
         os.path.join(docker_directory, "kipa_cli"))
 
     with open(os.path.join(docker_directory, "Dockerfile"), "w") as f:
+        # TODO: Base docker image has to use the same `glibc` as host machine
         f.write(f"""
-            FROM debian:stretch-slim
+            FROM debian:buster-slim
             ENV KIPA_KEY_ID ""
             ENV KIPA_ARGS ""
             RUN \\
