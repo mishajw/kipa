@@ -163,3 +163,78 @@ impl GraphSearch {
         Ok(None)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use address::Address;
+    use slog;
+    use key::Key;
+    use std::sync::Mutex;
+    use super::*;
+
+    #[test]
+    fn test_search_order() {
+        let test_log = Logger::root(slog::Discard, o!());
+        const NUM_NODES: usize = 100;
+        const START_INDEX: usize = 50;
+
+        let nodes = (0..NUM_NODES)
+            .map(|i| {
+                Node::new(
+                    Address::new(vec![0, 0, 0, i as u8], i as u16),
+                    Key::new(format!("{:08}", i), vec![i as u8]),
+                )
+            })
+            .collect::<Vec<_>>();
+        let nodes = Arc::new(nodes);
+
+        let search = GraphSearch::new(test_log);
+        let explored_nodes = Arc::new(Mutex::new(vec![]));
+
+        let search_nodes = nodes.clone();
+        let search_explored_nodes = explored_nodes.clone();
+        search
+            .search::<()>(
+                &nodes[0].key,
+                vec![
+                    nodes[START_INDEX].clone(),
+                    nodes[START_INDEX + 1].clone(),
+                ],
+                Arc::new(move |n, _k| {
+                    let node_index = n.address.port as usize;
+                    let neighbours: Vec<Node> =
+                        if node_index > 0 && node_index < NUM_NODES - 1 {
+                            vec![
+                                search_nodes[node_index - 1].clone(),
+                                search_nodes[node_index + 1].clone(),
+                            ]
+                        } else if node_index <= 0 {
+                            vec![search_nodes[node_index + 1].clone()]
+                        } else if node_index >= NUM_NODES - 1 {
+                            vec![search_nodes[node_index - 1].clone()]
+                        } else {
+                            vec![]
+                        };
+                    Ok(neighbours)
+                }),
+                Arc::new(|_n| Ok(SearchCallbackReturn::Continue())),
+                Arc::new(move |n| {
+                    search_explored_nodes.lock().unwrap().push(n.clone());
+                    Ok(SearchCallbackReturn::Continue())
+                }),
+            )
+            .unwrap();
+
+        let found_indices: Vec<usize> = explored_nodes
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|n| n.address.port as usize)
+            .collect();
+        let mut expected_found: Vec<usize> =
+            (0..START_INDEX + 1).rev().collect();
+        expected_found
+            .extend((START_INDEX + 1..NUM_NODES).collect::<Vec<usize>>());
+        assert_eq!(expected_found, found_indices);
+    }
+}

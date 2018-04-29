@@ -142,4 +142,23 @@ mod test {
         nums.sort();
         assert_eq!(nums, vec![1, 2, 4, 5, 6]);
     }
+
+    #[test]
+    fn test_distance() {
+        let ks = vec![
+            KeySpace { coords: vec![1, 3] },
+            KeySpace { coords: vec![3, 2] },
+            KeySpace { coords: vec![0, 0] },
+        ];
+
+        for i in 0..ks.len() {
+            for j in i + 1..ks.len() {
+                assert_eq!(&ks[i] - &ks[j], &ks[j] - &ks[i]);
+            }
+        }
+
+        assert_eq!(&ks[0] - &ks[1], 3.0);
+        assert_eq!(&ks[0] - &ks[2], 4.0);
+        assert_eq!(&ks[1] - &ks[2], 5.0);
+    }
 }
