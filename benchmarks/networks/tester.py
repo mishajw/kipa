@@ -1,9 +1,36 @@
 import itertools
 import logging
+from typing import List
 
 from benchmarks.networks import Network
 
 log = logging.getLogger(__name__)
+
+
+class SearchResult:
+    def __init__(
+            self,
+            from_keys: List[str],
+            to_keys: List[str],
+            results: List[bool]) -> None:
+        self.from_keys = from_keys
+        self.to_keys = to_keys
+        self.results = results
+
+    @classmethod
+    def empty(cls) -> "SearchResult":
+        return cls([], [], [])
+
+    def add_result(self, from_key: str, to_key: str, result: bool) -> None:
+        self.from_keys.append(from_key)
+        self.to_keys.append(to_key)
+        self.results.append(result)
+
+    def all_successes(self) -> bool:
+        return all(self.results)
+
+    def percentage_success(self) -> float:
+        return sum(1 for r in self.results if r) / len(self.results)
 
 
 def test_search(network: Network, from_key_id: str, to_key_id: str) -> bool:
@@ -19,9 +46,9 @@ def test_search(network: Network, from_key_id: str, to_key_id: str) -> bool:
     return "Search success" in output
 
 
-def test_all_searches(network: Network):
+def test_all_searches(network: Network) -> SearchResult:
     keys = network.get_all_keys()
+    results = SearchResult.empty()
     for k1, k2 in itertools.permutations(keys, 2):
-        if not test_search(network, k1, k2):
-            return False
-    return True
+        results.add_result(k1, k2, test_search(network, k1, k2))
+    return results

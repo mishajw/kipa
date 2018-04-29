@@ -108,7 +108,7 @@ def __create_nodes(
     api_client = docker.APIClient()
 
     for i, key_id in enumerate(key_ids):
-        name = f"{DOCKER_PREFIX}_{i}_{key_id}"
+        name = f"{DOCKER_PREFIX}_{i:04d}_{key_id}"
 
         log.info(f"Creating container with name {name}")
         container = client.containers.run(

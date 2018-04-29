@@ -14,7 +14,8 @@ def connect_node(
         "connect",
         "--key-id", connectee_key_id,
         "--address", network.get_address(connectee_key_id)])
-    assert "Connect successful" in output
+    assert "Connect successful" in output, \
+        f"Connection failed with output: {output}"
 
 
 def connect_nodes_to_one(network: Network, root_key_id: str) -> None:
