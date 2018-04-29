@@ -61,13 +61,14 @@ impl NeighboursStore {
 
     /// Given a node, consider keeping it as a neighbour.
     pub fn consider_candidate(&mut self, node: &Node) {
+        let key_space =
+            KeySpace::from_key(&node.key, self.local_key_space.get_size());
+
         info!(
             self.log,
             "Considering candidate neighbour";
-            "node" => %node);
-
-        let key_space =
-            KeySpace::from_key(&node.key, self.local_key_space.get_size());
+            "node" => %node,
+            "distance" => &key_space - &self.local_key_space);
 
         // Don't add ourselves
         if key_space == self.local_key_space {

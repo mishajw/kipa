@@ -43,16 +43,20 @@ impl KeySpace {
 impl<'a, 'b> Sub<&'b KeySpace> for &'a KeySpace {
     type Output = f32;
 
+    /// Gets the euclidean distance between points in key space.
     fn sub(self, other: &KeySpace) -> f32 {
         assert!(self.coords.len() == other.coords.len());
 
         let total: i64 = self.coords
             .iter()
             .zip(&other.coords)
-            .map(|(a, b)| a - b)
+            // Map to i64 so we have enough space to perform operations without
+            // overflow
+            .map(|(a, b)| (*a as i64, *b as i64))
+            .map(|(a, b)| (a - b).abs())
             .fold(0 as i64, |a, b| a + (b as i64));
 
-        (total as f32).powf(self.coords.len() as f32)
+        (total as f32).powf(1f32 / self.coords.len() as f32)
     }
 }
 
@@ -157,8 +161,8 @@ mod test {
             }
         }
 
-        assert_eq!(&ks[0] - &ks[1], 3.0);
-        assert_eq!(&ks[0] - &ks[2], 4.0);
-        assert_eq!(&ks[1] - &ks[2], 5.0);
+        assert_eq!(&ks[0] - &ks[1], 3f32.sqrt());
+        assert_eq!(&ks[0] - &ks[2], 4f32.sqrt());
+        assert_eq!(&ks[1] - &ks[2], 5f32.sqrt());
     }
 }

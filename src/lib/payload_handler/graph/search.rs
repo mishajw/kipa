@@ -93,7 +93,7 @@ impl GraphSearch {
             let cost = &KeySpace::from_key(&n.key, 2) - &key_space;
             SearchNode {
                 node: n,
-                cost: cost,
+                cost: -cost,
             }
         };
 
@@ -111,6 +111,7 @@ impl GraphSearch {
                 self.log,
                 "Search loop iteration";
                 "current_node" => %next_node.node,
+                "current_cost" => next_node.cost,
                 "found" => found
                     .iter()
                     .map(|k| k.get_key_id().clone())
