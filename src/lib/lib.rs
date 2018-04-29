@@ -10,8 +10,6 @@
 #![warn(missing_docs)]
 
 extern crate byteorder;
-#[macro_use]
-extern crate cfg_if;
 extern crate clap;
 #[macro_use]
 extern crate error_chain;

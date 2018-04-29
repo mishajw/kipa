@@ -4,10 +4,10 @@ use error::*;
 use node::Node;
 use api::{RequestMessage, RequestPayload, ResponseMessage};
 
-#[cfg(feature = "use-tcp")]
+#[cfg(use_tcp)]
 pub mod tcp;
 
-#[cfg(feature = "use-unix-socket")]
+#[cfg(use_unix_socket)]
 pub mod unix_socket;
 
 /// Create a server that can listen for requests from remote KIPA nodes and pass

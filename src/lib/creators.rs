@@ -37,125 +37,134 @@ pub fn create_logger(name: &'static str) -> Logger {
     )
 }
 
-cfg_if! {
-    if #[cfg(feature = "use-protobuf")] {
-        use data_transformer::protobuf::ProtobufDataTransformer;
-
-        /// Create a `DataTransformer`
-        pub fn create_data_transformer() -> Result<Arc<DataTransformer>> {
-            Ok(Arc::new(ProtobufDataTransformer{}))
-        }
-    } else {
-        #[allow(missing_docs)]
-        pub fn create_data_transformer() -> Result<Arc<DataTransformer>> {
-            Err(ErrorKind::ConfigError(
-                "A data transformer feature was not selected".into()).into())
-        }
-    }
+#[cfg(use_protobuf)]
+/// Create a `DataTransformer`
+pub fn create_data_transformer() -> Result<Arc<DataTransformer>> {
+    use data_transformer::protobuf::ProtobufDataTransformer;
+    Ok(Arc::new(ProtobufDataTransformer {}))
 }
 
-cfg_if! {
-    if #[cfg(feature = "use-tcp")] {
-        use server::tcp::{
-            TcpGlobalServer, TcpGlobalClient};
-
-        /// Create a `GlobalSendServer`
-        pub fn create_global_client(
-            data_transformer: Arc<DataTransformer>,
-            log: Logger
-        ) -> Result<Arc<Client>> {
-            Ok(Arc::new(TcpGlobalClient::new(data_transformer, log)))
-        }
-
-        /// Create a `GlobalRecieveServer`
-        pub fn create_global_server(
-                message_handler: Arc<MessageHandler>,
-                data_transformer: Arc<DataTransformer>,
-                local_node: Node,
-                log: Logger) -> Result<Arc<Mutex<Server>>> {
-            Ok(Arc::new(Mutex::new(TcpGlobalServer::new(
-                message_handler,
-                data_transformer.clone(),
-                local_node,
-                log))))
-        }
-    } else {
-        #[allow(missing_docs)]
-        pub fn create_global_client(
-            _data_transformer: Arc<DataTransformer>,
-            _log: Logger
-        ) -> Result<Arc<Client>> {
-            Err(ErrorKind::ConfigError(
-                "A server feature was not selected".into()).into())
-        }
-
-        #[allow(missing_docs)]
-        pub fn create_global_server(
-            _message_handler: Arc<MessageHandler>,
-            _data_transformer: Arc<DataTransformer>,
-            _local_node: Node,
-            _log: Logger,
-        ) -> Result<Arc<Mutex<Server>>> {
-            Err(ErrorKind::ConfigError(
-                "A server feature was not selected".into()).into())
-        }
-    }
+#[cfg(no_data_handler)]
+#[allow(missing_docs)]
+pub fn create_data_transformer() -> Result<Arc<DataTransformer>> {
+    Err(ErrorKind::ConfigError(
+        "A data transformer feature was not selected".into(),
+    ).into())
 }
 
-cfg_if! {
-    if #[cfg(feature = "use-unix-socket")] {
-        use server::unix_socket::{
-            UnixSocketLocalServer,
-            UnixSocketLocalClient,
-            DEFAULT_UNIX_SOCKET_PATH};
+#[cfg(use_tcp)]
+/// Create a `GlobalSendServer`
+pub fn create_global_client(
+    data_transformer: Arc<DataTransformer>,
+    log: Logger,
+) -> Result<Arc<Client>> {
+    use server::tcp::TcpGlobalClient;
+    Ok(Arc::new(TcpGlobalClient::new(data_transformer, log)))
+}
 
-        /// Create a `LocalReceiveServer`
-        pub fn create_local_server(
-                message_handler: Arc<MessageHandler>,
-                data_transformer: Arc<DataTransformer>,
-                args: &clap::ArgMatches,
-                log: Logger) -> Result<Arc<Mutex<Server>>> {
-            let socket_path = args.value_of("socket_path")
-                .unwrap_or(DEFAULT_UNIX_SOCKET_PATH);
-            Ok(Arc::new(Mutex::new(UnixSocketLocalServer::new(
-                message_handler,
-                data_transformer,
-                String::from(socket_path),
-                log)?)))
-        }
+#[cfg(use_tcp)]
+/// Create a `GlobalRecieveServer`
+pub fn create_global_server(
+    message_handler: Arc<MessageHandler>,
+    data_transformer: Arc<DataTransformer>,
+    local_node: Node,
+    log: Logger,
+) -> Result<Arc<Mutex<Server>>> {
+    use server::tcp::TcpGlobalServer;
+    Ok(Arc::new(Mutex::new(TcpGlobalServer::new(
+        message_handler,
+        data_transformer.clone(),
+        local_node,
+        log,
+    ))))
+}
 
-        /// Create a `LocalSendServer`
-        pub fn create_local_client(
-                data_transformer: Arc<DataTransformer>,
-                args: &clap::ArgMatches,
-                log: Logger) -> Result<Arc<LocalClient>> {
-            let socket_path = args.value_of("socket_path")
-                .unwrap_or(DEFAULT_UNIX_SOCKET_PATH);
-            Ok(Arc::new(UnixSocketLocalClient::new(
-                data_transformer,
-                &String::from(socket_path),
-                log)))
-        }
-    } else {
-        #[allow(missing_docs)]
-        pub fn create_local_server(
-                _message_handler: Arc<MessageHandler>,
-                _data_transformer: Arc<DataTransformer>,
-                _args: &clap::ArgMatches,
-                _log: Logger) -> Result<Arc<Mutex<Server>>> {
-            Err(ErrorKind::ConfigError(
-                "A local server feature was not selected".into()).into())
-        }
+#[cfg(no_global_server)]
+#[allow(missing_docs)]
+pub fn create_global_client(
+    _data_transformer: Arc<DataTransformer>,
+    _log: Logger,
+) -> Result<Arc<Client>> {
+    Err(
+        ErrorKind::ConfigError("A server feature was not selected".into())
+            .into(),
+    )
+}
 
-        #[allow(missing_docs)]
-        pub fn create_local_client(
-                _data_transformer: Arc<DataTransformer>,
-                _args: &clap::ArgMatches,
-                _log: Logger) -> Result<Arc<LocalClient>> {
-            Err(ErrorKind::ConfigError(
-                "A local server feature was not selected".into()).into())
-        }
-    }
+#[cfg(no_global_server)]
+#[allow(missing_docs)]
+pub fn create_global_server(
+    _message_handler: Arc<MessageHandler>,
+    _data_transformer: Arc<DataTransformer>,
+    _local_node: Node,
+    _log: Logger,
+) -> Result<Arc<Mutex<Server>>> {
+    Err(
+        ErrorKind::ConfigError("A server feature was not selected".into())
+            .into(),
+    )
+}
+
+#[cfg(use_unix_socket)]
+/// Create a `LocalReceiveServer`
+pub fn create_local_server(
+    message_handler: Arc<MessageHandler>,
+    data_transformer: Arc<DataTransformer>,
+    args: &clap::ArgMatches,
+    log: Logger,
+) -> Result<Arc<Mutex<Server>>> {
+    use server::unix_socket::{UnixSocketLocalServer, DEFAULT_UNIX_SOCKET_PATH};
+    let socket_path = args.value_of("socket_path")
+        .unwrap_or(DEFAULT_UNIX_SOCKET_PATH);
+    Ok(Arc::new(Mutex::new(UnixSocketLocalServer::new(
+        message_handler,
+        data_transformer,
+        String::from(socket_path),
+        log,
+    )?)))
+}
+
+#[cfg(use_unix_socket)]
+/// Create a `LocalSendServer`
+pub fn create_local_client(
+    data_transformer: Arc<DataTransformer>,
+    args: &clap::ArgMatches,
+    log: Logger,
+) -> Result<Arc<LocalClient>> {
+    use server::unix_socket::{UnixSocketLocalClient, DEFAULT_UNIX_SOCKET_PATH};
+
+    let socket_path = args.value_of("socket_path")
+        .unwrap_or(DEFAULT_UNIX_SOCKET_PATH);
+    Ok(Arc::new(UnixSocketLocalClient::new(
+        data_transformer,
+        &String::from(socket_path),
+        log,
+    )))
+}
+
+#[cfg(no_local_server)]
+#[allow(missing_docs)]
+pub fn create_local_server(
+    _message_handler: Arc<MessageHandler>,
+    _data_transformer: Arc<DataTransformer>,
+    _args: &clap::ArgMatches,
+    _log: Logger,
+) -> Result<Arc<Mutex<Server>>> {
+    Err(ErrorKind::ConfigError(
+        "A local server feature was not selected".into(),
+    ).into())
+}
+
+#[cfg(no_local_server)]
+#[allow(missing_docs)]
+pub fn create_local_client(
+    _data_transformer: Arc<DataTransformer>,
+    _args: &clap::ArgMatches,
+    _log: Logger,
+) -> Result<Arc<LocalClient>> {
+    Err(ErrorKind::ConfigError(
+        "A local server feature was not selected".into(),
+    ).into())
 }
 
 /// Create a `MessageHandler`.
@@ -167,53 +176,53 @@ pub fn create_message_handler(
     Arc::new(MessageHandler::new(payload_handler, local_node, client))
 }
 
-cfg_if! {
-    if #[cfg(feature = "use-graph")] {
-        use payload_handler::graph::{
-            GraphPayloadHandler,
-            DEFAULT_NEIGHBOURS_SIZE,
-            DEFAULT_KEY_SPACE_SIZE};
+#[cfg(use_graph)]
+/// Create a `PayloadHandler`
+pub fn create_payload_handler(
+    local_node: Node,
+    args: &clap::ArgMatches,
+    log: Logger,
+) -> Result<Arc<PayloadHandler>> {
+    use payload_handler::graph::{GraphPayloadHandler, DEFAULT_KEY_SPACE_SIZE,
+                                 DEFAULT_NEIGHBOURS_SIZE};
 
-        /// Create a `PayloadHandler`
-        pub fn create_payload_handler(
-                local_node: Node,
-                args: &clap::ArgMatches,
-                log: Logger) -> Result<Arc<PayloadHandler>> {
+    let neighbours_size = args.value_of("neighbours_size")
+        .unwrap_or(&DEFAULT_NEIGHBOURS_SIZE.to_string())
+        .parse::<usize>()
+        .chain_err(|| "Error on parsing neighbour size")?;
 
-            let neighbours_size = args.value_of("neighbours_size")
-                .unwrap_or(&DEFAULT_NEIGHBOURS_SIZE.to_string())
-                .parse::<usize>()
-                .chain_err(|| "Error on parsing neighbour size")?;
+    let key_space_size = args.value_of("key_space_size")
+        .unwrap_or(&DEFAULT_KEY_SPACE_SIZE.to_string())
+        .parse::<usize>()
+        .chain_err(|| "Error on parsing key space size")?;
 
-            let key_space_size = args.value_of("key_space_size")
-                .unwrap_or(&DEFAULT_KEY_SPACE_SIZE.to_string())
-                .parse::<usize>()
-                .chain_err(|| "Error on parsing key space size")?;
+    Ok(Arc::new(GraphPayloadHandler::new(
+        local_node.key,
+        neighbours_size,
+        key_space_size,
+        log,
+    )))
+}
 
-            Ok(Arc::new(GraphPayloadHandler::new(
-                local_node.key,
-                neighbours_size,
-                key_space_size,
-                log)))
-        }
-    } else if #[cfg(feature = "use-black-hole")] {
-        use payload_handler::black_hole::BlackHolePayloadHandler;
+#[cfg(use_black_hole)]
+#[allow(missing_docs)]
+pub fn create_payload_handler(
+    _local_node: Node,
+    _args: &clap::ArgMatches,
+    log: Logger,
+) -> Result<Arc<PayloadHandler>> {
+    use payload_handler::black_hole::BlackHolePayloadHandler;
+    Ok(Arc::new(BlackHolePayloadHandler::new(log)))
+}
 
-        #[allow(missing_docs)]
-        pub fn create_payload_handler(
-                _local_node: Node,
-                _args: &clap::ArgMatches,
-                log: Logger) -> Result<Arc<PayloadHandler>> {
-            Ok(Arc::new(BlackHolePayloadHandler::new(log)))
-        }
-    } else {
-        #[allow(missing_docs)]
-        pub fn create_payload_handler(
-                _local_node: Node,
-                _args: &clap::ArgMatches,
-                _log: Logger) -> Result<Arc<PayloadHandler>> {
-            Err(ErrorKind::ConfigError(
-                "A request handler feature was not selected".into()).into())
-        }
-    }
+#[cfg(no_payload_handler)]
+#[allow(missing_docs)]
+pub fn create_payload_handler(
+    _local_node: Node,
+    _args: &clap::ArgMatches,
+    _log: Logger,
+) -> Result<Arc<PayloadHandler>> {
+    Err(ErrorKind::ConfigError(
+        "A request handler feature was not selected".into(),
+    ).into())
 }

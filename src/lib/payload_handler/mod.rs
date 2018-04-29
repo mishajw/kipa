@@ -7,10 +7,10 @@ use error::*;
 
 use std::sync::Arc;
 
-#[cfg(feature = "use-graph")]
+#[cfg(use_graph)]
 pub mod graph;
 
-#[cfg(feature = "use-black-hole")]
+#[cfg(use_black_hole)]
 pub mod black_hole;
 
 /// Trait for any type that handles requests.
