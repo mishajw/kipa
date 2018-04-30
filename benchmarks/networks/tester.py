@@ -1,5 +1,6 @@
 import itertools
 import logging
+import random
 from typing import List
 
 from benchmarks.networks import Network
@@ -52,3 +53,14 @@ def test_all_searches(network: Network) -> SearchResult:
     for k1, k2 in itertools.permutations(keys, 2):
         results.add_result(k1, k2, test_search(network, k1, k2))
     return results
+
+
+def sample_test_searches(
+        network: Network, num_searches: int=500) -> SearchResult:
+    key_pairs = list(itertools.permutations(network.get_all_keys(), 2))
+    num_searches = min(len(key_pairs), num_searches)
+    results = SearchResult.empty()
+    for k1, k2 in random.sample(key_pairs, num_searches):
+        results.add_result(k1, k2, test_search(network, k1, k2))
+    return results
+
