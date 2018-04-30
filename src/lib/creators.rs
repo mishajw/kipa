@@ -184,6 +184,8 @@ pub fn create_payload_handler(
     log: Logger,
 ) -> Result<Arc<PayloadHandler>> {
     use payload_handler::graph::{GraphPayloadHandler, KeySpaceManager,
+                                 NeighboursStore, DEFAULT_ANGLE_WEIGHTING,
+                                 DEFAULT_DISTANCE_WEIGHTING,
                                  DEFAULT_KEY_SPACE_SIZE,
                                  DEFAULT_NEIGHBOURS_SIZE};
 
@@ -197,12 +199,31 @@ pub fn create_payload_handler(
         .parse::<usize>()
         .chain_err(|| "Error on parsing key space size")?;
 
+    let distance_weighting = args.value_of("distance_weighting")
+        .unwrap_or(&DEFAULT_DISTANCE_WEIGHTING.to_string())
+        .parse::<f32>()
+        .chain_err(|| "Error on parsing distance weighting")?;
+
+    let angle_weighting = args.value_of("angle_weighting")
+        .unwrap_or(&DEFAULT_ANGLE_WEIGHTING.to_string())
+        .parse::<f32>()
+        .chain_err(|| "Error on parsing angle weighting")?;
+
     let key_space_manager = Arc::new(KeySpaceManager::new(key_space_size));
+
+    let neighbours_store = Arc::new(Mutex::new(NeighboursStore::new(
+        local_node.key.clone(),
+        neighbours_size,
+        distance_weighting,
+        angle_weighting,
+        key_space_manager.clone(),
+        log.new(o!("neighbours_store" => true)),
+    )));
 
     Ok(Arc::new(GraphPayloadHandler::new(
         local_node.key,
         key_space_manager,
-        neighbours_size,
+        neighbours_store,
         log,
     )))
 }

@@ -8,6 +8,9 @@ use std::mem::size_of;
 use std::ops::{BitXor, Deref};
 use std::fmt;
 
+/// The default dimension size for key space
+pub const DEFAULT_KEY_SPACE_SIZE: usize = 2;
+
 /// A key space value with a set of coordinates.
 #[derive(Clone, PartialEq)]
 pub struct KeySpace {
@@ -82,6 +85,43 @@ impl KeySpaceManager {
             .fold(0 as i64, |a, b| a + (b as i64));
 
         (total as f32).powf(1f32 / a_ks.coords.len() as f32)
+    }
+
+    /// Get the angle between two points in key space `a` and `b`, relative to
+    /// a point in key space `relative_to`.
+    pub fn angle(
+        &self,
+        relative_to: &KeySpace,
+        a: &KeySpace,
+        b: &KeySpace,
+    ) -> f32 {
+        let dot = |a2: &KeySpace, b2: &KeySpace| -> f32 {
+            let result: i64 = a2.coords
+                .iter()
+                .zip(&b2.coords)
+                .zip(&relative_to.coords)
+                .map(|((i, j), l)| ((i - l) as i64, (j - l) as i64))
+                .map(|(i, j)| i * j)
+                .sum();
+            result as f32
+        };
+
+        let numerator = dot(a, b);
+        let denominator = dot(a, a).sqrt() * dot(b, b).sqrt();
+
+        // If the denominator is zero, then either `a` or `b` are equal to
+        // `relative_to`, and the angle between `a` and `b` is zero too.
+        if denominator == 0.0 {
+            return 0.0;
+        }
+
+        let cos_angle = numerator / denominator;
+
+        // Ensure that the angle is between -1 and 1.
+        // Check just around this range to allow for some floating point error.
+        assert!(cos_angle.abs() < 1.01);
+
+        cos_angle.min(1.0).max(-1.0).acos()
     }
 
     /// Sort a vector by each element's closeness to some key in key space.
@@ -184,5 +224,86 @@ mod test {
         assert_eq!(manager.distance(&ks[0], &ks[1]), 3f32.sqrt());
         assert_eq!(manager.distance(&ks[0], &ks[2]), 4f32.sqrt());
         assert_eq!(manager.distance(&ks[1], &ks[2]), 5f32.sqrt());
+    }
+
+    #[test]
+    fn test_angle() {
+        // Grid of form:
+        //       |7   8   1
+        //       |
+        //y = 0 >|6   0   2
+        //       |
+        //       |5   4   3
+        //       - - - - -
+        //      x = 0 ^
+        //
+        // Where the numbers on the grids are the indices in `ks`
+        let ks = vec![
+            KeySpace { coords: vec![0, 0] },
+            KeySpace { coords: vec![2, 2] },
+            KeySpace { coords: vec![2, 0] },
+            KeySpace {
+                coords: vec![2, -2],
+            },
+            KeySpace {
+                coords: vec![0, -2],
+            },
+            KeySpace {
+                coords: vec![-2, -2],
+            },
+            KeySpace {
+                coords: vec![-2, 0],
+            },
+            KeySpace {
+                coords: vec![-2, 2],
+            },
+            KeySpace { coords: vec![0, 2] },
+        ];
+        let manager = KeySpaceManager::new(2);
+
+        for k in &ks {
+            assert_eq!(manager.angle(k, k, k), 0.0);
+        }
+
+        for k in &ks {
+            assert_eq!(manager.angle(&ks[0], k, k), 0.0);
+        }
+
+        assert_eq!(
+            manager.angle(&ks[0], &ks[1], &ks[2]),
+            ::std::f32::consts::PI / 4.0
+        );
+        assert_eq!(
+            manager.angle(&ks[0], &ks[2], &ks[6]),
+            ::std::f32::consts::PI
+        );
+        assert_eq!(
+            manager.angle(&ks[0], &ks[3], &ks[6]),
+            3.0 * ::std::f32::consts::PI / 4.0
+        );
+        assert_eq!(
+            manager.angle(&ks[0], &ks[7], &ks[8]),
+            ::std::f32::consts::PI / 4.0
+        );
+        assert_eq!(
+            manager.angle(&ks[0], &ks[3], &ks[7]),
+            ::std::f32::consts::PI
+        );
+    }
+
+    #[test]
+    fn test_angle_1d() {
+        let ks = vec![
+            KeySpace { coords: vec![-1] },
+            KeySpace { coords: vec![0] },
+            KeySpace { coords: vec![1] },
+            KeySpace { coords: vec![2] },
+        ];
+        let manager = KeySpaceManager::new(1);
+        assert_eq!(
+            manager.angle(&ks[1], &ks[0], &ks[2]),
+            ::std::f32::consts::PI
+        );
+        assert_eq!(manager.angle(&ks[1], &ks[2], &ks[3]), 0.0);
     }
 }

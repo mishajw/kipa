@@ -4,7 +4,13 @@ mod key_space;
 mod neighbours_store;
 mod search;
 
-pub use payload_handler::graph::key_space::KeySpaceManager;
+pub use payload_handler::graph::neighbours_store::{NeighboursStore,
+                                                   DEFAULT_ANGLE_WEIGHTING,
+                                                   DEFAULT_DISTANCE_WEIGHTING,
+                                                   DEFAULT_NEIGHBOURS_SIZE};
+pub use payload_handler::graph::key_space::{KeySpaceManager,
+                                            DEFAULT_KEY_SPACE_SIZE};
+
 use address::Address;
 use api::{RequestPayload, ResponsePayload};
 use error::*;
@@ -12,18 +18,11 @@ use key::Key;
 use message_handler::PayloadClient;
 use node::Node;
 use payload_handler::PayloadHandler;
-use payload_handler::graph::neighbours_store::NeighboursStore;
 use payload_handler::graph::search::{GetNeighboursFn, GraphSearch,
                                      SearchCallbackReturn};
 
 use std::sync::{Arc, Mutex};
 use slog::Logger;
-
-/// The default size of the neighbours store
-pub const DEFAULT_NEIGHBOURS_SIZE: usize = 3;
-
-/// The default dimension size for key space
-pub const DEFAULT_KEY_SPACE_SIZE: usize = 2;
 
 /// The default bredth of the search to use when connecting
 pub const DEFAULT_CONNECT_SEARCH_SIZE: usize = 3;
@@ -46,18 +45,13 @@ impl GraphPayloadHandler {
     pub fn new(
         key: Key,
         key_space_manager: Arc<KeySpaceManager>,
-        neighbours_size: usize,
+        neighbours_store: Arc<Mutex<NeighboursStore>>,
         log: Logger,
     ) -> Self {
         GraphPayloadHandler {
             key: key.clone(),
             graph_search: Arc::new(GraphSearch::new(key_space_manager.clone())),
-            neighbours_store: Arc::new(Mutex::new(NeighboursStore::new(
-                key,
-                neighbours_size,
-                key_space_manager.clone(),
-                log.new(o!("neighbours_store" => true)),
-            ))),
+            neighbours_store: neighbours_store,
             key_space_manager: key_space_manager,
             log: log,
         }
