@@ -48,6 +48,7 @@ impl MessageHandler {
             &message.payload,
             sender,
             payload_client,
+            message.id,
         )?;
 
         let response = ResponseMessage::new(

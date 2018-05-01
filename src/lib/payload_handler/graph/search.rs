@@ -36,9 +36,7 @@ macro_rules! return_callback {
 }
 
 /// Contains data for graph search
-pub struct GraphSearch {
-    log: Logger,
-}
+pub struct GraphSearch {}
 
 #[derive(Clone)]
 struct SearchNode {
@@ -69,8 +67,8 @@ impl PartialOrd for SearchNode {
 impl GraphSearch {
     /// Create a new graph search with a function for retrieving the neighbours
     /// of the node.
-    pub fn new(log: Logger) -> Self {
-        GraphSearch { log: log }
+    pub fn new() -> Self {
+        GraphSearch {}
     }
 
     /// Search for a key using the `GetNeighboursFn`.
@@ -81,8 +79,9 @@ impl GraphSearch {
         get_neighbours_fn: GetNeighboursFn,
         found_node_callback: FoundNodeCallback<T>,
         explored_node_callback: ExploredNodeCallback<T>,
+        log: Logger,
     ) -> Result<Option<T>> {
-        info!(self.log, "Starting graph search"; "key" => %key);
+        info!(log, "Starting graph search"; "key" => %key);
 
         let key_space = KeySpace::from_key(key, 2);
         // Create structures for the search.
@@ -108,7 +107,7 @@ impl GraphSearch {
 
         while let Some(next_node) = to_explore.pop() {
             trace!(
-                self.log,
+                log,
                 "Search loop iteration";
                 "current_node" => %next_node.node,
                 "current_cost" => next_node.cost,
@@ -123,7 +122,7 @@ impl GraphSearch {
             // Get the neighbours of the node
             let neighbours = (*get_neighbours_fn)(&next_node.node, key)?;
             trace!(
-                self.log,
+                log,
                 "Found neighbours for node";
                 "node" => %next_node.node,
                 "neighbours" => neighbours
@@ -139,14 +138,14 @@ impl GraphSearch {
                 // If we've seen it before, ignore it
                 if found.contains(&search_node.node.key) {
                     trace!(
-                        self.log,
+                        log,
                         "Seen before";
                         "node" => %search_node.node.key);
                     continue;
                 }
 
                 trace!(
-                    self.log,
+                    log,
                     "First encounter";
                     "node" => %search_node.node.key);
                 found.insert(search_node.node.key.clone());
@@ -160,7 +159,7 @@ impl GraphSearch {
             return_callback!(explored_node_callback(&next_node.node)?);
         }
 
-        info!(self.log, "Failed to find key"; "key" => %key);
+        info!(log, "Failed to find key"; "key" => %key);
         Ok(None)
     }
 }
@@ -189,7 +188,7 @@ mod test {
             .collect::<Vec<_>>();
         let nodes = Arc::new(nodes);
 
-        let search = GraphSearch::new(test_log);
+        let search = GraphSearch::new();
         let explored_nodes = Arc::new(Mutex::new(vec![]));
 
         let search_nodes = nodes.clone();
@@ -223,6 +222,7 @@ mod test {
                     search_explored_nodes.lock().unwrap().push(n.clone());
                     Ok(SearchCallbackReturn::Continue())
                 }),
+                test_log,
             )
             .unwrap();
 

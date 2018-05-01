@@ -57,9 +57,7 @@ impl GraphPayloadHandler {
                 key_space_size,
                 log.new(o!("neighbours_store" => true)),
             ))),
-            graph_search: Arc::new(GraphSearch::new(log.new(
-                o!("search" => true),
-            ))),
+            graph_search: Arc::new(GraphSearch::new()),
             key_space_size: key_space_size,
             log: log,
         }
@@ -69,6 +67,7 @@ impl GraphPayloadHandler {
         &self,
         key: &Key,
         payload_client: Arc<PayloadClient>,
+        log: Logger,
     ) -> Result<Option<Node>> {
         let callback_key = key.clone();
         let found_log = self.log.new(o!());
@@ -101,6 +100,7 @@ impl GraphPayloadHandler {
                     "node" => %n);
                 Ok(SearchCallbackReturn::Continue())
             }),
+            log,
         )
     }
 
@@ -108,6 +108,7 @@ impl GraphPayloadHandler {
         &self,
         node: &Node,
         payload_client: Arc<PayloadClient>,
+        log: Logger,
     ) -> Result<()> {
         // Continue the graph search looking for ourselves, until the `n`
         // closest nodes to ourselves have also been explored.
@@ -189,6 +190,7 @@ impl GraphPayloadHandler {
             self.create_get_neighbours_fn(payload_client.clone()),
             Arc::new(found_callback),
             Arc::new(explored_callback),
+            log,
         )?;
         Ok(())
     }
@@ -223,6 +225,7 @@ impl PayloadHandler for GraphPayloadHandler {
         payload: &RequestPayload,
         sender: Option<&Node>,
         payload_client: Arc<PayloadClient>,
+        message_id: u32,
     ) -> Result<ResponsePayload> {
         info!(
             self.log,
@@ -264,6 +267,10 @@ impl PayloadHandler for GraphPayloadHandler {
                 Ok(ResponsePayload::SearchResponse(self.search(
                     &key,
                     payload_client,
+                    self.log.new(o!(
+                            "message_id" => message_id,
+                            "search_request" => true
+                        )),
                 )?))
             }
             &RequestPayload::ConnectRequest(ref node) => {
@@ -271,7 +278,14 @@ impl PayloadHandler for GraphPayloadHandler {
                     self.log,
                     "Received connect request";
                     "node" => %node);
-                self.connect(node, payload_client)?;
+                self.connect(
+                    node,
+                    payload_client,
+                    self.log.new(o!(
+                            "message_id" => message_id,
+                            "connect_request" => true
+                        )),
+                )?;
                 Ok(ResponsePayload::ConnectResponse())
             }
             &RequestPayload::ListNeighboursRequest() => {
