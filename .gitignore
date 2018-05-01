@@ -1,5 +1,6 @@
 .env
 .gnupg
 __pycache__
+benchmarks_output
 src/lib/data_transformer/proto_api.rs
 target

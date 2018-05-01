@@ -1,0 +1,3 @@
+num_nodes: 5
+connect_type: rooted
+num_connects: 1

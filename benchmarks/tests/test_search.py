@@ -8,22 +8,19 @@ log = logging.getLogger(__name__)
 
 class TestCyclicSearch(unittest.TestCase):
     def test_all_searches(self):
-        network = networks.creator.create(3)
-        networks.modifier.ensure_alive(network)
-        networks.modifier.connect_nodes_cyclically(network)
+        results = networks.configuration.Configuration(
+            num_nodes=5,
+            connect_type=networks.configuration.ConnectType.CYCLICAL,
+            num_connects=1).run("benchmarks_output/tests")
 
-        results = networks.tester.test_all_searches(network)
-        log.info(results.percentage_success())
-        self.assertTrue(results.all_successes())
+        self.assertTrue(results["percentage_success"] == 1)
 
 
 class TestRootedSearch(unittest.TestCase):
     def test_all_searches(self):
-        network = networks.creator.create(32)
-        networks.modifier.ensure_alive(network)
-        [root_key_id] = network.get_random_keys(1)
-        networks.modifier.connect_nodes_to_one(network, root_key_id)
+        results = networks.configuration.Configuration(
+            num_nodes=5,
+            connect_type=networks.configuration.ConnectType.ROOTED,
+            num_connects=1).run("benchmarks_output/tests")
 
-        results = networks.tester.test_all_searches(network)
-        log.info(results.percentage_success())
-        self.assertTrue(results.all_successes())
+        self.assertTrue(results["percentage_success"] == 1)

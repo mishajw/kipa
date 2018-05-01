@@ -1,6 +1,6 @@
 from benchmarks import networks
 from benchmarks.networks import Network
-from typing import List, Iterator
+from typing import List, Iterator, Dict
 import operator
 import re
 from PIL import Image, ImageDraw
@@ -13,15 +13,14 @@ class GraphNode:
         self.neighbours = neighbours
 
 
-def draw(network: Network) -> None:
+def draw(network_logs: Dict[str, List[dict]], save_location: str) -> None:
     # This will make sure that `list-neighbours` is called at the end of
     # execution
-    networks.modifier.ensure_alive(network)
-    graph = list(__get_nodes(network))
-    __draw_graph(graph)
+    graph = list(__get_nodes(network_logs))
+    __draw_graph(graph, save_location)
 
 
-def __draw_graph(graph: List[GraphNode]):
+def __draw_graph(graph: List[GraphNode], save_location: str):
     image_dims = [1920, 1080]
     node_radius = 10
 
@@ -93,13 +92,12 @@ def __draw_graph(graph: List[GraphNode]):
         d.text((x, y), n.key_id, fill="black")
 
     # Save the image
-    # TODO: Add configurability to image save location
-    image.save("graph.png")
+    image.save(save_location)
 
 
-def __get_nodes(network: Network) -> Iterator[GraphNode]:
-    for key in network.get_all_keys():
-        logs = network.get_logs(key)
+def __get_nodes(network_logs: Dict[str, List[dict]]) -> Iterator[GraphNode]:
+    for key in network_logs:
+        logs = network_logs[key]
         key_space = __get_key_space(logs)
         neighbours = __get_neighbours(logs)
 
