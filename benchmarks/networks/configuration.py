@@ -3,6 +3,7 @@ import logging
 import os
 from enum import Enum
 import datetime
+from typing import Dict, Any
 
 import yaml
 
@@ -57,7 +58,7 @@ class Configuration:
 
         # The results dictionary that will be written detailing the
         # configuration run
-        results_dict = dict(
+        results_dict: Dict[str, Any] = dict(
             original_config=dict(
                 num_nodes=self.num_nodes,
                 connect_type=self.connect_type.to_str(),
@@ -92,7 +93,16 @@ class Configuration:
             log.info(f"Performing connection #{i + 1}")
             connect()
 
+        log.info("Getting search results")
+        search_results = networks.tester.sample_test_searches(network)
+        percentage_success = search_results.percentage_success()
+        results_dict["percentage_success"] = percentage_success
+        log.info(f"Search results: {percentage_success * 100}% success")
+
         log.info("Getting logs")
+        # This will call `list-neighbours` so that we have an up-to-date account
+        # of each nodes neighbours in the logs
+        networks.modifier.ensure_alive(network)
         network_logs = dict()
         network_human_readable_logs = dict()
         for key in network.get_all_keys():
@@ -110,18 +120,33 @@ class Configuration:
             with open(os.path.join(network_log_dir, f"{key}.txt"), "w") as f:
                 f.write(network_human_readable_logs[key])
 
-        log.info("Drawing network")
-        graph_path = os.path.abspath(
-            os.path.join(output_directory, "graph.png"))
-        networks.drawer.draw(
-            network_logs, graph_path)
-        results_dict["graph"] = graph_path
+        log.info("Drawing main graph")
+        graph_directory = os.path.abspath(
+            os.path.join(output_directory, "graphs"))
+        if not os.path.isdir(graph_directory):
+            os.makedirs(graph_directory)
+        main_graph_path = os.path.join(graph_directory, "graph.png")
+        networks.drawer.draw_main_graph(
+            network_logs, main_graph_path)
+        results_dict["graph"] = main_graph_path
 
-        log.info("Getting search results")
-        search_results = networks.tester.sample_test_searches(network)
-        percentage_success = search_results.percentage_success()
-        results_dict["percentage_success"] = percentage_success
-        log.info(f"Search results: {percentage_success * 100}% success")
+        log.info("Drawing search networks and collecting search results")
+        results_dict["search_results"] = []
+        for i in range(len(search_results)):
+            from_key_id, to_key_id, result, message_id = search_results[i]
+            query_graph_path = os.path.join(
+                graph_directory, f"{message_id}.png")
+            networks.drawer.draw_query_graph(
+                network_logs,
+                from_key_id,
+                message_id,
+                query_graph_path)
+            results_dict["search_results"].append(dict(
+                from_key_id=from_key_id,
+                to_key_id=to_key_id,
+                success=result,
+                message_id=message_id,
+                graph=query_graph_path))
 
         with open(os.path.join(output_directory, "details.yaml"), "w") as f:
             yaml.dump(results_dict, f, default_flow_style=False)

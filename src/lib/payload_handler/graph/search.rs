@@ -124,6 +124,7 @@ impl GraphSearch {
             trace!(
                 log,
                 "Found neighbours for node";
+                "found" => true,
                 "node" => %next_node.node,
                 "neighbours" => neighbours
                     .iter()

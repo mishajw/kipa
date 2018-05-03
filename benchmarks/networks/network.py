@@ -39,7 +39,13 @@ class Network:
         return output
 
     def get_logs(self, key_id: str) -> List[dict]:
-        raw_logs = self.exec_command(key_id, ["cat", "/root/log-daemon.json"])
+        return self.__get_logs_from_file(key_id, "/root/log-daemon.json")
+
+    def get_cli_logs(self, key_id: str) -> List[dict]:
+        return self.__get_logs_from_file(key_id, "/root/log-cli.json")
+
+    def __get_logs_from_file(self, key_id: str, file_name: str) -> List[Dict]:
+        raw_logs = self.exec_command(key_id, ["cat", file_name])
         logs: List[dict] = []
         for line in (raw_logs.split("\n")):
             if line.strip() == "":

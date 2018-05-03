@@ -83,6 +83,7 @@ fn message_daemon(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
     )?;
 
     let message_id: u32 = thread_rng().gen();
+    info!(log, "Created message ID"; "message_id" => message_id);
 
     if let Some(search_args) = args.subcommand_matches("search") {
         let search_key = gpg_key_handler
