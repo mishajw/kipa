@@ -54,26 +54,32 @@ class SearchResult:
 
 def test_search(
         network: Network, from_key_id: str, to_key_id: str) -> Tuple[bool, str]:
-    log.info(f"Testing search between {from_key_id} and {to_key_id}")
-    output = network.exec_command(
-        from_key_id,
-        [
-            "/root/kipa_cli",
-            "search",
-            "--key-id", to_key_id])
+    try:
+        log.info(f"Testing search between {from_key_id} and {to_key_id}")
+        output = network.exec_command(
+            from_key_id,
+            [
+                "/root/kipa_cli",
+                "search",
+                "--key-id", to_key_id])
 
-    success = "Search success" in output
+        success = "Search success" in output
 
-    message_id = set([
-        l["message_id"]
-        for l in network.get_cli_logs(from_key_id)
-        if "message_id" in l])
-    assert len(message_id) == 1, \
-        "Couldn't find exactly one `message_id` when testing search, " \
-        f"found: {message_id}"
-    message_id = next(iter(message_id))
+        message_id = set([
+            l["message_id"]
+            for l in network.get_cli_logs(from_key_id)
+            if "message_id" in l])
+        assert len(message_id) == 1, \
+            "Couldn't find exactly one `message_id` when testing search, " \
+            f"found: {message_id}"
+        message_id = next(iter(message_id))
 
-    return success, message_id
+        return success, message_id
+    except AssertionError as e:
+        log.error(
+            "Error thrown when testing search "
+            f"between {from_key_id} and {to_key_id}: {e}")
+        return False, ""
 
 
 def test_all_searches(network: Network) -> SearchResult:
