@@ -117,7 +117,7 @@ class Configuration:
         for key in network_logs.keys():
             with open(os.path.join(network_log_dir, f"{key}.json"), "w") as f:
                 json.dump(network_logs[key], f)
-            with open(os.path.join(network_log_dir, f"{key}.txt"), "w") as f:
+            with open(os.path.join(network_log_dir, f"{key}.txt"), "wb") as f:
                 f.write(network_human_readable_logs[key])
 
         log.info("Drawing main graph")

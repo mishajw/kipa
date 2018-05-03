@@ -53,9 +53,9 @@ class Network:
             logs.append(json.loads(line))
         return logs
 
-    def get_human_readable_logs(self, key_id: str) -> str:
+    def get_human_readable_logs(self, key_id: str) -> bytes:
         logs = self.__key_dict[key_id].container.attach(
-            stdout=True, stderr=True, stream=False, logs=True).decode()
-        assert isinstance(logs, str), \
-            f"Logs returned from docker was not a string: {logs}"
+            stdout=True, stderr=True, stream=False, logs=True)
+        assert isinstance(logs, bytes), \
+            f"Logs returned from docker was not bytes: {logs}"
         return logs
