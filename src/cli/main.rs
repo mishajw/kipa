@@ -79,7 +79,7 @@ fn message_daemon(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
     let local_client = create_local_client(
         data_transformer.clone(),
         args,
-        log.new(o!("local-client" => true)),
+        log.new(o!("local_client" => true)),
     )?;
 
     let message_id: u32 = thread_rng().gen();

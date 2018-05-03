@@ -55,7 +55,7 @@ impl GraphPayloadHandler {
                 key,
                 neighbours_size,
                 key_space_size,
-                log.new(o!("neighbours-store" => true)),
+                log.new(o!("neighbours_store" => true)),
             ))),
             graph_search: Arc::new(GraphSearch::new(log.new(
                 o!("search" => true),
@@ -281,7 +281,7 @@ impl PayloadHandler for GraphPayloadHandler {
                 trace!(
                     self.log,
                     "Replying to list neighbours request";
-                    "list-neighbours" => true,
+                    "list_neighbours" => true,
                     "reply" => true,
                     "neighbours" => neighbours
                         .iter()

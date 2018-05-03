@@ -112,7 +112,7 @@ impl GraphSearch {
                 "Search loop iteration";
                 "current_node" => %next_node.node,
                 "current_cost" => next_node.cost,
-                "found" => found
+                "previously_found" => found
                     .iter()
                     .map(|k| k.get_key_id().clone())
                     .collect::<Vec<String>>()
@@ -126,7 +126,7 @@ impl GraphSearch {
                 self.log,
                 "Found neighbours for node";
                 "node" => %next_node.node,
-                "neigbours" => neighbours
+                "neighbours" => neighbours
                     .iter()
                     .map(|n| n.key.get_key_id().clone())
                     .collect::<Vec<String>>()
