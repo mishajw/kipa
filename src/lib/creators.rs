@@ -183,7 +183,8 @@ pub fn create_payload_handler(
     args: &clap::ArgMatches,
     log: Logger,
 ) -> Result<Arc<PayloadHandler>> {
-    use payload_handler::graph::{GraphPayloadHandler, DEFAULT_KEY_SPACE_SIZE,
+    use payload_handler::graph::{GraphPayloadHandler, KeySpaceManager,
+                                 DEFAULT_KEY_SPACE_SIZE,
                                  DEFAULT_NEIGHBOURS_SIZE};
 
     let neighbours_size = args.value_of("neighbours_size")
@@ -196,10 +197,12 @@ pub fn create_payload_handler(
         .parse::<usize>()
         .chain_err(|| "Error on parsing key space size")?;
 
+    let key_space_manager = Arc::new(KeySpaceManager::new(key_space_size));
+
     Ok(Arc::new(GraphPayloadHandler::new(
         local_node.key,
+        key_space_manager,
         neighbours_size,
-        key_space_size,
         log,
     )))
 }

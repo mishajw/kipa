@@ -3,7 +3,7 @@
 use error::*;
 use key::Key;
 use node::Node;
-use payload_handler::graph::key_space::KeySpace;
+use payload_handler::graph::key_space::KeySpaceManager;
 
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashSet};
@@ -36,7 +36,9 @@ macro_rules! return_callback {
 }
 
 /// Contains data for graph search
-pub struct GraphSearch {}
+pub struct GraphSearch {
+    key_space_manager: Arc<KeySpaceManager>,
+}
 
 #[derive(Clone)]
 struct SearchNode {
@@ -67,8 +69,10 @@ impl PartialOrd for SearchNode {
 impl GraphSearch {
     /// Create a new graph search with a function for retrieving the neighbours
     /// of the node.
-    pub fn new() -> Self {
-        GraphSearch {}
+    pub fn new(key_space_manager: Arc<KeySpaceManager>) -> Self {
+        GraphSearch {
+            key_space_manager: key_space_manager,
+        }
     }
 
     /// Search for a key using the `GetNeighboursFn`.
@@ -83,13 +87,16 @@ impl GraphSearch {
     ) -> Result<Option<T>> {
         info!(log, "Starting graph search"; "key" => %key);
 
-        let key_space = KeySpace::from_key(key, 2);
+        let key_space = self.key_space_manager.create_from_key(key);
         // Create structures for the search.
         let mut to_explore = BinaryHeap::new();
         let mut found: HashSet<Key> = HashSet::new();
 
         let into_search_node = |n: Node| -> SearchNode {
-            let cost = &KeySpace::from_key(&n.key, 2) - &key_space;
+            let cost = self.key_space_manager.distance(
+                &self.key_space_manager.create_from_key(&n.key),
+                &key_space,
+            );
             SearchNode {
                 node: n,
                 cost: -cost,
@@ -189,7 +196,7 @@ mod test {
             .collect::<Vec<_>>();
         let nodes = Arc::new(nodes);
 
-        let search = GraphSearch::new();
+        let search = GraphSearch::new(Arc::new(KeySpaceManager::new(1)));
         let explored_nodes = Arc::new(Mutex::new(vec![]));
 
         let search_nodes = nodes.clone();

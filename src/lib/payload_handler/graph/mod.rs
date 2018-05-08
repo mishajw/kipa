@@ -1,20 +1,20 @@
 //! Implement `PayloadHandler` using graph based searches through KIPA net.
 
-mod search;
-mod neighbours_store;
 mod key_space;
+mod neighbours_store;
+mod search;
 
+pub use payload_handler::graph::key_space::KeySpaceManager;
+use address::Address;
+use api::{RequestPayload, ResponsePayload};
 use error::*;
 use key::Key;
+use message_handler::PayloadClient;
 use node::Node;
-use address::Address;
+use payload_handler::PayloadHandler;
 use payload_handler::graph::neighbours_store::NeighboursStore;
-use payload_handler::graph::key_space::{sort_key_relative, KeySpace};
 use payload_handler::graph::search::{GetNeighboursFn, GraphSearch,
                                      SearchCallbackReturn};
-use api::{RequestPayload, ResponsePayload};
-use payload_handler::PayloadHandler;
-use message_handler::PayloadClient;
 
 use std::sync::{Arc, Mutex};
 use slog::Logger;
@@ -31,9 +31,9 @@ pub const DEFAULT_CONNECT_SEARCH_SIZE: usize = 3;
 /// Contains graph search information.
 pub struct GraphPayloadHandler {
     key: Key,
+    key_space_manager: Arc<KeySpaceManager>,
     neighbours_store: Arc<Mutex<NeighboursStore>>,
     graph_search: Arc<GraphSearch>,
-    key_space_size: usize,
     log: Logger,
 }
 
@@ -45,20 +45,20 @@ impl GraphPayloadHandler {
     /// - `initial_node` is the initial other node in KIPA network.
     pub fn new(
         key: Key,
+        key_space_manager: Arc<KeySpaceManager>,
         neighbours_size: usize,
-        key_space_size: usize,
         log: Logger,
     ) -> Self {
         GraphPayloadHandler {
             key: key.clone(),
+            graph_search: Arc::new(GraphSearch::new(key_space_manager.clone())),
             neighbours_store: Arc::new(Mutex::new(NeighboursStore::new(
                 key,
                 neighbours_size,
-                key_space_size,
+                key_space_manager.clone(),
                 log.new(o!("neighbours_store" => true)),
             ))),
-            graph_search: Arc::new(GraphSearch::new()),
-            key_space_size: key_space_size,
+            key_space_manager: key_space_manager,
             log: log,
         }
     }
@@ -120,10 +120,10 @@ impl GraphPayloadHandler {
         ));
 
         let local_key_space =
-            Arc::new(KeySpace::from_key(&self.key, self.key_space_size));
+            Arc::new(self.key_space_manager.create_from_key(&self.key));
 
         let found_n_closest = n_closest.clone();
-        let found_key_space_size = self.key_space_size.clone();
+        let found_key_space_manager = self.key_space_manager.clone();
         let found_neighbours_store = self.neighbours_store.clone();
         let found_log = self.log.new(o!());
         let found_callback = move |n: &Node| {
@@ -142,9 +142,9 @@ impl GraphPayloadHandler {
                 .lock()
                 .expect("Failed to lock found_n_closest");
             n_closest_local.push((n.clone(), false));
-            sort_key_relative(
+            found_key_space_manager.sort_key_relative(
                 &mut n_closest_local,
-                &|&(ref n, _)| KeySpace::from_key(&n.key, found_key_space_size),
+                &|&(ref n, _)| found_key_space_manager.create_from_key(&n.key),
                 &local_key_space,
             );
             while n_closest_local.len() > DEFAULT_CONNECT_SEARCH_SIZE {

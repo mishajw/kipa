@@ -2,14 +2,15 @@
 
 use key::Key;
 use node::Node;
-use payload_handler::graph::key_space::{remove_duplicate_keys,
-                                        sort_key_relative, KeySpace};
+use payload_handler::graph::key_space::{KeySpace, KeySpaceManager};
 
 use slog::Logger;
+use std::sync::Arc;
 
 /// Holds the neighbour store data
 pub struct NeighboursStore {
     local_key_space: KeySpace,
+    key_space_manager: Arc<KeySpaceManager>,
     size: usize,
     neighbours: Vec<(Node, KeySpace)>,
     log: Logger,
@@ -20,16 +21,17 @@ impl NeighboursStore {
     pub fn new(
         local_key: Key,
         size: usize,
-        key_space_size: usize,
+        key_space_manager: Arc<KeySpaceManager>,
         log: Logger,
     ) -> Self {
-        let local_key_space = KeySpace::from_key(&local_key, key_space_size);
+        let local_key_space = key_space_manager.create_from_key(&local_key);
         info!(
             log,
             "Creating neighbours store";
             "local_key_space" => local_key_space.to_string());
         NeighboursStore {
             local_key_space: local_key_space,
+            key_space_manager: key_space_manager,
             size: size,
             neighbours: vec![],
             log: log,
@@ -39,10 +41,10 @@ impl NeighboursStore {
     /// Get the `n` closest neighbours to some key.
     pub fn get_n_closest(&self, key: &Key, n: usize) -> Vec<Node> {
         let mut neighbours = self.neighbours.clone();
-        sort_key_relative(
+        self.key_space_manager.sort_key_relative(
             &mut neighbours,
             &|&(_, ref ks)| ks.clone(),
-            &KeySpace::from_key(key, self.local_key_space.get_size()),
+            &self.key_space_manager.create_from_key(key),
         );
         neighbours
             .iter()
@@ -61,14 +63,14 @@ impl NeighboursStore {
 
     /// Given a node, consider keeping it as a neighbour.
     pub fn consider_candidate(&mut self, node: &Node) {
-        let key_space =
-            KeySpace::from_key(&node.key, self.local_key_space.get_size());
+        let key_space = self.key_space_manager.create_from_key(&node.key);
 
         info!(
             self.log,
             "Considering candidate neighbour";
             "node" => %node,
-            "distance" => &key_space - &self.local_key_space);
+            "distance" => self.key_space_manager.distance(
+                &key_space, &self.local_key_space));
 
         // Don't add ourselves
         if key_space == self.local_key_space {
@@ -78,16 +80,19 @@ impl NeighboursStore {
         // Add the key to neighbours...
         self.neighbours.push((node.clone(), key_space));
         // ...sort the neighbours...
-        sort_key_relative(
+        self.key_space_manager.sort_key_relative(
             &mut self.neighbours,
             &|&(_, ref ks)| ks.clone(),
             &self.local_key_space,
         );
         // ...remove duplicates...
-        remove_duplicate_keys(&mut self.neighbours, &|&(_, ref ks)| ks.clone());
+        self.key_space_manager
+            .remove_duplicate_keys(&mut self.neighbours, &|&(_, ref ks)| {
+                ks.clone()
+            });
         // ...sort again because removing duplicates breaks ordering...
         // TODO: Fix
-        sort_key_relative(
+        self.key_space_manager.sort_key_relative(
             &mut self.neighbours,
             &|&(_, ref ks)| ks.clone(),
             &self.local_key_space,
@@ -120,8 +125,12 @@ mod test {
             Key::new("00000007".to_string(), vec![7]),
         ];
 
-        let mut ns =
-            NeighboursStore::new(keys[keys.len() - 1].clone(), 3, 2, test_log);
+        let mut ns = NeighboursStore::new(
+            keys[keys.len() - 1].clone(),
+            3,
+            Arc::new(KeySpaceManager::new(1)),
+            test_log,
+        );
         for i in 0..keys.len() - 1 {
             ns.consider_candidate(&Node::new(
                 Address::new(vec![0, 0, 0, 0], 0),
