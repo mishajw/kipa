@@ -32,4 +32,5 @@ if __name__ == "__main__":
     logging.getLogger().setLevel(logging.DEBUG)
     logging.getLogger("docker").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger("PIL").setLevel(logging.WARNING)
     main()
