@@ -7,7 +7,7 @@ mod search;
 pub use payload_handler::graph::neighbours_store::{NeighboursStore,
                                                    DEFAULT_ANGLE_WEIGHTING,
                                                    DEFAULT_DISTANCE_WEIGHTING,
-                                                   DEFAULT_NEIGHBOURS_SIZE};
+                                                   DEFAULT_MAX_NUM_NEIGHBOURS};
 pub use payload_handler::graph::key_space::{KeySpaceManager,
                                             DEFAULT_KEY_SPACE_SIZE};
 

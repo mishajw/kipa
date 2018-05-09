@@ -187,10 +187,10 @@ pub fn create_payload_handler(
                                  NeighboursStore, DEFAULT_ANGLE_WEIGHTING,
                                  DEFAULT_DISTANCE_WEIGHTING,
                                  DEFAULT_KEY_SPACE_SIZE,
-                                 DEFAULT_NEIGHBOURS_SIZE};
+                                 DEFAULT_MAX_NUM_NEIGHBOURS};
 
     let neighbours_size = args.value_of("neighbours_size")
-        .unwrap_or(&DEFAULT_NEIGHBOURS_SIZE.to_string())
+        .unwrap_or(&DEFAULT_MAX_NUM_NEIGHBOURS.to_string())
         .parse::<usize>()
         .chain_err(|| "Error on parsing neighbour size")?;
 

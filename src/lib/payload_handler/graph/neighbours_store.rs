@@ -9,7 +9,7 @@ use slog::Logger;
 use std::collections::HashMap;
 
 /// The default size of the neighbours store.
-pub const DEFAULT_NEIGHBOURS_SIZE: usize = 3;
+pub const DEFAULT_MAX_NUM_NEIGHBOURS: usize = 3;
 
 /// The default weight for distance when considering neighbours.
 pub const DEFAULT_DISTANCE_WEIGHTING: f32 = 0.5;
@@ -21,7 +21,7 @@ pub const DEFAULT_ANGLE_WEIGHTING: f32 = 0.5;
 pub struct NeighboursStore {
     local_key_space: KeySpace,
     key_space_manager: Arc<KeySpaceManager>,
-    size: usize,
+    max_num_neighbours: usize,
     distance_weighting: f32,
     angle_weighting: f32,
     neighbours: Vec<(Node, KeySpace)>,
@@ -29,10 +29,11 @@ pub struct NeighboursStore {
 }
 
 impl NeighboursStore {
-    /// Create a new neighbour store with a size and the key of the local node.
+    /// Create a new neighbour store with a maximum number of neighbours and the
+    /// key of the local node.
     pub fn new(
         local_key: Key,
-        size: usize,
+        max_num_neighbours: usize,
         distance_weighting: f32,
         angle_weighting: f32,
         key_space_manager: Arc<KeySpaceManager>,
@@ -46,7 +47,7 @@ impl NeighboursStore {
         NeighboursStore {
             local_key_space: local_key_space,
             key_space_manager: key_space_manager,
-            size: size,
+            max_num_neighbours: max_num_neighbours,
             distance_weighting: distance_weighting,
             angle_weighting: angle_weighting,
             neighbours: vec![],
@@ -109,7 +110,7 @@ impl NeighboursStore {
         // Add the key to neighbours
         self.neighbours.push(neighbours_entry);
 
-        if self.neighbours.len() < self.size {
+        if self.neighbours.len() < self.max_num_neighbours {
             return;
         }
 
@@ -186,7 +187,7 @@ impl NeighboursStore {
         });
 
         // ...remove the furthest neighbours.
-        while self.neighbours.len() > self.size {
+        while self.neighbours.len() > self.max_num_neighbours {
             self.neighbours.pop();
         }
     }
