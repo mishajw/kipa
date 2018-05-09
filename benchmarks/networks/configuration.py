@@ -35,19 +35,26 @@ class ConnectType(Enum):
 
 class Configuration:
     def __init__(
-            self, num_nodes: int, connect_type: ConnectType, num_connects: int):
+            self,
+            num_nodes: int,
+            connect_type: ConnectType,
+            num_connects: int,
+            daemon_args: Dict[str, str]=None):
         self.num_nodes = num_nodes
         self.connect_type = connect_type
         self.num_connects = num_connects
+        self.daemon_args = daemon_args if daemon_args is not None else {}
 
     @classmethod
     def from_yaml(cls, yaml_path: str) -> "Configuration":
         with open(yaml_path, "r") as f:
             parameters = yaml.load(f)
+
         return cls(
             parameters["num_nodes"],
             ConnectType.from_str(parameters["connect_type"]),
-            parameters["num_connects"])
+            parameters["num_connects"],
+            parameters["daemon_args"] if "daemon_args" in parameters else {})
 
     def run(self, output_directory: str) -> dict:
         """
@@ -68,7 +75,8 @@ class Configuration:
             os.makedirs(output_directory)
 
         log.info(f"Creating network of size {self.num_nodes}")
-        network = networks.creator.create(self.num_nodes)
+        network = networks.creator.create(
+            self.num_nodes, self.__get_daemon_args_str())
         results_dict["keys"] = network.get_all_keys()
 
         # Create the `connect` function for connecting all nodes
@@ -148,3 +156,7 @@ class Configuration:
             yaml.dump(results_dict, f, default_flow_style=False)
 
         return results_dict
+
+    def __get_daemon_args_str(self) -> str:
+        return " ".join(
+            [f"--{arg} {self.daemon_args[arg]}" for arg in self.daemon_args])

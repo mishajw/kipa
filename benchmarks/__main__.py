@@ -4,7 +4,7 @@ import argparse
 import logging
 import os
 
-from benchmarks import networks, utils
+from benchmarks import networks, utils, comparisons
 
 
 def main():
@@ -21,14 +21,28 @@ def main():
         type=str,
         default="benchmarks_output",
         help="Where to output benchmark results")
+    parser.add_argument(
+        "--comparison",
+        type=str,
+        choices=["angle"],
+        default=None,
+        help="Run a comparison of the performance on a variable")
 
     args = parser.parse_args()
-    configuration = networks.configuration.Configuration.from_yaml(
-        args.network_config)
-    configuration.run(
-        os.path.join(
+    network_config = args.network_config
+    output_directory = args.output_directory
+    comparison = args.comparison
+
+    if comparison is None:
+        configuration = networks.configuration.Configuration.from_yaml(
+            network_config)
+        configuration.run(os.path.join(
             args.output_directory,
             f"configuration_{utils.get_formatted_time()}"))
+    elif comparison == "angle":
+        comparisons.run_angle_comparison(network_config, output_directory)
+    else:
+        raise ValueError(f"Unhandled comparison type: {comparison}")
 
 
 if __name__ == "__main__":

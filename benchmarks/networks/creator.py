@@ -23,7 +23,7 @@ NETWORK_NAME = f"{DOCKER_PREFIX}_network"
 IPV4_PREFIX = "192.168.123"
 
 
-def create(size: int) -> Network:
+def create(size: int, daemon_args: str) -> Network:
     """Create a network of the specified size"""
 
     key_ids = create_keys(size)
@@ -38,7 +38,8 @@ def create(size: int) -> Network:
     client.images.build(
         path=docker_directory,
         tag=IMAGE_NAME,
-        quiet=False)
+        quiet=False,
+        buildargs=dict(KIPA_ARGS=daemon_args))
 
     log.info("Deleting old docker constructs")
     __delete_old(client)
