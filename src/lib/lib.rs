@@ -22,6 +22,7 @@ extern crate slog_async;
 extern crate slog_json;
 extern crate slog_term;
 #[cfg(test)]
+#[allow(unused)]
 #[macro_use]
 extern crate spectral;
 
