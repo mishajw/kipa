@@ -2,8 +2,9 @@
 
 import argparse
 import logging
+import os
 
-from benchmarks import networks
+from benchmarks import networks, utils
 
 
 def main():
@@ -24,7 +25,10 @@ def main():
     args = parser.parse_args()
     configuration = networks.configuration.Configuration.from_yaml(
         args.network_config)
-    configuration.run(args.output_directory)
+    configuration.run(
+        os.path.join(
+            args.output_directory,
+            f"configuration_{utils.get_formatted_time()}"))
 
 
 if __name__ == "__main__":

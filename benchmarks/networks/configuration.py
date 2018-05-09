@@ -2,7 +2,6 @@ import json
 import logging
 import os
 from enum import Enum
-import datetime
 from typing import Dict, Any
 
 import yaml
@@ -65,9 +64,6 @@ class Configuration:
                 num_connects=self.num_connects))
 
         # Create the directory for outputting configuration run data
-        time_str = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-        output_directory = os.path.join(
-            output_directory, f"configuration_{time_str}")
         if not os.path.isdir(output_directory):
             os.makedirs(output_directory)
 
