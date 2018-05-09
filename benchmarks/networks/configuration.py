@@ -39,10 +39,12 @@ class Configuration:
             num_nodes: int,
             connect_type: ConnectType,
             num_connects: int,
-            daemon_args: Dict[str, str]=None):
+            num_search_tests: int = None,
+            daemon_args: Dict[str, str] = None):
         self.num_nodes = num_nodes
         self.connect_type = connect_type
         self.num_connects = num_connects
+        self.num_search_tests = num_search_tests
         self.daemon_args = daemon_args if daemon_args is not None else {}
 
     @classmethod
@@ -54,6 +56,8 @@ class Configuration:
             parameters["num_nodes"],
             ConnectType.from_str(parameters["connect_type"]),
             parameters["num_connects"],
+            parameters["num_search_tests"]
+            if "num_search_tests" in parameters else None,
             parameters["daemon_args"] if "daemon_args" in parameters else {})
 
     def run(self, output_directory: str) -> dict:
@@ -98,7 +102,8 @@ class Configuration:
             connect()
 
         log.info("Getting search results")
-        search_results = networks.tester.sample_test_searches(network)
+        search_results = networks.tester.sample_test_searches(
+            network, num_searches=self.num_search_tests)
         percentage_success = search_results.percentage_success()
         results_dict["percentage_success"] = percentage_success
         log.info(f"Search results: {percentage_success * 100}% success")
