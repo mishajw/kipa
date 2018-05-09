@@ -174,11 +174,13 @@ impl GraphSearch {
 
 #[cfg(test)]
 mod test {
-    use address::Address;
-    use slog;
-    use key::Key;
-    use std::sync::Mutex;
     use super::*;
+    use address::Address;
+    use key::Key;
+
+    use slog;
+    use std::sync::Mutex;
+    use spectral::assert_that;
 
     #[test]
     fn test_search_order() {
@@ -244,6 +246,6 @@ mod test {
             (0..START_INDEX + 1).rev().collect();
         expected_found
             .extend((START_INDEX + 1..NUM_NODES).collect::<Vec<usize>>());
-        assert_eq!(expected_found, found_indices);
+        assert_that!(expected_found).is_equal_to(found_indices);
     }
 }

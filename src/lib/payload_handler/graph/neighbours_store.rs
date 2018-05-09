@@ -197,7 +197,9 @@ mod test {
     use super::*;
     use key::Key;
     use address::Address;
+
     use slog;
+    use spectral::assert_that;
 
     #[test]
     fn test_consider_candidates() {
@@ -233,7 +235,7 @@ mod test {
             .map(|n| n.key.get_data()[0])
             .collect::<Vec<u8>>();
         data.sort();
-        assert_eq!(data, vec![4, 5, 6]);
+        assert_that!(data).is_equal_to(vec![4, 5, 6]);
     }
 
     #[test]
@@ -268,6 +270,6 @@ mod test {
             .map(|n| n.key.get_data()[3])
             .collect::<Vec<u8>>();
         data.sort();
-        assert_eq!(data, vec![2, 6]);
+        assert_that!(data).is_equal_to(vec![2, 6]);
     }
 }

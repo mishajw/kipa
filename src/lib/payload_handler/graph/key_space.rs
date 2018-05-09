@@ -169,6 +169,10 @@ impl KeySpaceManager {
 #[cfg(test)]
 mod test {
     use super::*;
+    use spectral::assert_that;
+    use spectral::iter::*;
+    use spectral::numeric::*;
+    use spectral::vec::*;
 
     #[test]
     fn test_remove_duplicate_keys_small() {
@@ -176,10 +180,10 @@ mod test {
             vec![KeySpace { coords: vec![1] }, KeySpace { coords: vec![1] }];
         let manager = KeySpaceManager::new(1);
         manager.remove_duplicate_keys(&mut ks, &|k: &KeySpace| k.clone());
-        assert_eq!(ks.len(), 1);
+        assert_that!(ks.len()).is_equal_to(1);
         let mut nums = ks.iter().map(|k| k.coords[0]).collect::<Vec<i32>>();
         nums.sort();
-        assert_eq!(nums, vec![1]);
+        assert_that!(nums).is_equal_to(vec![1]);
     }
 
     #[test]
@@ -197,10 +201,10 @@ mod test {
         ];
         let manager = KeySpaceManager::new(1);
         manager.remove_duplicate_keys(&mut ks, &|k: &KeySpace| k.clone());
-        assert_eq!(ks.len(), 5);
+        assert_that!(ks).has_length(5);
         let mut nums = ks.iter().map(|k| k.coords[0]).collect::<Vec<i32>>();
         nums.sort();
-        assert_eq!(nums, vec![1, 2, 4, 5, 6]);
+        assert_that!(nums).contains_all_of(&vec![&1, &2, &4, &5, &6]);
     }
 
     #[test]
@@ -214,16 +218,17 @@ mod test {
 
         for i in 0..ks.len() {
             for j in i + 1..ks.len() {
-                assert_eq!(
-                    manager.distance(&ks[i], &ks[j]),
-                    manager.distance(&ks[j], &ks[i])
-                );
+                assert_that!(manager.distance(&ks[i], &ks[j]))
+                    .is_close_to(manager.distance(&ks[j], &ks[i]), 1e-4);
             }
         }
 
-        assert_eq!(manager.distance(&ks[0], &ks[1]), 3f32.sqrt());
-        assert_eq!(manager.distance(&ks[0], &ks[2]), 4f32.sqrt());
-        assert_eq!(manager.distance(&ks[1], &ks[2]), 5f32.sqrt());
+        assert_that!(manager.distance(&ks[0], &ks[1]))
+            .is_close_to(3f32.sqrt(), 1e-4);
+        assert_that!(manager.distance(&ks[0], &ks[2]))
+            .is_close_to(4f32.sqrt(), 1e-4);
+        assert_that!(manager.distance(&ks[1], &ks[2]))
+            .is_close_to(5f32.sqrt(), 1e-4);
     }
 
     #[test]
@@ -262,33 +267,23 @@ mod test {
         let manager = KeySpaceManager::new(2);
 
         for k in &ks {
-            assert_eq!(manager.angle(k, k, k), 0.0);
+            assert_that!(manager.angle(k, k, k)).is_equal_to(0.0);
         }
 
         for k in &ks {
-            assert_eq!(manager.angle(&ks[0], k, k), 0.0);
+            assert_that!(manager.angle(&ks[0], k, k)).is_equal_to(0.0);
         }
 
-        assert_eq!(
-            manager.angle(&ks[0], &ks[1], &ks[2]),
-            ::std::f32::consts::PI / 4.0
-        );
-        assert_eq!(
-            manager.angle(&ks[0], &ks[2], &ks[6]),
-            ::std::f32::consts::PI
-        );
-        assert_eq!(
-            manager.angle(&ks[0], &ks[3], &ks[6]),
-            3.0 * ::std::f32::consts::PI / 4.0
-        );
-        assert_eq!(
-            manager.angle(&ks[0], &ks[7], &ks[8]),
-            ::std::f32::consts::PI / 4.0
-        );
-        assert_eq!(
-            manager.angle(&ks[0], &ks[3], &ks[7]),
-            ::std::f32::consts::PI
-        );
+        assert_that!(manager.angle(&ks[0], &ks[1], &ks[2]))
+            .is_close_to(::std::f32::consts::PI / 4.0, 1e-4);
+        assert_that!(manager.angle(&ks[0], &ks[2], &ks[6]))
+            .is_close_to(::std::f32::consts::PI, 1e-4);
+        assert_that!(manager.angle(&ks[0], &ks[3], &ks[6]))
+            .is_close_to(3.0 * ::std::f32::consts::PI / 4.0, 1e-4);
+        assert_that!(manager.angle(&ks[0], &ks[7], &ks[8]))
+            .is_close_to(::std::f32::consts::PI / 4.0, 1e-4);
+        assert_that!(manager.angle(&ks[0], &ks[3], &ks[7]))
+            .is_close_to(::std::f32::consts::PI, 1e-4);
     }
 
     #[test]
@@ -300,10 +295,8 @@ mod test {
             KeySpace { coords: vec![2] },
         ];
         let manager = KeySpaceManager::new(1);
-        assert_eq!(
-            manager.angle(&ks[1], &ks[0], &ks[2]),
-            ::std::f32::consts::PI
-        );
-        assert_eq!(manager.angle(&ks[1], &ks[2], &ks[3]), 0.0);
+        assert_that!(manager.angle(&ks[1], &ks[0], &ks[2]))
+            .is_close_to(::std::f32::consts::PI, 1e-4);
+        assert_that!(manager.angle(&ks[1], &ks[2], &ks[3])).is_equal_to(0.0);
     }
 }

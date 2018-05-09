@@ -21,6 +21,9 @@ extern crate slog;
 extern crate slog_async;
 extern crate slog_json;
 extern crate slog_term;
+#[cfg(test)]
+#[macro_use]
+extern crate spectral;
 
 pub mod api;
 pub mod creators;
