@@ -73,6 +73,18 @@ fn main() {
                 .help("Weight of the angle when considering neighbours")
                 .takes_value(true),
         )
+        .arg(
+            clap::Arg::with_name("search_breadth")
+                .long("search-breadth")
+                .help("Breadth of the search when searching for keys")
+                .takes_value(true),
+        )
+        .arg(
+            clap::Arg::with_name("connect_search_breadth")
+                .long("connect-search-breadth")
+                .help("Breadth of the search when connecting to the network")
+                .takes_value(true),
+        )
         .get_matches();
 
     if let Err(err) = run_servers(&args, &log) {

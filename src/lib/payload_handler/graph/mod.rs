@@ -24,12 +24,17 @@ use payload_handler::graph::search::{GetNeighboursFn, GraphSearch,
 use std::sync::{Arc, Mutex};
 use slog::Logger;
 
-/// The default bredth of the search to use when connecting
-pub const DEFAULT_CONNECT_SEARCH_SIZE: usize = 3;
+/// The default breadth to use when searching
+pub const DEFAULT_SEARCH_BREADTH: usize = 3;
+
+/// The default breadth of the search to use when connecting
+pub const DEFAULT_CONNECT_SEARCH_BREADTH: usize = 3;
 
 /// Contains graph search information.
 pub struct GraphPayloadHandler {
     key: Key,
+    search_breadth: usize,
+    connect_search_breadth: usize,
     neighbours_store: Arc<Mutex<NeighboursStore>>,
     graph_search: Arc<GraphSearch>,
     log: Logger,
@@ -43,12 +48,16 @@ impl GraphPayloadHandler {
     /// - `initial_node` is the initial other node in KIPA network.
     pub fn new(
         key: Key,
+        search_breadth: usize,
+        connect_search_breadth: usize,
         key_space_manager: Arc<KeySpaceManager>,
         neighbours_store: Arc<Mutex<NeighboursStore>>,
         log: Logger,
     ) -> Self {
         GraphPayloadHandler {
             key: key.clone(),
+            search_breadth,
+            connect_search_breadth,
             graph_search: Arc::new(GraphSearch::new(key_space_manager.clone())),
             neighbours_store: neighbours_store,
             log: log,
@@ -75,8 +84,9 @@ impl GraphPayloadHandler {
 
         let explored_log = self.log.new(o!());
 
-        self.graph_search.search(
+        self.graph_search.search_with_breadth(
             &key,
+            self.search_breadth,
             vec![
                 Node::new(
                     Address::new(vec![0, 0, 0, 0], 10842),
@@ -128,7 +138,7 @@ impl GraphPayloadHandler {
 
         self.graph_search.search_with_breadth::<()>(
             &self.key,
-            DEFAULT_CONNECT_SEARCH_SIZE,
+            self.connect_search_breadth,
             vec![node.clone()],
             self.create_get_neighbours_fn(payload_client.clone()),
             Arc::new(found_callback),

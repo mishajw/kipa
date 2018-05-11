@@ -185,9 +185,11 @@ pub fn create_payload_handler(
 ) -> Result<Arc<PayloadHandler>> {
     use payload_handler::graph::{GraphPayloadHandler, KeySpaceManager,
                                  NeighboursStore, DEFAULT_ANGLE_WEIGHTING,
+                                 DEFAULT_CONNECT_SEARCH_BREADTH,
                                  DEFAULT_DISTANCE_WEIGHTING,
                                  DEFAULT_KEY_SPACE_SIZE,
-                                 DEFAULT_MAX_NUM_NEIGHBOURS};
+                                 DEFAULT_MAX_NUM_NEIGHBOURS,
+                                 DEFAULT_SEARCH_BREADTH};
 
     let neighbours_size = args.value_of("neighbours_size")
         .unwrap_or(&DEFAULT_MAX_NUM_NEIGHBOURS.to_string())
@@ -209,6 +211,16 @@ pub fn create_payload_handler(
         .parse::<f32>()
         .chain_err(|| "Error on parsing angle weighting")?;
 
+    let search_breadth = args.value_of("search_breadth")
+        .unwrap_or(&DEFAULT_SEARCH_BREADTH.to_string())
+        .parse::<usize>()
+        .chain_err(|| "Error on parsing search breadth")?;
+
+    let connect_search_breadth = args.value_of("connect_search_breadth")
+        .unwrap_or(&DEFAULT_CONNECT_SEARCH_BREADTH.to_string())
+        .parse::<usize>()
+        .chain_err(|| "Error on parsing connect search breadth")?;
+
     let key_space_manager = Arc::new(KeySpaceManager::new(key_space_size));
 
     let neighbours_store = Arc::new(Mutex::new(NeighboursStore::new(
@@ -222,6 +234,8 @@ pub fn create_payload_handler(
 
     Ok(Arc::new(GraphPayloadHandler::new(
         local_node.key,
+        search_breadth,
+        connect_search_breadth,
         key_space_manager,
         neighbours_store,
         log,
