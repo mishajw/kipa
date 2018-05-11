@@ -7,7 +7,7 @@ use payload_handler::graph::key_space::KeySpaceManager;
 
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashSet};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use slog::Logger;
 
@@ -76,7 +76,7 @@ impl GraphSearch {
     }
 
     /// Search for a key using the `GetNeighboursFn`.
-    pub fn search<T>(
+    pub fn search<T: 'static>(
         &self,
         key: &Key,
         start_nodes: Vec<Node>,
@@ -169,6 +169,80 @@ impl GraphSearch {
 
         info!(log, "Failed to find key"; "key" => %key);
         Ok(None)
+    }
+
+    pub fn search_with_breadth<T: 'static>(
+        &self,
+        key: &Key,
+        breadth: usize,
+        start_nodes: Vec<Node>,
+        get_neighbours_fn: GetNeighboursFn,
+        found_node_callback: FoundNodeCallback<T>,
+        explored_node_callback: ExploredNodeCallback<T>,
+        log: Logger,
+    ) -> Result<Option<T>> {
+        // Continue the graph search looking for a key, until the `n`
+        // closest nodes have also been explored.
+
+        // List of tuples of the `n` closest nodes, where first is the node,
+        // and second is a boolean telling whether it has been explored.
+        let n_closest: Arc<Mutex<Vec<(Node, bool)>>> =
+            Arc::new(Mutex::new(Vec::with_capacity(breadth)));
+
+        let key_space = Arc::new(self.key_space_manager.create_from_key(key));
+
+        let found_n_closest = n_closest.clone();
+        let found_key_space_manager = self.key_space_manager.clone();
+        let wrapped_found_node_callback = move |n: &Node| {
+            // Add the new node to `n_closest`, sort it, and remove the last
+            let mut n_closest_local = found_n_closest
+                .lock()
+                .expect("Failed to lock found_n_closest");
+            n_closest_local.push((n.clone(), false));
+            found_key_space_manager.sort_key_relative(
+                &mut n_closest_local,
+                &|&(ref n, _)| found_key_space_manager.create_from_key(&n.key),
+                &key_space,
+            );
+            while n_closest_local.len() > breadth {
+                n_closest_local.pop();
+            }
+
+            // Return the value from the callback passed in
+            found_node_callback(n)
+        };
+
+        let explored_n_closest = n_closest.clone();
+        let wrapped_explored_node_callback = move |n: &Node| {
+            // Set the `n_closest` value to explored
+            let mut n_closest_local = explored_n_closest
+                .lock()
+                .expect("Failed to lock explored_n_closest");
+            for tuple in &mut *n_closest_local {
+                if n == &tuple.0 {
+                    tuple.1 = true;
+                }
+            }
+
+            // Check if all of the `n_closest` has been explored
+            let all_explored = n_closest_local.iter().all(&|&(_, ref e)| *e);
+
+            if all_explored && n_closest_local.len() == breadth {
+                Ok(SearchCallbackReturn::Exit())
+            } else {
+                // Return the value from the callback passed in
+                explored_node_callback(n)
+            }
+        };
+
+        self.search(
+            key,
+            start_nodes,
+            get_neighbours_fn,
+            Arc::new(wrapped_found_node_callback),
+            Arc::new(wrapped_explored_node_callback),
+            log,
+        )
     }
 }
 

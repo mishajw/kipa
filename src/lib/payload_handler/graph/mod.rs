@@ -30,7 +30,6 @@ pub const DEFAULT_CONNECT_SEARCH_SIZE: usize = 3;
 /// Contains graph search information.
 pub struct GraphPayloadHandler {
     key: Key,
-    key_space_manager: Arc<KeySpaceManager>,
     neighbours_store: Arc<Mutex<NeighboursStore>>,
     graph_search: Arc<GraphSearch>,
     log: Logger,
@@ -52,7 +51,6 @@ impl GraphPayloadHandler {
             key: key.clone(),
             graph_search: Arc::new(GraphSearch::new(key_space_manager.clone())),
             neighbours_store: neighbours_store,
-            key_space_manager: key_space_manager,
             log: log,
         }
     }
@@ -104,20 +102,6 @@ impl GraphPayloadHandler {
         payload_client: Arc<PayloadClient>,
         log: Logger,
     ) -> Result<()> {
-        // Continue the graph search looking for ourselves, until the `n`
-        // closest nodes to ourselves have also been explored.
-
-        // List of tuples of the `n` closest nodes, where first is the node,
-        // and second is a boolean telling whether it has been explored.
-        let n_closest: Arc<Mutex<Vec<(Node, bool)>>> = Arc::new(Mutex::new(
-            Vec::with_capacity(DEFAULT_CONNECT_SEARCH_SIZE),
-        ));
-
-        let local_key_space =
-            Arc::new(self.key_space_manager.create_from_key(&self.key));
-
-        let found_n_closest = n_closest.clone();
-        let found_key_space_manager = self.key_space_manager.clone();
         let found_neighbours_store = self.neighbours_store.clone();
         let found_log = self.log.new(o!());
         let found_callback = move |n: &Node| {
@@ -130,56 +114,21 @@ impl GraphPayloadHandler {
                 .lock()
                 .expect("Failed to lock found_neighbours_store")
                 .consider_candidate(n);
-
-            // Add the new node to `n_closest`, sort it, and remove the last
-            let mut n_closest_local = found_n_closest
-                .lock()
-                .expect("Failed to lock found_n_closest");
-            n_closest_local.push((n.clone(), false));
-            found_key_space_manager.sort_key_relative(
-                &mut n_closest_local,
-                &|&(ref n, _)| found_key_space_manager.create_from_key(&n.key),
-                &local_key_space,
-            );
-            while n_closest_local.len() > DEFAULT_CONNECT_SEARCH_SIZE {
-                n_closest_local.pop();
-            }
-
             Ok(SearchCallbackReturn::Continue())
         };
 
-        let explored_n_closest = n_closest.clone();
         let explored_log = self.log.new(o!());
         let explored_callback = move |n: &Node| {
             trace!(
                 explored_log,
                 "Explored node when connecting";
                 "node" => %n);
-
-            // Set the `n_closest` value to explored
-            let mut n_closest_local = explored_n_closest
-                .lock()
-                .expect("Failed to lock explored_n_closest");
-            for tuple in &mut *n_closest_local {
-                if n == &tuple.0 {
-                    tuple.1 = true;
-                }
-            }
-
-            // Check if all of the `n_closest` has been explored
-            let all_explored = n_closest_local.iter().all(&|&(_, ref e)| *e);
-
-            if all_explored
-                && n_closest_local.len() == DEFAULT_CONNECT_SEARCH_SIZE
-            {
-                Ok(SearchCallbackReturn::Return(()))
-            } else {
-                Ok(SearchCallbackReturn::Continue())
-            }
+            Ok(SearchCallbackReturn::Continue())
         };
 
-        self.graph_search.search(
+        self.graph_search.search_with_breadth::<()>(
             &self.key,
+            DEFAULT_CONNECT_SEARCH_SIZE,
             vec![node.clone()],
             self.create_get_neighbours_fn(payload_client.clone()),
             Arc::new(found_callback),
