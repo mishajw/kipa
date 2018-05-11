@@ -38,8 +38,7 @@ def create(size: int, daemon_args: str) -> Network:
     client.images.build(
         path=docker_directory,
         tag=IMAGE_NAME,
-        quiet=False,
-        buildargs=dict(KIPA_ARGS=daemon_args))
+        quiet=False)
 
     log.info("Deleting old docker constructs")
     __delete_old(client)
@@ -54,7 +53,7 @@ def create(size: int, daemon_args: str) -> Network:
                 gateway=f"{IPV4_PREFIX}.123")]))
 
     log.info(f"Creating {len(key_ids)} containers")
-    containers = list(__create_nodes(client, key_ids, network))
+    containers = list(__create_nodes(client, key_ids, daemon_args, network))
     return Network(containers)
 
 
@@ -65,7 +64,7 @@ def __create_docker_directory() -> str:
 
     build_process = subprocess.Popen(["cargo", "build", "--release"])
     build_process.wait()
-    assert build_process.returncode == 0, "Build command failed"
+    assert build_process.returncode == 0, "KIPA build command failed"
 
     assert os.path.isfile("target/release/kipa_daemon")
     shutil.copyfile(
@@ -102,6 +101,7 @@ def __create_docker_directory() -> str:
 def __create_nodes(
         client,
         key_ids: List[str],
+        daemon_args: str,
         network: docker.models.networks.Network) -> Iterator[Node]:
     assert len(key_ids) < 256, "No support for more than 256 nodes"
 
@@ -123,7 +123,7 @@ def __create_nodes(
                     target="/root/.gnupg",
                     type="bind",
                     read_only=False)],
-            environment={"KIPA_KEY_ID": key_id})
+            environment={"KIPA_KEY_ID": key_id, "KIPA_ARGS": daemon_args})
 
         ip_address = api_client.inspect_container(container.name)\
             ["NetworkSettings"]["Networks"][network.name]["IPAddress"]

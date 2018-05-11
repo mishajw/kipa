@@ -58,7 +58,7 @@ class Configuration:
             parameters["num_connects"],
             parameters["num_search_tests"]
             if "num_search_tests" in parameters else None,
-            parameters["daemon_args"] if "daemon_args" in parameters else {})
+            parameters["daemon_args"] if "daemon_args" in parameters else None)
 
     def run(self, output_directory: str) -> dict:
         """
@@ -164,4 +164,5 @@ class Configuration:
 
     def __get_daemon_args_str(self) -> str:
         return " ".join(
-            [f"--{arg} {self.daemon_args[arg]}" for arg in self.daemon_args])
+            [f"--{arg.replace('_', '-')} {self.daemon_args[arg]}"
+             for arg in self.daemon_args])

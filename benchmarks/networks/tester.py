@@ -92,7 +92,9 @@ def test_all_searches(network: Network) -> SearchResult:
 
 
 def sample_test_searches(
-        network: Network, num_searches: int=500) -> SearchResult:
+        network: Network, num_searches: int=None) -> SearchResult:
+    if num_searches is None:
+        num_searches = 500
     key_pairs = list(itertools.permutations(network.get_all_keys(), 2))
     num_searches = min(len(key_pairs), num_searches)
     results = SearchResult.empty()

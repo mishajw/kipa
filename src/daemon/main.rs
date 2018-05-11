@@ -52,22 +52,26 @@ fn main() {
         .arg(
             clap::Arg::with_name("key_space_size")
                 .long("key-space-size")
-                .help("Number of dimensions to use for key space"),
+                .help("Number of dimensions to use for key space")
+                .takes_value(true),
         )
         .arg(
             clap::Arg::with_name("neighbours_size")
                 .long("neighbours-size")
-                .help("Maximum number of neighbours to store"),
+                .help("Maximum number of neighbours to store")
+                .takes_value(true),
         )
         .arg(
             clap::Arg::with_name("distance_weighting")
                 .long("distance-weighting")
-                .help("Weight of the distance when considering neighbours"),
+                .help("Weight of the distance when considering neighbours")
+                .takes_value(true),
         )
         .arg(
             clap::Arg::with_name("angle_weighting")
                 .long("angle-weighting")
-                .help("Weight of the angle when considering neighbours"),
+                .help("Weight of the angle when considering neighbours")
+                .takes_value(true),
         )
         .get_matches();
 
