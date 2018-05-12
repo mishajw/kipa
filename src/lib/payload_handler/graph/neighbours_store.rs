@@ -151,19 +151,24 @@ impl NeighboursStore {
                 .max_by(|a, b| a.partial_cmp(b).unwrap())
                 .expect("Error on unwrapping max")
         }
-        let min_min_angle = min_floats(&min_angles);
-        let max_min_angle = max_floats(&min_angles);
+        // let min_min_angle = min_floats(&min_angles);
+        // let max_min_angle = max_floats(&min_angles);
         let min_distance = min_floats(&distances);
         let max_distance = max_floats(&distances);
 
         let distance_weighting = self.distance_weighting;
         let angle_weighting = self.angle_weighting;
         let scores = min_angles.iter().zip(&distances).map(|(a, d)| {
-            let normalized_a = if max_min_angle != min_min_angle {
-                1.0 - ((a - min_min_angle) / (max_min_angle - min_min_angle))
-            } else {
-                0.0
-            };
+            assert!(&0.0 <= a && a <= &::std::f32::consts::PI);
+
+            let normalized_a = 1.0 - (a / ::std::f32::consts::PI);
+
+            // let normalized_a = if max_min_angle != min_min_angle {
+            //     1.0 - ((a - min_min_angle) / (max_min_angle - min_min_angle))
+            // } else {
+            //     0.0
+            // };
+
             let normalized_d = if max_distance != min_distance {
                 (d - min_distance) / (max_distance - min_distance)
             } else {
