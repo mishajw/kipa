@@ -4,6 +4,9 @@ from typing import List, Iterator, Dict, Tuple
 
 from PIL import Image, ImageDraw
 
+IMAGE_DIMS = [1920, 1080]
+NODE_RADIUS = 10
+
 
 class GraphNode:
     def __init__(self, key_id: str, position: List[int]):
@@ -13,38 +16,32 @@ class GraphNode:
 
 def draw_main_graph(
         network_logs: Dict[str, List[dict]], save_location: str) -> None:
-    # This will make sure that `list-neighbours` is called at the end of
-    # execution
     graph = list(__get_nodes(network_logs))
     neighbours = list(__get_neighbours(network_logs))
-    __draw_graph(graph, neighbours, save_location)
+    location_dict = __get_location_dict(graph, IMAGE_DIMS)
+    image = Image.new("RGBA", tuple(IMAGE_DIMS), color="white")
+    draw = ImageDraw.Draw(image)
+    __draw_neighbours(neighbours, location_dict, draw)
+    __draw_nodes(graph, location_dict, draw)
+    image.save(save_location)
 
 
 def draw_query_graph(
         network_logs: Dict[str, List[dict]],
-        key_id: str,
+        from_key_id: str,
+        to_key_id: str,
         message_id: str,
         save_location: str) -> None:
     graph = list(__get_nodes(network_logs))
     message_neighbours = list(__get_message_neighbours(
-        network_logs[key_id], message_id))
-    __draw_graph(graph, message_neighbours, save_location)
-
-
-def __draw_graph(
-        graph: List[GraphNode],
-        neighbours: List[Tuple[str, str]],
-        save_location: str):
-    image_dims = [1920, 1080]
-    location_dict = __get_location_dict(graph, image_dims)
-
-    image = Image.new("RGBA", tuple(image_dims), color="white")
+        network_logs[from_key_id], message_id))
+    location_dict = __get_location_dict(graph, IMAGE_DIMS)
+    image = Image.new("RGBA", tuple(IMAGE_DIMS), color="white")
     draw = ImageDraw.Draw(image)
-
-    __draw_neighbours(neighbours, location_dict, draw)
+    __draw_neighbours(message_neighbours, location_dict, draw)
     __draw_nodes(graph, location_dict, draw)
-
-    # Save the image
+    __draw_node_circle(location_dict[from_key_id], draw, color="blue")
+    __draw_node_circle(location_dict[to_key_id], draw, color="red")
     image.save(save_location)
 
 
@@ -54,22 +51,28 @@ def __draw_nodes(
         draw: ImageDraw):
     """Draw all nodes as circles"""
 
-    node_radius = 10
     for n in graph:
-        (x, y) = location_dict[n.key_id]
-        draw.ellipse(
-            (
-                x - node_radius,
-                y - node_radius,
-                x + node_radius,
-                y + node_radius),
-            fill="green")
+        __draw_node_circle(location_dict[n.key_id], draw)
 
     # Draw the key IDs next to the nodes
     # Done last to keep above node/neighbour drawings
     for n in graph:
         (x, y) = location_dict[n.key_id]
         draw.text((x, y), n.key_id, fill="black")
+
+
+def __draw_node_circle(
+        centre: Tuple[float, float],
+        draw: ImageDraw,
+        color: str="green"):
+    x, y = centre
+    draw.ellipse(
+        (
+            x - NODE_RADIUS,
+            y - NODE_RADIUS,
+            x + NODE_RADIUS,
+            y + NODE_RADIUS),
+        fill=color)
 
 
 def __draw_neighbours(

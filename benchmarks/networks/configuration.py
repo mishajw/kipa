@@ -148,6 +148,7 @@ class Configuration:
             networks.drawer.draw_query_graph(
                 network_logs,
                 from_key_id,
+                to_key_id,
                 message_id,
                 query_graph_path)
             results_dict["search_results"].append(dict(
