@@ -1,14 +1,15 @@
 import logging
 import os
 
-from benchmarks import networks
+from benchmarks import networks, utils
 
 log = logging.getLogger(__name__)
 
 
 def run_angle_comparison(
         network_config_path: str, output_directory: str) -> None:
-    output_directory = os.path.join(output_directory, "comparison", "angle")
+    output_directory = os.path.join(
+        output_directory, "comparison", "angle", utils.get_formatted_time())
 
     angle_weighting_values = [x / 100 for x in range(0, 100, 10)]
 
