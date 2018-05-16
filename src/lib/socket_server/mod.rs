@@ -16,6 +16,7 @@ use std::io::Cursor;
 use std::io::{Read, Write};
 use std::mem::size_of;
 use std::sync::Arc;
+use std::thread;
 
 use slog::Logger;
 
@@ -26,7 +27,7 @@ pub const DEFAULT_PORT: u16 = 10842;
 /// `PayloadHandler`.
 pub trait SocketServer: Send + Sync {
     /// The type of the socket to use for sending/receiveing data
-    type SocketType: Read + Write;
+    type SocketType: Read + Write + Send + Sync + 'static;
 
     /// Get the logger for this instance
     fn get_log(&self) -> &Logger;
@@ -38,42 +39,57 @@ pub trait SocketServer: Send + Sync {
         message_handler: Arc<MessageHandler>,
         data_transformer: Arc<DataTransformer>,
     ) {
-        let result = socket_result.and_then(|mut socket| {
-            self.handle_socket(
-                &mut socket,
-                &*message_handler,
-                &*data_transformer,
-            )
-        });
-
-        if let Err(err) = result {
+        if let &Err(ref err) = &socket_result {
             error!(
                 self.get_log(),
-                "Exception when handling socket";
+                "Exception when receiving socket";
                 "exception" => %err.display_chain());
         }
+
+        self.handle_socket(
+            socket_result.unwrap(),
+            message_handler,
+            data_transformer,
+        )
     }
 
     /// Handle a socket that the server has received.
     fn handle_socket(
         &self,
-        socket: &mut Self::SocketType,
-        message_handler: &MessageHandler,
-        data_transformer: &DataTransformer,
-    ) -> Result<()> {
-        trace!(self.get_log(), "Reading request from socket");
-        let request_data = receive_data(socket)?;
+        socket: Self::SocketType,
+        message_handler: Arc<MessageHandler>,
+        data_transformer: Arc<DataTransformer>,
+    ) {
+        let log = self.get_log().new(o!());
+        let callback = move || -> Result<()> {
+            let mut inner_socket = socket;
+            trace!(log, "Reading request from socket");
+            let request_data = receive_data(&mut inner_socket)?;
 
-        trace!(self.get_log(), "Processing request");
-        let request =
-            data_transformer.bytes_to_request(&request_data.to_vec())?;
+            trace!(log, "Processing request");
+            let request =
+                data_transformer.bytes_to_request(&request_data.to_vec())?;
 
-        trace!(self.get_log(), "Sending response");
-        let response = message_handler.receive(request)?;
-        let response_data = data_transformer.response_to_bytes(&response)?;
-        send_data(&response_data, socket)?;
-        trace!(self.get_log(), "Sent response bytes");
-        Ok(())
+            trace!(log, "Sending response");
+            let response = message_handler.receive(request)?;
+            let response_data = data_transformer.response_to_bytes(&response)?;
+            send_data(&response_data, &mut inner_socket)?;
+            trace!(log, "Sent response bytes");
+            Ok(())
+        };
+
+        let thread_log = self.get_log().new(o!());
+        // TODO: Can we move the `thread::spawn` to earlier in the socket
+        // creation in order to speed up ability to process multiple requests
+        // quickly?
+        thread::spawn(move || {
+            if let Err(err) = callback() {
+                error!(
+                    thread_log,
+                    "Exception when handling socket";
+                     "exception" => %err.display_chain());
+            }
+        });
     }
 
     /// Check that the request is OK to process.
