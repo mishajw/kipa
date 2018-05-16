@@ -189,6 +189,7 @@ pub fn create_payload_handler(
                                  DEFAULT_DISTANCE_WEIGHTING,
                                  DEFAULT_KEY_SPACE_SIZE,
                                  DEFAULT_MAX_NUM_NEIGHBOURS,
+                                 DEFAULT_MAX_NUM_SEARCH_THREADS,
                                  DEFAULT_SEARCH_BREADTH};
 
     let neighbours_size = args.value_of("neighbours_size")
@@ -221,6 +222,11 @@ pub fn create_payload_handler(
         .parse::<usize>()
         .chain_err(|| "Error on parsing connect search breadth")?;
 
+    let max_num_search_threads = args.value_of("max_num_search_threads")
+        .unwrap_or(&DEFAULT_MAX_NUM_SEARCH_THREADS.to_string())
+        .parse::<usize>()
+        .chain_err(|| "Error on parsing connect search breadth")?;
+
     let key_space_manager = Arc::new(KeySpaceManager::new(key_space_size));
 
     let neighbours_store = Arc::new(Mutex::new(NeighboursStore::new(
@@ -236,6 +242,7 @@ pub fn create_payload_handler(
         local_node.key,
         search_breadth,
         connect_search_breadth,
+        max_num_search_threads,
         key_space_manager,
         neighbours_store,
         log,

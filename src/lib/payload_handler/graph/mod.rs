@@ -30,11 +30,15 @@ pub const DEFAULT_SEARCH_BREADTH: usize = 3;
 /// The default breadth of the search to use when connecting
 pub const DEFAULT_CONNECT_SEARCH_BREADTH: usize = 3;
 
+/// The default maximum number of concurrent threads to have when searching
+pub const DEFAULT_MAX_NUM_SEARCH_THREADS: usize = 3;
+
 /// Contains graph search information.
 pub struct GraphPayloadHandler {
     key: Key,
     search_breadth: usize,
     connect_search_breadth: usize,
+    max_num_search_threads: usize,
     neighbours_store: Arc<Mutex<NeighboursStore>>,
     graph_search: Arc<GraphSearch>,
     log: Logger,
@@ -50,6 +54,7 @@ impl GraphPayloadHandler {
         key: Key,
         search_breadth: usize,
         connect_search_breadth: usize,
+        max_num_search_threads: usize,
         key_space_manager: Arc<KeySpaceManager>,
         neighbours_store: Arc<Mutex<NeighboursStore>>,
         log: Logger,
@@ -58,6 +63,7 @@ impl GraphPayloadHandler {
             key: key.clone(),
             search_breadth,
             connect_search_breadth,
+            max_num_search_threads,
             graph_search: Arc::new(GraphSearch::new(key_space_manager.clone())),
             neighbours_store: neighbours_store,
             log: log,
@@ -102,6 +108,7 @@ impl GraphPayloadHandler {
                     "node" => %n);
                 Ok(SearchCallbackReturn::Continue())
             }),
+            self.max_num_search_threads,
             log,
         )
     }
@@ -143,6 +150,7 @@ impl GraphPayloadHandler {
             self.create_get_neighbours_fn(payload_client.clone()),
             Arc::new(found_callback),
             Arc::new(explored_callback),
+            self.max_num_search_threads,
             log,
         )?;
         Ok(())
