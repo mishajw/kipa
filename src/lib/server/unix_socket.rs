@@ -9,6 +9,7 @@ use data_transformer::DataTransformer;
 use server::{LocalClient, Server};
 use socket_server::{receive_data, send_data, SocketServer};
 
+use std::fs;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync::Arc;
 
@@ -45,6 +46,12 @@ impl UnixSocketLocalServer {
 
 impl Server for UnixSocketLocalServer {
     fn start(&self) -> Result<()> {
+        // Remove the old unix socket file if it exists
+        if fs::metadata(&self.socket_path).is_ok() {
+            fs::remove_file(&self.socket_path)
+                .chain_err(|| "Error on removing old KIPA socket file")?;
+        }
+
         let listener = UnixListener::bind(&self.socket_path).chain_err(|| {
             format!("Error on binding to socket path: {}", self.socket_path)
         })?;
