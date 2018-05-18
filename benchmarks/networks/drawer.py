@@ -1,8 +1,11 @@
 import operator
 import re
 from typing import List, Iterator, Dict, Tuple
+import logging
 
 from PIL import Image, ImageDraw
+
+log = logging.getLogger(__name__)
 
 IMAGE_DIMS = [1920, 1080]
 NODE_RADIUS = 10
@@ -42,7 +45,11 @@ def draw_query_graph(
     __draw_nodes(graph, location_dict, draw)
     __draw_node_circle(location_dict[from_key_id], draw, color="blue")
     __draw_node_circle(location_dict[to_key_id], draw, color="red")
-    image.save(save_location)
+    try:
+        image.save(save_location)
+    except ValueError as e:
+        # TODO: Fix issue with PIL throwing "unknown file extension" errors
+        log.warning(f"Failed to write image with error: {e}")
 
 
 def __draw_nodes(
