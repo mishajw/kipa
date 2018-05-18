@@ -14,36 +14,41 @@ class SearchResult:
             from_keys: List[str],
             to_keys: List[str],
             results: List[bool],
-            message_ids: List[str]) -> None:
+            message_ids: List[str],
+            num_requests: List[int]) -> None:
         self.from_keys = from_keys
         self.to_keys = to_keys
         self.results = results
         self.message_ids = message_ids
+        self.num_requests = num_requests
 
     @classmethod
     def empty(cls) -> "SearchResult":
-        return cls([], [], [], [])
+        return cls([], [], [], [], [])
 
     def __len__(self):
         return len(self.message_ids)
 
-    def __getitem__(self, index) -> Tuple[str, str, bool, str]:
+    def __getitem__(self, index) -> Tuple[str, str, bool, str, int]:
         return \
             self.from_keys[index], \
             self.to_keys[index], \
             self.results[index], \
-            self.message_ids[index]
+            self.message_ids[index], \
+            self.num_requests[index]
 
     def add_result(
             self,
             from_key: str,
             to_key: str,
             result: bool,
-            message_id: str) -> None:
+            message_id: str,
+            num_requests: int) -> None:
         self.from_keys.append(from_key)
         self.to_keys.append(to_key)
         self.results.append(result)
         self.message_ids.append(message_id)
+        self.num_requests.append(num_requests)
 
     def all_successes(self) -> bool:
         return all(self.results)
@@ -51,9 +56,16 @@ class SearchResult:
     def percentage_success(self) -> float:
         return sum(1 for r in self.results if r) / len(self.results)
 
+    def average_num_requests(self) -> float:
+        successful_num_requests = [
+            nr for nr, r in zip(self.num_requests, self.results) if r]
+        return sum(successful_num_requests) / len(successful_num_requests)
+
 
 def test_search(
-        network: Network, from_key_id: str, to_key_id: str) -> Tuple[bool, str]:
+        network: Network,
+        from_key_id: str,
+        to_key_id: str) -> Tuple[bool, str, int]:
     try:
         log.info(f"Testing search between {from_key_id} and {to_key_id}")
         output = network.exec_command(
@@ -74,20 +86,27 @@ def test_search(
             f"found: {message_id}"
         message_id = next(iter(message_id))
 
-        return success, message_id
+        num_requests = sum(
+            1
+            for l in network.get_logs(from_key_id)
+            if "message_id" in l
+               and l["message_id"] == message_id
+               and "making_request" in l)
+
+        return success, message_id, num_requests
     except AssertionError as e:
         log.error(
             "Error thrown when testing search "
             f"between {from_key_id} and {to_key_id}: {e}")
-        return False, ""
+        return False, "", 0
 
 
 def test_all_searches(network: Network) -> SearchResult:
     keys = network.get_all_keys()
     results = SearchResult.empty()
     for k1, k2 in itertools.permutations(keys, 2):
-        success, message_id = test_search(network, k1, k2)
-        results.add_result(k1, k2, success, message_id)
+        success, message_id, num_requests = test_search(network, k1, k2)
+        results.add_result(k1, k2, success, message_id, num_requests)
     return results
 
 
@@ -99,6 +118,6 @@ def sample_test_searches(
     num_searches = min(len(key_pairs), num_searches)
     results = SearchResult.empty()
     for k1, k2 in random.sample(key_pairs, num_searches):
-        success, message_id = test_search(network, k1, k2)
-        results.add_result(k1, k2, success, message_id)
+        success, message_id, num_requests = test_search(network, k1, k2)
+        results.add_result(k1, k2, success, message_id, num_requests)
     return results

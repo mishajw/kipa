@@ -270,6 +270,7 @@ impl GraphSearch {
             thread::spawn(move || {
                 trace!(
                     spawn_log, "Getting neighbours";
+                    "making_request" => true,
                     "node" => %current_node.node);
                 let neighbours =
                     spawn_get_neighbours_fn(&current_node.node, &spawn_key);

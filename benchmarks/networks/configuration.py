@@ -105,8 +105,11 @@ class Configuration:
         search_results = networks.tester.sample_test_searches(
             network, num_searches=self.num_search_tests)
         percentage_success = search_results.percentage_success()
+        average_num_requests = search_results.average_num_requests()
         results_dict["percentage_success"] = percentage_success
-        log.info(f"Search results: {percentage_success * 100}% success")
+        results_dict["average_num_requests"] = average_num_requests
+        log.info(f"Search results: {percentage_success * 100}% success, "
+                 f"average {average_num_requests} requests")
 
         log.info("Getting logs")
         # This will call `list-neighbours` so that we have an up-to-date account
@@ -142,7 +145,8 @@ class Configuration:
         log.info("Drawing search networks and collecting search results")
         results_dict["search_results"] = []
         for i in range(len(search_results)):
-            from_key_id, to_key_id, result, message_id = search_results[i]
+            from_key_id, to_key_id, result, message_id, num_requests = \
+                search_results[i]
             query_graph_path = os.path.join(
                 graph_directory, f"{message_id}.png")
             networks.drawer.draw_query_graph(
@@ -156,6 +160,7 @@ class Configuration:
                 to_key_id=to_key_id,
                 success=result,
                 message_id=message_id,
+                num_requests=num_requests,
                 graph=query_graph_path))
 
         with open(os.path.join(output_directory, "details.yaml"), "w") as f:
