@@ -83,7 +83,7 @@ def __create_docker_directory() -> str:
             ENV KIPA_KEY_ID ""
             ENV KIPA_ARGS ""
             RUN \\
-                apt-get update && apt-get --yes install gpg
+                apt-get update && apt-get --yes install gpg iproute2
             COPY kipa_daemon /root/kipa_daemon
             COPY kipa_cli /root/kipa_cli
             WORKDIR /root
@@ -117,6 +117,7 @@ def __create_nodes(
             detach=True,
             name=name,
             network=network.name,
+            privileged=True,  # Needed for faking poor connections
             mounts=[
                 docker.types.Mount(
                     source=GPG_HOME,

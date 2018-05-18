@@ -33,6 +33,20 @@ class ConnectType(Enum):
             raise ValueError(f"Unhandled `ConnectType`: {self}")
 
 
+class ConnectionQuality:
+    def __init__(self, loss: float, delay: float, rate: float) -> None:
+        self.loss = loss
+        self.delay = delay
+        self.rate = rate
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "ConnectionQuality":
+        return cls(
+            d["loss"] if "loss" in d else 0,
+            d["delay"] if "delay" in d else 0,
+            d["rate"] if "delay" in d else 0)
+
+
 class Configuration:
     def __init__(
             self,
@@ -40,12 +54,14 @@ class Configuration:
             connect_type: ConnectType,
             num_connects: int,
             num_search_tests: int = None,
-            daemon_args: Dict[str, str] = None):
+            daemon_args: Dict[str, str] = None,
+            connection_quality: ConnectionQuality = None):
         self.num_nodes = num_nodes
         self.connect_type = connect_type
         self.num_connects = num_connects
         self.num_search_tests = num_search_tests
         self.daemon_args = daemon_args if daemon_args is not None else {}
+        self.connection_quality = connection_quality
 
     @classmethod
     def from_yaml(cls, yaml_path: str) -> "Configuration":
@@ -58,7 +74,9 @@ class Configuration:
             parameters["num_connects"],
             parameters["num_search_tests"]
             if "num_search_tests" in parameters else None,
-            parameters["daemon_args"] if "daemon_args" in parameters else None)
+            parameters["daemon_args"] if "daemon_args" in parameters else None,
+            ConnectionQuality.from_dict(parameters["connection_quality"])
+            if "connection_quality" in parameters else None)
 
     def run(self, output_directory: str) -> dict:
         """
@@ -82,6 +100,14 @@ class Configuration:
         network = networks.creator.create(
             self.num_nodes, self.__get_daemon_args_str())
         results_dict["keys"] = network.get_all_keys()
+
+        log.info("Setting connection quality")
+        if self.connection_quality is not None:
+            networks.modifier.fake_poor_connection(
+                network,
+                self.connection_quality.loss,
+                self.connection_quality.delay,
+                self.connection_quality.rate)
 
         # Create the `connect` function for connecting all nodes
         if self.connect_type == ConnectType.CYCLICAL:

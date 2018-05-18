@@ -50,3 +50,22 @@ def ensure_alive(network: Network) -> None:
                     "sleeping for one second and trying again")
                 time.sleep(1)
 
+
+def fake_poor_connection(
+        network: Network, loss: float, delay: float, rate: float) -> None:
+    log.debug(
+        "Faking a poor connection between all containers with "
+        f"loss {loss * 100:.3f}%, "
+        f"delay {delay}, and "
+        f"rate of {rate}Kbps")
+
+    if loss == 0 and delay == 0 and rate == 0:
+        return
+
+    command = f"tc qdisc add dev eth0 root netem " + \
+        (f"loss {loss * 100}% " if loss != 0 else "") + \
+        (f"delay {delay} " if delay != 0 else "") + \
+        (f"rate {rate}kbit" if rate != 0 else "")
+
+    for k in network.get_all_keys():
+        network.exec_command(k, command.split(" "))
