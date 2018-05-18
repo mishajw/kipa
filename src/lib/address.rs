@@ -4,6 +4,7 @@ use std::fmt;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use pnet::datalink;
+use slog::Logger;
 
 /// An address of a node.
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -43,25 +44,36 @@ impl Address {
     pub fn get_local(
         port: u16,
         interface_name: Option<&str>,
+        log: Logger,
     ) -> Result<Address> {
         for interface in datalink::interfaces() {
-            if interface_name.is_none() && interface.name == "lo" {
-                // Ignore loopback interfaces
+            // Skip interfaces that are loopback or have no IPs
+            if interface_name.is_none() && (interface.name == "lo")
+                || interface.ips.len() == 0
+            {
                 continue;
             }
 
+            // Skip if we've specified a name, and this interface doesn't match
             if interface_name.is_some()
                 && interface.name != interface_name.unwrap()
             {
                 continue;
             }
 
-            if interface.ips.len() < 1 {
+            if interface.ips.len() == 0 {
                 return Err(ErrorKind::IpAddressError(format!(
-                    "Could not find exactly 1 IP address on interface {}, \
+                    "Could not find any IP address on interface {}, \
                      found: {:?}",
                     interface.name, interface.ips
                 )).into());
+            }
+
+            if interface.ips.len() > 1 {
+                warn!(
+                    log, "Found multiple IPs on interface, selecting first";
+                    "interface_name" => interface.name,
+                    "selected_ip" => %interface.ips[0])
             }
 
             match interface.ips[0].ip() {

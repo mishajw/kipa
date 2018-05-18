@@ -104,7 +104,14 @@ fn run_servers(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
     // Get local key
     let local_key = gpg_key_handler
         .get_key(String::from(args.value_of("key_id").unwrap()))?;
-    let local_node = Node::new(Address::get_local(port, interface)?, local_key);
+    let local_node = Node::new(
+        Address::get_local(
+            port,
+            interface,
+            log.new(o!("address_creation" => true)),
+        )?,
+        local_key,
+    );
 
     // Set up transformer for protobufs
     let data_transformer = create_data_transformer()?;
