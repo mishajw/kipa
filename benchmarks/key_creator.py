@@ -17,10 +17,16 @@ def create_keys(num: int) -> List[str]:
     existing_key_ids = __get_existing_key_ids()
     num_keys_to_create = num - len(existing_key_ids)
 
-    log.info(
-        f"Found {len(existing_key_ids)}, "
-        f"asked for {num} keys, "
-        f"creating {num_keys_to_create}")
+    if num_keys_to_create <= 0:
+        log.info(
+            f"Found {len(existing_key_ids)}, "
+            f"asked for {num} keys, "
+            f"not creating any more keys")
+    else:
+        log.info(
+            f"Found {len(existing_key_ids)}, "
+            f"asked for {num} keys, "
+            f"creating {num_keys_to_create}")
 
     log.debug("Writing GPG commands to temp file")
     gpg_commands = tempfile.NamedTemporaryFile(mode="w")

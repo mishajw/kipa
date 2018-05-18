@@ -108,8 +108,9 @@ impl SocketClient for TcpGlobalClient {
     }
 
     fn create_socket(&self, node: &Node) -> Result<TcpStream> {
-        TcpStream::connect(&node.address.get_socket_addr())
-            .chain_err(|| "Error on trying to connect to node")
+        TcpStream::connect(&node.address.get_socket_addr()).chain_err(|| {
+            format!("Error on trying to connect to node {}", node)
+        })
     }
 }
 

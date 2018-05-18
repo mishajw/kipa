@@ -82,6 +82,7 @@ impl GraphPayloadHandler {
             trace!(
                 found_log, "Found node when searching"; "node" => %n);
             if n.key == callback_key {
+                info!(found_log, "Search success"; "node" => %n);
                 Ok(SearchCallbackReturn::Return(n.clone()))
             } else {
                 Ok(SearchCallbackReturn::Continue())
