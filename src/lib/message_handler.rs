@@ -8,6 +8,7 @@ use node::Node;
 use payload_handler::PayloadHandler;
 
 use std::sync::Arc;
+use std::time::Duration;
 
 /// The message handling struct.
 pub struct MessageHandler {
@@ -89,6 +90,7 @@ impl PayloadClient {
         &self,
         node: &Node,
         payload: RequestPayload,
+        timeout: Duration,
     ) -> Result<ResponsePayload> {
         let request_message = RequestMessage::new(
             payload,
@@ -96,7 +98,8 @@ impl PayloadClient {
             self.message_id,
         );
 
-        let response_message = self.client.send(node, request_message)?;
+        let response_message =
+            self.client.send(node, request_message, timeout)?;
 
         if response_message.id != self.message_id {
             return Err(ErrorKind::ResponseError(format!(

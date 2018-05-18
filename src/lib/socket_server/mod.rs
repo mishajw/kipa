@@ -17,6 +17,7 @@ use std::io::{Read, Write};
 use std::mem::size_of;
 use std::sync::Arc;
 use std::thread;
+use std::time::Duration;
 
 use slog::Logger;
 
@@ -105,14 +106,19 @@ pub trait SocketClient {
     fn get_log(&self) -> &Logger;
 
     /// Create a socket to connect to the `node`.
-    fn create_socket(&self, node: &Node) -> Result<Self::SocketType>;
+    fn create_socket(
+        &self,
+        node: &Node,
+        timeout: Duration,
+    ) -> Result<Self::SocketType>;
 
     /// Send a request to another `Node` and get the `Response`.
-    fn receive<'a>(
+    fn send<'a>(
         &self,
         node: &Node,
         request: RequestMessage,
         data_transformer: &DataTransformer,
+        timeout: Duration,
     ) -> Result<ResponseMessage> {
         let request_bytes = data_transformer.request_to_bytes(&request)?;
 
@@ -121,7 +127,7 @@ pub trait SocketClient {
             "Setting up socket";
             "node" => %node
         );
-        let mut socket = self.create_socket(node)?;
+        let mut socket = self.create_socket(node, timeout)?;
 
         trace!(self.get_log(), "Sending request to another node");
         send_data(&request_bytes, &mut socket)?;

@@ -4,6 +4,8 @@ use error::*;
 use node::Node;
 use api::{RequestMessage, RequestPayload, ResponseMessage};
 
+use std::time::Duration;
+
 #[cfg(use_tcp)]
 pub mod tcp;
 
@@ -24,6 +26,7 @@ pub trait Client: Send + Sync {
         &self,
         node: &Node,
         request: RequestMessage,
+        timeout: Duration,
     ) -> Result<ResponseMessage>;
 }
 

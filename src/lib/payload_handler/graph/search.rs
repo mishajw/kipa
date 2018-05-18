@@ -14,9 +14,6 @@ use std::time::Duration;
 use error_chain::ChainedError;
 use slog::Logger;
 
-// TODO: Make configurable
-const CONNECTION_TIMEOUT_SEC: usize = 1;
-
 pub enum SearchCallbackReturn<T> {
     Continue(),
     Return(T),
@@ -105,6 +102,7 @@ impl GraphSearch {
         found_node_callback: FoundNodeCallback<T>,
         explored_node_callback: ExploredNodeCallback<T>,
         max_num_active_threads: usize,
+        timeout_sec: usize,
         log: Logger,
     ) -> Result<Option<T>> {
         // Algorithm outline:
@@ -132,7 +130,9 @@ impl GraphSearch {
         info!(log, "Starting graph search"; "key" => %key);
 
         let key_space = self.key_space_manager.create_from_key(key);
-        let timeout = Duration::from_secs(CONNECTION_TIMEOUT_SEC as u64);
+        // Double the timeout for waiting for threads to resolve to allow some
+        // slack in threads responding
+        let timeout = Duration::from_secs((timeout_sec * 2) as u64);
 
         // Create structures for the search.
         let mut to_explore = BinaryHeap::new();
@@ -307,6 +307,7 @@ impl GraphSearch {
         found_node_callback: FoundNodeCallback<T>,
         explored_node_callback: ExploredNodeCallback<T>,
         num_active_threads: usize,
+        timeout_sec: usize,
         log: Logger,
     ) -> Result<Option<T>> {
         // Continue the graph search looking for a key, until the `n`
@@ -370,6 +371,7 @@ impl GraphSearch {
             Arc::new(wrapped_found_node_callback),
             Arc::new(wrapped_explored_node_callback),
             num_active_threads,
+            timeout_sec,
             log,
         )
     }
@@ -435,6 +437,7 @@ mod test {
                     search_explored_nodes.lock().unwrap().push(n.clone());
                     Ok(SearchCallbackReturn::Continue())
                 }),
+                1,
                 1,
                 test_log,
             )

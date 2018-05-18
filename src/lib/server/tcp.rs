@@ -10,6 +10,7 @@ use socket_server::{SocketClient, SocketServer};
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener, TcpStream};
 use std::sync::Arc;
+use std::time::Duration;
 
 use slog::Logger;
 
@@ -107,10 +108,15 @@ impl SocketClient for TcpGlobalClient {
         &self.log
     }
 
-    fn create_socket(&self, node: &Node) -> Result<TcpStream> {
-        TcpStream::connect(&node.address.get_socket_addr()).chain_err(|| {
-            format!("Error on trying to connect to node {}", node)
-        })
+    fn create_socket(
+        &self,
+        node: &Node,
+        timeout: Duration,
+    ) -> Result<TcpStream> {
+        TcpStream::connect_timeout(&node.address.get_socket_addr(), timeout)
+            .chain_err(|| {
+                format!("Error on trying to connect to node {}", node)
+            })
     }
 }
 
@@ -119,7 +125,14 @@ impl Client for TcpGlobalClient {
         &self,
         node: &Node,
         request: RequestMessage,
+        timeout: Duration,
     ) -> Result<ResponseMessage> {
-        SocketClient::receive(self, node, request, &*self.data_transformer)
+        SocketClient::send(
+            self,
+            node,
+            request,
+            &*self.data_transformer,
+            timeout,
+        )
     }
 }

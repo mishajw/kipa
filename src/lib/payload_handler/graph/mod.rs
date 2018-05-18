@@ -22,6 +22,7 @@ use payload_handler::graph::search::{GetNeighboursFn, GraphSearch,
                                      SearchCallbackReturn};
 
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use slog::Logger;
 
 /// The default breadth to use when searching
@@ -33,12 +34,16 @@ pub const DEFAULT_CONNECT_SEARCH_BREADTH: usize = 3;
 /// The default maximum number of concurrent threads to have when searching
 pub const DEFAULT_MAX_NUM_SEARCH_THREADS: usize = 3;
 
+/// The default timeout for queries when performing a search
+pub const DEFAULT_SEARCH_TIMEOUT_SEC: usize = 2;
+
 /// Contains graph search information.
 pub struct GraphPayloadHandler {
     key: Key,
     search_breadth: usize,
     connect_search_breadth: usize,
     max_num_search_threads: usize,
+    search_timeout_sec: usize,
     neighbours_store: Arc<Mutex<NeighboursStore>>,
     graph_search: Arc<GraphSearch>,
     log: Logger,
@@ -55,6 +60,7 @@ impl GraphPayloadHandler {
         search_breadth: usize,
         connect_search_breadth: usize,
         max_num_search_threads: usize,
+        search_timeout_sec: usize,
         key_space_manager: Arc<KeySpaceManager>,
         neighbours_store: Arc<Mutex<NeighboursStore>>,
         log: Logger,
@@ -64,6 +70,7 @@ impl GraphPayloadHandler {
             search_breadth,
             connect_search_breadth,
             max_num_search_threads,
+            search_timeout_sec,
             graph_search: Arc::new(GraphSearch::new(key_space_manager.clone())),
             neighbours_store: neighbours_store,
             log: log,
@@ -110,6 +117,7 @@ impl GraphPayloadHandler {
                 Ok(SearchCallbackReturn::Continue())
             }),
             self.max_num_search_threads,
+            self.search_timeout_sec,
             log,
         )
     }
@@ -152,6 +160,7 @@ impl GraphPayloadHandler {
             Arc::new(found_callback),
             Arc::new(explored_callback),
             self.max_num_search_threads,
+            self.search_timeout_sec,
             log,
         )?;
         Ok(())
@@ -163,13 +172,17 @@ impl GraphPayloadHandler {
     ) -> GetNeighboursFn {
         let neighbours_store = self.neighbours_store.clone();
         let key = self.key.clone();
+        let timeout = Duration::from_secs(self.search_timeout_sec as u64);
         Arc::new(move |n, k: &Key| {
             if n.key == key {
                 return Ok(neighbours_store.lock().unwrap().get_all());
             }
 
-            let response = payload_client
-                .send(n, RequestPayload::QueryRequest(k.clone()))?;
+            let response = payload_client.send(
+                n,
+                RequestPayload::QueryRequest(k.clone()),
+                timeout,
+            )?;
 
             match response {
                 ResponsePayload::QueryResponse(ref nodes) => Ok(nodes.clone()),
