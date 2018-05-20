@@ -9,12 +9,12 @@
 //! files are placed.
 
 use address::Address;
+use api::{MessageSender, RequestMessage, RequestPayload, ResponseMessage,
+          ResponsePayload};
 use data_transformer::{proto_api, DataTransformer};
 use error::*;
 use key::Key;
 use node::Node;
-use api::{MessageSender, RequestMessage, RequestPayload, ResponseMessage,
-          ResponsePayload};
 
 use byteorder::{NetworkEndian, ReadBytesExt, WriteBytesExt};
 use protobuf::*;
@@ -73,24 +73,41 @@ impl DataTransformer for ProtobufDataTransformer {
             parse_from_bytes(data).chain_err(|| "Error on parsing request")?;
 
         let payload = if request.has_query_request() {
-            let key = request.get_query_request().get_key().clone().into();
+            let key = request
+                .get_query_request()
+                .get_key()
+                .clone()
+                .into();
             RequestPayload::QueryRequest(key)
         } else if request.has_search_request() {
-            let key = request.get_search_request().get_key().clone().into();
+            let key = request
+                .get_search_request()
+                .get_key()
+                .clone()
+                .into();
             RequestPayload::SearchRequest(key)
         } else if request.has_connect_request() {
-            let node: Result<Node> =
-                request.get_connect_request().get_node().clone().into();
+            let node: Result<Node> = request
+                .get_connect_request()
+                .get_node()
+                .clone()
+                .into();
             RequestPayload::ConnectRequest(node?)
         } else if request.has_list_neighbours_request() {
             RequestPayload::ListNeighboursRequest()
         } else {
-            return Err(ErrorKind::ParseError("Unrecognized request".into()).into());
+            return Err(
+                ErrorKind::ParseError("Unrecognized request".into()).into(),
+            );
         };
 
         let sender: Result<MessageSender> = request.get_sender().clone().into();
 
-        Ok(RequestMessage::new(payload, sender?, request.get_id()))
+        Ok(RequestMessage::new(
+            payload,
+            sender?,
+            request.get_id(),
+        ))
     }
 
     fn response_to_bytes(&self, response: &ResponseMessage) -> Result<Vec<u8>> {
@@ -151,8 +168,11 @@ impl DataTransformer for ProtobufDataTransformer {
             ResponsePayload::QueryResponse(nodes?)
         } else if response.has_search_response() {
             if response.get_search_response().has_node() {
-                let node: Result<Node> =
-                    response.get_search_response().get_node().clone().into();
+                let node: Result<Node> = response
+                    .get_search_response()
+                    .get_node()
+                    .clone()
+                    .into();
                 ResponsePayload::SearchResponse(Some(node?))
             } else {
                 ResponsePayload::SearchResponse(None)
@@ -168,13 +188,19 @@ impl DataTransformer for ProtobufDataTransformer {
                 .collect();
             ResponsePayload::ListNeighboursResponse(nodes?)
         } else {
-            return Err(ErrorKind::ParseError("Unrecognized response".into()).into());
+            return Err(
+                ErrorKind::ParseError("Unrecognized response".into()).into(),
+            );
         };
 
         let sender: Result<MessageSender> =
             response.get_sender().clone().into();
 
-        Ok(ResponseMessage::new(payload, sender?, response.get_id()))
+        Ok(ResponseMessage::new(
+            payload,
+            sender?,
+            response.get_id(),
+        ))
     }
 }
 
@@ -189,7 +215,10 @@ impl Into<proto_api::Key> for Key {
 
 impl From<proto_api::Key> for Key {
     fn from(kipa_key: proto_api::Key) -> Key {
-        Key::new(kipa_key.get_key_id().into(), kipa_key.data.clone())
+        Key::new(
+            kipa_key.get_key_id().into(),
+            kipa_key.data.clone(),
+        )
     }
 }
 
@@ -230,7 +259,10 @@ impl Into<Result<proto_api::Node>> for Node {
 impl Into<Result<Node>> for proto_api::Node {
     fn into(self) -> Result<Node> {
         let address: Result<Address> = self.get_address().clone().into();
-        Ok(Node::new(address?, self.get_key().clone().into()))
+        Ok(Node::new(
+            address?,
+            self.get_key().clone().into(),
+        ))
     }
 }
 

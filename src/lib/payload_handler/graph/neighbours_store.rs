@@ -4,9 +4,9 @@ use key::Key;
 use node::Node;
 use payload_handler::graph::key_space::{KeySpace, KeySpaceManager};
 
-use std::sync::Arc;
 use slog::Logger;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 /// The default size of the neighbours store.
 pub const DEFAULT_MAX_NUM_NEIGHBOURS: usize = 3;
@@ -80,7 +80,8 @@ impl NeighboursStore {
 
     /// Given a node, consider keeping it as a neighbour.
     pub fn consider_candidate(&mut self, node: &Node) {
-        let key_space = self.key_space_manager.create_from_key(&node.key);
+        let key_space = self.key_space_manager
+            .create_from_key(&node.key);
 
         info!(
             self.log,
@@ -128,7 +129,8 @@ impl NeighboursStore {
                         )
                     })
                     .min_by(|a, b| {
-                        a.partial_cmp(b).expect("Error on comparing angles")
+                        a.partial_cmp(b)
+                            .expect("Error on comparing angles")
                     })
                     .unwrap()
             })
@@ -137,7 +139,8 @@ impl NeighboursStore {
         let distances: Vec<f32> = self.neighbours
             .iter()
             .map(|&(_, ref ks)| {
-                self.key_space_manager.distance(&self.local_key_space, ks)
+                self.key_space_manager
+                    .distance(&self.local_key_space, ks)
             })
             .collect();
 
@@ -185,11 +188,12 @@ impl NeighboursStore {
             scores_map.insert(n.key.get_key_id().clone(), s);
         }
 
-        self.neighbours.sort_by(|&(ref a, _), &(ref b, _)| {
-            let a_score = scores_map.get(a.key.get_key_id()).unwrap();
-            let b_score = scores_map.get(b.key.get_key_id()).unwrap();
-            a_score.partial_cmp(b_score).unwrap()
-        });
+        self.neighbours
+            .sort_by(|&(ref a, _), &(ref b, _)| {
+                let a_score = scores_map.get(a.key.get_key_id()).unwrap();
+                let b_score = scores_map.get(b.key.get_key_id()).unwrap();
+                a_score.partial_cmp(b_score).unwrap()
+            });
 
         // ...remove the furthest neighbours.
         while self.neighbours.len() > self.max_num_neighbours {
@@ -201,8 +205,8 @@ impl NeighboursStore {
 #[cfg(test)]
 mod test {
     use super::*;
-    use key::Key;
     use address::Address;
+    use key::Key;
 
     use slog;
     use spectral::assert_that;

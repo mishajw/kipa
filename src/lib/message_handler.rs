@@ -2,10 +2,10 @@
 
 use api::{MessageSender, RequestMessage, RequestPayload, ResponseMessage,
           ResponsePayload};
-use server::Client;
 use error::*;
 use node::Node;
 use payload_handler::PayloadHandler;
+use server::Client;
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -99,7 +99,8 @@ impl PayloadClient {
         );
 
         let response_message =
-            self.client.send(node, request_message, timeout)?;
+            self.client
+                .send(node, request_message, timeout)?;
 
         if response_message.id != self.message_id {
             return Err(ErrorKind::ResponseError(format!(

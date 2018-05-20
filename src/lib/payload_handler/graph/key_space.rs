@@ -3,10 +3,10 @@
 use key::Key;
 
 use byteorder::{BigEndian, ReadBytesExt};
+use std::fmt;
 use std::io::Cursor;
 use std::mem::size_of;
 use std::ops::{BitXor, Deref};
-use std::fmt;
 
 /// The default dimension size for key space
 pub const DEFAULT_KEY_SPACE_SIZE: usize = 2;
@@ -63,7 +63,11 @@ impl KeySpaceManager {
         }
         let coords: Vec<i32> = chunks_transpose
             .iter()
-            .map(|cs| cs.iter().map(Deref::deref).fold(0 as u8, BitXor::bitxor))
+            .map(|cs| {
+                cs.iter()
+                    .map(Deref::deref)
+                    .fold(0 as u8, BitXor::bitxor)
+            })
             .collect::<Vec<u8>>()
             .chunks(size_of::<i32>() / size_of::<u8>())
             .map(|cs| Cursor::new(cs).read_i32::<BigEndian>().unwrap())
@@ -176,12 +180,20 @@ mod test {
 
     #[test]
     fn test_remove_duplicate_keys_small() {
-        let mut ks =
-            vec![KeySpace { coords: vec![1] }, KeySpace { coords: vec![1] }];
+        let mut ks = vec![
+            KeySpace {
+                coords: vec![1],
+            },
+            KeySpace {
+                coords: vec![1],
+            },
+        ];
         let manager = KeySpaceManager::new(1);
         manager.remove_duplicate_keys(&mut ks, &|k: &KeySpace| k.clone());
         assert_that!(ks.len()).is_equal_to(1);
-        let mut nums = ks.iter().map(|k| k.coords[0]).collect::<Vec<i32>>();
+        let mut nums = ks.iter()
+            .map(|k| k.coords[0])
+            .collect::<Vec<i32>>();
         nums.sort();
         assert_that!(nums).is_equal_to(vec![1]);
     }
@@ -189,20 +201,40 @@ mod test {
     #[test]
     fn test_remove_duplicate_keys() {
         let mut ks = vec![
-            KeySpace { coords: vec![1] },
-            KeySpace { coords: vec![1] },
-            KeySpace { coords: vec![2] },
-            KeySpace { coords: vec![4] },
-            KeySpace { coords: vec![1] },
-            KeySpace { coords: vec![4] },
-            KeySpace { coords: vec![4] },
-            KeySpace { coords: vec![6] },
-            KeySpace { coords: vec![5] },
+            KeySpace {
+                coords: vec![1],
+            },
+            KeySpace {
+                coords: vec![1],
+            },
+            KeySpace {
+                coords: vec![2],
+            },
+            KeySpace {
+                coords: vec![4],
+            },
+            KeySpace {
+                coords: vec![1],
+            },
+            KeySpace {
+                coords: vec![4],
+            },
+            KeySpace {
+                coords: vec![4],
+            },
+            KeySpace {
+                coords: vec![6],
+            },
+            KeySpace {
+                coords: vec![5],
+            },
         ];
         let manager = KeySpaceManager::new(1);
         manager.remove_duplicate_keys(&mut ks, &|k: &KeySpace| k.clone());
         assert_that!(ks).has_length(5);
-        let mut nums = ks.iter().map(|k| k.coords[0]).collect::<Vec<i32>>();
+        let mut nums = ks.iter()
+            .map(|k| k.coords[0])
+            .collect::<Vec<i32>>();
         nums.sort();
         assert_that!(nums).contains_all_of(&vec![&1, &2, &4, &5, &6]);
     }
@@ -210,9 +242,15 @@ mod test {
     #[test]
     fn test_distance() {
         let ks = vec![
-            KeySpace { coords: vec![1, 3] },
-            KeySpace { coords: vec![3, 2] },
-            KeySpace { coords: vec![0, 0] },
+            KeySpace {
+                coords: vec![1, 3],
+            },
+            KeySpace {
+                coords: vec![3, 2],
+            },
+            KeySpace {
+                coords: vec![0, 0],
+            },
         ];
         let manager = KeySpaceManager::new(2);
 
@@ -244,9 +282,15 @@ mod test {
         //
         // Where the numbers on the grids are the indices in `ks`
         let ks = vec![
-            KeySpace { coords: vec![0, 0] },
-            KeySpace { coords: vec![2, 2] },
-            KeySpace { coords: vec![2, 0] },
+            KeySpace {
+                coords: vec![0, 0],
+            },
+            KeySpace {
+                coords: vec![2, 2],
+            },
+            KeySpace {
+                coords: vec![2, 0],
+            },
             KeySpace {
                 coords: vec![2, -2],
             },
@@ -262,7 +306,9 @@ mod test {
             KeySpace {
                 coords: vec![-2, 2],
             },
-            KeySpace { coords: vec![0, 2] },
+            KeySpace {
+                coords: vec![0, 2],
+            },
         ];
         let manager = KeySpaceManager::new(2);
 
@@ -289,10 +335,18 @@ mod test {
     #[test]
     fn test_angle_1d() {
         let ks = vec![
-            KeySpace { coords: vec![-1] },
-            KeySpace { coords: vec![0] },
-            KeySpace { coords: vec![1] },
-            KeySpace { coords: vec![2] },
+            KeySpace {
+                coords: vec![-1],
+            },
+            KeySpace {
+                coords: vec![0],
+            },
+            KeySpace {
+                coords: vec![1],
+            },
+            KeySpace {
+                coords: vec![2],
+            },
         ];
         let manager = KeySpaceManager::new(1);
         assert_that!(manager.angle(&ks[1], &ks[0], &ks[2]))

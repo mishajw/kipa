@@ -3,10 +3,10 @@
 use api::{ApiVisibility, RequestMessage, ResponseMessage};
 use data_transformer::DataTransformer;
 use error::*;
-use server::{Client, Server};
-use node::Node;
 use message_handler::MessageHandler;
-use socket_server::{SocketHandler, SocketClient, SocketServer};
+use node::Node;
+use server::{Client, Server};
+use socket_server::{SocketClient, SocketHandler, SocketServer};
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener, TcpStream};
 use std::sync::Arc;
@@ -98,7 +98,10 @@ impl SocketServer for TcpGlobalServer {
     }
 
     fn check_request(&self, request: &RequestMessage) -> Result<()> {
-        if !request.payload.is_visible(&ApiVisibility::Global()) {
+        if !request
+            .payload
+            .is_visible(&ApiVisibility::Global())
+        {
             Err(ErrorKind::RequestError(
                 "Request is not globally available".into(),
             ).into())

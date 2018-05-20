@@ -1,13 +1,13 @@
 //! Serialize and deserialize requests and responses for communication over
 //! the wire between KIPA nodes/interfaces.
 
-use error::*;
 use api::{RequestMessage, ResponseMessage};
+use error::*;
 
 #[cfg(use_protobuf)]
-pub mod protobuf;
-#[cfg(use_protobuf)]
 mod proto_api;
+#[cfg(use_protobuf)]
+pub mod protobuf;
 
 /// Implementors must be able to convert `Request`s and `Response`s to and from
 /// bytes.

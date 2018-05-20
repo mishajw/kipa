@@ -27,8 +27,12 @@ pub fn create_logger(name: &'static str) -> Logger {
         .expect("Error on creating log file");
 
     let decorator = slog_term::TermDecorator::new().build();
-    let json_drain = slog_json::Json::new(log_file).add_default_keys().build();
-    let drain = slog_term::CompactFormat::new(decorator).build().fuse();
+    let json_drain = slog_json::Json::new(log_file)
+        .add_default_keys()
+        .build();
+    let drain = slog_term::CompactFormat::new(decorator)
+        .build()
+        .fuse();
     let drain = slog::Duplicate(json_drain, drain).fuse();
     let drain = slog_async::Async::new(drain).build().fuse();
     slog::Logger::root(
@@ -59,7 +63,10 @@ pub fn create_global_client(
     log: Logger,
 ) -> Result<Arc<Client>> {
     use server::tcp::TcpGlobalClient;
-    Ok(Arc::new(TcpGlobalClient::new(data_transformer, log)))
+    Ok(Arc::new(TcpGlobalClient::new(
+        data_transformer,
+        log,
+    )))
 }
 
 #[cfg(use_tcp)]
@@ -173,7 +180,11 @@ pub fn create_message_handler(
     client: Arc<Client>,
     local_node: Node,
 ) -> Arc<MessageHandler> {
-    Arc::new(MessageHandler::new(payload_handler, local_node, client))
+    Arc::new(MessageHandler::new(
+        payload_handler,
+        local_node,
+        client,
+    ))
 }
 
 #[cfg(use_graph)]

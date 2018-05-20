@@ -1,8 +1,8 @@
 //! Traits for sending and receiving requests between KIPA nodes
 
+use api::{RequestMessage, RequestPayload, ResponseMessage};
 use error::*;
 use node::Node;
-use api::{RequestMessage, RequestPayload, ResponseMessage};
 
 use std::thread::JoinHandle;
 use std::time::Duration;

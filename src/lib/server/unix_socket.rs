@@ -56,7 +56,10 @@ impl Server for UnixSocketLocalServer {
         }
 
         let listener = UnixListener::bind(&self.socket_path).chain_err(|| {
-            format!("Error on binding to socket path: {}", self.socket_path)
+            format!(
+                "Error on binding to socket path: {}",
+                self.socket_path
+            )
         })?;
         debug!(
             self.log,
@@ -102,7 +105,10 @@ impl SocketServer for UnixSocketLocalServer {
     }
 
     fn check_request(&self, request: &RequestMessage) -> Result<()> {
-        if !request.payload.is_visible(&ApiVisibility::Local()) {
+        if !request
+            .payload
+            .is_visible(&ApiVisibility::Local())
+        {
             Err(ErrorKind::RequestError(
                 "Request is not locally available".into(),
             ).into())

@@ -1,9 +1,9 @@
 //! Handle providing `Response`s for `Request`s.
 
 use api::{RequestPayload, ResponsePayload};
-use node::Node;
-use message_handler::PayloadClient;
 use error::*;
+use message_handler::PayloadClient;
+use node::Node;
 
 use std::sync::Arc;
 

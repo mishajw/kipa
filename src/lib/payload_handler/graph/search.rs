@@ -31,11 +31,11 @@ type ExploredNodeCallback<T> =
 macro_rules! return_callback {
     ($callback_value:expr) => {
         match $callback_value {
-            SearchCallbackReturn::Continue() => {},
+            SearchCallbackReturn::Continue() => {}
             SearchCallbackReturn::Return(t) => return Ok(Some(t)),
             SearchCallbackReturn::Exit() => return Ok(None),
         }
-    }
+    };
 }
 
 /// Contains data for graph search
@@ -384,8 +384,8 @@ mod test {
     use key::Key;
 
     use slog;
-    use std::sync::Mutex;
     use spectral::assert_that;
+    use std::sync::Mutex;
 
     #[test]
     fn test_search_order() {
@@ -434,7 +434,10 @@ mod test {
                 }),
                 Arc::new(|_n| Ok(SearchCallbackReturn::Continue())),
                 Arc::new(move |n| {
-                    search_explored_nodes.lock().unwrap().push(n.clone());
+                    search_explored_nodes
+                        .lock()
+                        .unwrap()
+                        .push(n.clone());
                     Ok(SearchCallbackReturn::Continue())
                 }),
                 1,

@@ -2,9 +2,9 @@
 
 use api::{RequestPayload, ResponsePayload};
 use error::*;
+use message_handler::PayloadClient;
 use node::Node;
 use payload_handler::PayloadHandler;
-use message_handler::PayloadClient;
 
 use slog::Logger;
 use std::sync::Arc;

@@ -28,8 +28,8 @@ impl Address {
 
     /// Create a new address from a string.
     pub fn from_string(s: &str) -> Result<Address> {
-        let socket_addr: SocketAddr =
-            s.parse().chain_err(|| "Error on parsing IP address")?;
+        let socket_addr: SocketAddr = s.parse()
+            .chain_err(|| "Error on parsing IP address")?;
 
         match socket_addr {
             SocketAddr::V4(addr) => Ok(Address {
