@@ -6,15 +6,17 @@ use error::*;
 use server::{Client, Server};
 use node::Node;
 use message_handler::MessageHandler;
-use socket_server::{SocketClient, SocketServer};
+use socket_server::{SocketHandler, SocketClient, SocketServer};
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener, TcpStream};
 use std::sync::Arc;
+use std::thread;
 use std::time::Duration;
 
 use slog::Logger;
 
 /// Server that listens for global requests on a specified TCP socket.
+#[derive(Clone)]
 pub struct TcpGlobalServer {
     message_handler: Arc<MessageHandler>,
     data_transformer: Arc<DataTransformer>,
@@ -43,7 +45,7 @@ impl TcpGlobalServer {
 }
 
 impl Server for TcpGlobalServer {
-    fn start(&self) -> Result<()> {
+    fn start(&self) -> Result<thread::JoinHandle<()>> {
         let listener = TcpListener::bind(SocketAddr::new(
             IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
             self.local_node.address.port,
@@ -54,21 +56,43 @@ impl Server for TcpGlobalServer {
             self.local_node.address.port
         );
 
-        listener.incoming().for_each(|socket| {
-            self.handle_socket_result(
-                socket.chain_err(|| "Failed to create socket"),
-                self.message_handler.clone(),
-                self.data_transformer.clone(),
-            )
+        let arc_self = Arc::new(self.clone());
+        let join_handle = thread::spawn(move || {
+            listener.incoming().for_each(move |socket| {
+                let spawn_self = arc_self.clone();
+                thread::spawn(move || {
+                    spawn_self.handle_socket_result(
+                        socket.chain_err(|| "Failed to create socket"),
+                        spawn_self.message_handler.clone(),
+                        spawn_self.data_transformer.clone(),
+                    )
+                });
+            });
         });
 
+        Ok(join_handle)
+    }
+}
+
+impl SocketHandler for TcpGlobalServer {
+    type SocketType = TcpStream;
+
+    fn set_socket_timeout(
+        &self,
+        socket: &mut TcpStream,
+        timeout: Option<Duration>,
+    ) -> Result<()> {
+        socket
+            .set_read_timeout(timeout)
+            .chain_err(|| "Error on setting read timeout on TCP socket")?;
+        socket
+            .set_write_timeout(timeout)
+            .chain_err(|| "Error on setting write timeout on TCP socket")?;
         Ok(())
     }
 }
 
 impl SocketServer for TcpGlobalServer {
-    type SocketType = TcpStream;
-
     fn get_log(&self) -> &Logger {
         &self.log
     }
@@ -101,9 +125,25 @@ impl TcpGlobalClient {
     }
 }
 
-impl SocketClient for TcpGlobalClient {
+impl SocketHandler for TcpGlobalClient {
     type SocketType = TcpStream;
 
+    fn set_socket_timeout(
+        &self,
+        socket: &mut TcpStream,
+        timeout: Option<Duration>,
+    ) -> Result<()> {
+        socket
+            .set_read_timeout(timeout)
+            .chain_err(|| "Error on setting read timeout on TCP socket")?;
+        socket
+            .set_write_timeout(timeout)
+            .chain_err(|| "Error on setting write timeout on TCP socket")?;
+        Ok(())
+    }
+}
+
+impl SocketClient for TcpGlobalClient {
     fn get_log(&self) -> &Logger {
         &self.log
     }

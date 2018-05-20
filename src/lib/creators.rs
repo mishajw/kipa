@@ -4,22 +4,22 @@
 
 use data_transformer::DataTransformer;
 use error::*;
-#[allow(unused)]
-use server::{Client, LocalClient, Server};
-use payload_handler::PayloadHandler;
 use message_handler::MessageHandler;
 use node::Node;
-
+use payload_handler::PayloadHandler;
 #[allow(unused)]
-use std::sync::{Arc, Mutex};
+use server::{Client, LocalClient, Server};
+
 use clap;
 use slog;
+use slog::Drain;
 use slog::Logger;
-use slog_term;
 use slog_async;
 use slog_json;
-use slog::Drain;
+use slog_term;
 use std::fs;
+#[allow(unused)]
+use std::sync::{Arc, Mutex};
 
 /// Create the root logger for the project
 pub fn create_logger(name: &'static str) -> Logger {
@@ -69,14 +69,14 @@ pub fn create_global_server(
     data_transformer: Arc<DataTransformer>,
     local_node: Node,
     log: Logger,
-) -> Result<Arc<Mutex<Server>>> {
+) -> Result<Box<Server>> {
     use server::tcp::TcpGlobalServer;
-    Ok(Arc::new(Mutex::new(TcpGlobalServer::new(
+    Ok(Box::new(TcpGlobalServer::new(
         message_handler,
         data_transformer.clone(),
         local_node,
         log,
-    ))))
+    )))
 }
 
 #[cfg(no_global_server)]
@@ -98,7 +98,7 @@ pub fn create_global_server(
     _data_transformer: Arc<DataTransformer>,
     _local_node: Node,
     _log: Logger,
-) -> Result<Arc<Mutex<Server>>> {
+) -> Result<Box<Server>> {
     Err(
         ErrorKind::ConfigError("A server feature was not selected".into())
             .into(),
@@ -112,16 +112,16 @@ pub fn create_local_server(
     data_transformer: Arc<DataTransformer>,
     args: &clap::ArgMatches,
     log: Logger,
-) -> Result<Arc<Mutex<Server>>> {
+) -> Result<Box<Server>> {
     use server::unix_socket::{UnixSocketLocalServer, DEFAULT_UNIX_SOCKET_PATH};
     let socket_path = args.value_of("socket_path")
         .unwrap_or(DEFAULT_UNIX_SOCKET_PATH);
-    Ok(Arc::new(Mutex::new(UnixSocketLocalServer::new(
+    Ok(Box::new(UnixSocketLocalServer::new(
         message_handler,
         data_transformer,
         String::from(socket_path),
         log,
-    )?)))
+    )?))
 }
 
 #[cfg(use_unix_socket)]
@@ -149,7 +149,7 @@ pub fn create_local_server(
     _data_transformer: Arc<DataTransformer>,
     _args: &clap::ArgMatches,
     _log: Logger,
-) -> Result<Arc<Mutex<Server>>> {
+) -> Result<Box<Server>> {
     Err(ErrorKind::ConfigError(
         "A local server feature was not selected".into(),
     ).into())

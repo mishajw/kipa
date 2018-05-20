@@ -1,17 +1,19 @@
 //! Handles sending and receiving requests on a unix pipe for local processes,
 //! such as the CLI.
 
-use error::*;
-use message_handler::MessageHandler;
 use api::{ApiVisibility, MessageSender, RequestMessage, RequestPayload,
           ResponseMessage};
 use data_transformer::DataTransformer;
+use error::*;
+use message_handler::MessageHandler;
 use server::{LocalClient, Server};
-use socket_server::{receive_data, send_data, SocketServer};
+use socket_server::{SocketHandler, SocketServer};
 
 use std::fs;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync::Arc;
+use std::thread;
+use std::time::Duration;
 
 use slog::Logger;
 
@@ -19,6 +21,7 @@ use slog::Logger;
 pub const DEFAULT_UNIX_SOCKET_PATH: &str = "/tmp/kipa";
 
 /// Listens for local requests on a unix socket file.
+#[derive(Clone)]
 pub struct UnixSocketLocalServer {
     message_handler: Arc<MessageHandler>,
     data_transformer: Arc<DataTransformer>,
@@ -45,7 +48,7 @@ impl UnixSocketLocalServer {
 }
 
 impl Server for UnixSocketLocalServer {
-    fn start(&self) -> Result<()> {
+    fn start(&self) -> Result<thread::JoinHandle<()>> {
         // Remove the old unix socket file if it exists
         if fs::metadata(&self.socket_path).is_ok() {
             fs::remove_file(&self.socket_path)
@@ -61,21 +64,39 @@ impl Server for UnixSocketLocalServer {
             "path" => &self.socket_path
         );
 
-        listener.incoming().for_each(|socket| {
-            self.handle_socket_result(
-                socket.chain_err(|| "Failed to create socket"),
-                self.message_handler.clone(),
-                self.data_transformer.clone(),
-            )
+        let arc_self = Arc::new(self.clone());
+        let join_handle = thread::spawn(move || {
+            listener.incoming().for_each(move |socket| {
+                let spawn_self = arc_self.clone();
+                thread::spawn(move || {
+                    spawn_self.handle_socket_result(
+                        socket.chain_err(|| "Failed to create socket"),
+                        spawn_self.message_handler.clone(),
+                        spawn_self.data_transformer.clone(),
+                    )
+                });
+            });
         });
 
+        Ok(join_handle)
+    }
+}
+
+impl SocketHandler for UnixSocketLocalServer {
+    type SocketType = UnixStream;
+
+    fn set_socket_timeout(
+        &self,
+        _socket: &mut UnixStream,
+        _timeout: Option<Duration>,
+    ) -> Result<()> {
+        // Ignore timeouts on unix sockets, as there should be little to no
+        // delay
         Ok(())
     }
 }
 
 impl SocketServer for UnixSocketLocalServer {
-    type SocketType = UnixStream;
-
     fn get_log(&self) -> &Logger {
         &self.log
     }
@@ -114,6 +135,20 @@ impl UnixSocketLocalClient {
     }
 }
 
+impl SocketHandler for UnixSocketLocalClient {
+    type SocketType = UnixStream;
+
+    fn set_socket_timeout(
+        &self,
+        _socket: &mut UnixStream,
+        _timeout: Option<Duration>,
+    ) -> Result<()> {
+        // Ignore timeouts on unix sockets, as there should be little to no
+        // delay
+        Ok(())
+    }
+}
+
 impl LocalClient for UnixSocketLocalClient {
     fn send<'a>(
         &self,
@@ -125,19 +160,21 @@ impl LocalClient for UnixSocketLocalClient {
             MessageSender::Cli(),
             message_id,
         );
-        let request_bytes = self.data_transformer.request_to_bytes(&request)?;
+        let request_bytes = self.data_transformer
+            .request_to_bytes(&request)?;
 
         trace!(self.log, "Setting up socket to daemon");
         let mut socket = UnixStream::connect(&self.socket_path)
             .chain_err(|| "Error on trying to connect to node")?;
 
         trace!(self.log, "Sending request to daemon");
-        send_data(&request_bytes, &mut socket)?;
+        self.send_data(&request_bytes, &mut socket, None)?;
 
         trace!(self.log, "Reading response from daemon");
-        let response_data = receive_data(&mut socket)?;
+        let response_data = self.receive_data(&mut socket, None)?;
 
         trace!(self.log, "Got response bytes");
-        self.data_transformer.bytes_to_response(&response_data)
+        self.data_transformer
+            .bytes_to_response(&response_data)
     }
 }

@@ -140,7 +140,7 @@ impl GraphSearch {
 
         // Set up channels for returning results from spawned threads
         let (explored_channel_tx, explored_channel_rx) =
-            channel::<Result<(Node, Vec<Node>)>>();
+            channel::<(Node, Result<Vec<Node>>)>();
 
         // Counter of active threads
         let mut num_active_threads = 0 as usize;
@@ -160,7 +160,7 @@ impl GraphSearch {
 
         let wait_explored_channel_tx = explored_channel_tx.clone();
         let wait_for_threads =
-            |rx: &Receiver<Result<(Node, Vec<Node>)>>| -> Result<()> {
+            |rx: &Receiver<(Node, Result<Vec<Node>>)>| -> Result<()> {
                 // Wait for `recv` to resolve
                 let recv = rx.recv_timeout(timeout)
                     .chain_err(|| "Error on `recv` when waiting for threads")?;
@@ -184,14 +184,14 @@ impl GraphSearch {
         loop {
             // Pop everything we can off the channel and into `found` and
             // `to_explore`
-            while let Ok(Ok((explored_node, found_nodes))) =
+            while let Ok((explored_node, found_nodes)) =
                 explored_channel_rx.try_recv()
             {
                 // If we pop something off the channel, a thread has finished
                 num_active_threads -= 1;
 
                 // Check all found nodes
-                for found_node in found_nodes {
+                for found_node in found_nodes.unwrap_or(vec![]) {
                     let search_node = into_search_node(found_node);
 
                     // If we've seen it before, ignore it
@@ -291,7 +291,7 @@ impl GraphSearch {
                 }
 
                 spawn_explored_channel_tx
-                    .send(neighbours.map(|ns| (current_node.node.clone(), ns)))
+                    .send((current_node.node.clone(), neighbours))
                     .chain_err(|| "Error on `send` when getting neighbours")
                     .expect("3");
             });

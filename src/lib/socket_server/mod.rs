@@ -16,20 +16,82 @@ use std::io::Cursor;
 use std::io::{Read, Write};
 use std::mem::size_of;
 use std::sync::Arc;
-use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use slog::Logger;
 
 /// The default port for server communication.
 pub const DEFAULT_PORT: u16 = 10842;
 
-/// Create a server that can listen for requests and pass onto a
-/// `PayloadHandler`.
-pub trait SocketServer: Send + Sync {
+/// Type for structs that interface with sockets
+pub trait SocketHandler {
     /// The type of the socket to use for sending/receiveing data
     type SocketType: Read + Write + Send + Sync + 'static;
 
+    /// Set the timeout of a `SocketType`
+    fn set_socket_timeout(
+        &self,
+        socket: &mut Self::SocketType,
+        timeout: Option<Duration>,
+    ) -> Result<()>;
+
+    /// Send data down a socket. Handles writing the length of the data.
+    fn send_data(
+        &self,
+        data: &Vec<u8>,
+        socket: &mut Self::SocketType,
+        deadline: Option<Instant>,
+    ) -> Result<()> {
+        let mut len_data = vec![];
+        len_data
+            .write_u32::<NetworkEndian>(data.len() as u32)
+            .chain_err(|| "Error on encoding length as byte array")?;
+
+        self.set_socket_timeout(socket, deadline.map(|d| d - Instant::now()))?;
+        socket
+            .write(&len_data)
+            .chain_err(|| "Error on writing length")?;
+
+        self.set_socket_timeout(socket, deadline.map(|d| d - Instant::now()))?;
+        socket
+            .write(&data)
+            .chain_err(|| "Error on writing response data")?;
+
+        Ok(())
+    }
+
+    /// Receive data from a socket. Handles reading the length of the data.
+    fn receive_data(
+        &self,
+        socket: &mut Self::SocketType,
+        deadline: Option<Instant>,
+    ) -> Result<Vec<u8>> {
+        const SIZE_OF_LEN: usize = size_of::<u32>();
+        let mut len_data: [u8; SIZE_OF_LEN] = [0; SIZE_OF_LEN];
+
+        self.set_socket_timeout(socket, deadline.map(|d| d - Instant::now()))?;
+        socket
+            .read_exact(&mut len_data)
+            .chain_err(|| "Error on reading length data")?;
+
+        let mut cursor = Cursor::new(len_data);
+        let len = cursor
+            .read_u32::<NetworkEndian>()
+            .chain_err(|| "Error on casting length data to u32")?;
+        let mut data = vec![0 as u8; len as usize];
+
+        self.set_socket_timeout(socket, deadline.map(|d| d - Instant::now()))?;
+        socket
+            .read_exact(&mut data)
+            .chain_err(|| "Error on read main data")?;
+
+        Ok(data)
+    }
+}
+
+/// Create a server that can listen for requests and pass onto a
+/// `PayloadHandler`.
+pub trait SocketServer: SocketHandler + Send + Sync {
     /// Get the logger for this instance
     fn get_log(&self) -> &Logger;
 
@@ -40,18 +102,15 @@ pub trait SocketServer: Send + Sync {
         message_handler: Arc<MessageHandler>,
         data_transformer: Arc<DataTransformer>,
     ) {
-        if let &Err(ref err) = &socket_result {
+        let result = socket_result
+            .map(|s| self.handle_socket(s, message_handler, data_transformer));
+
+        if let &Err(ref err) = &result {
             error!(
                 self.get_log(),
-                "Exception when receiving socket";
+                "Exception when handling socket";
                 "exception" => %err.display_chain());
         }
-
-        self.handle_socket(
-            socket_result.unwrap(),
-            message_handler,
-            data_transformer,
-        )
     }
 
     /// Handle a socket that the server has received.
@@ -60,37 +119,24 @@ pub trait SocketServer: Send + Sync {
         socket: Self::SocketType,
         message_handler: Arc<MessageHandler>,
         data_transformer: Arc<DataTransformer>,
-    ) {
-        let log = self.get_log().new(o!());
-        let callback = move || -> Result<()> {
-            let mut inner_socket = socket;
-            trace!(log, "Reading request from socket");
-            let request_data = receive_data(&mut inner_socket)?;
+    ) -> Result<()> {
+        let log = self.get_log();
 
-            trace!(log, "Processing request");
-            let request =
-                data_transformer.bytes_to_request(&request_data.to_vec())?;
+        let mut inner_socket = socket;
+        trace!(log, "Reading request from socket");
+        let request_data = self.receive_data(&mut inner_socket, None)?;
 
-            trace!(log, "Sending response");
-            let response = message_handler.receive(request)?;
-            let response_data = data_transformer.response_to_bytes(&response)?;
-            send_data(&response_data, &mut inner_socket)?;
-            trace!(log, "Sent response bytes");
-            Ok(())
-        };
+        trace!(log, "Processing request");
+        let request =
+            data_transformer.bytes_to_request(&request_data.to_vec())?;
 
-        let thread_log = self.get_log().new(o!());
-        // TODO: Can we move the `thread::spawn` to earlier in the socket
-        // creation in order to speed up ability to process multiple requests
-        // quickly?
-        thread::spawn(move || {
-            if let Err(err) = callback() {
-                error!(
-                    thread_log,
-                    "Exception when handling socket";
-                     "exception" => %err.display_chain());
-            }
-        });
+        trace!(log, "Sending response");
+        let response = message_handler.receive(request)?;
+        let response_data = data_transformer.response_to_bytes(&response)?;
+        self.send_data(&response_data, &mut inner_socket, None)?;
+        trace!(log, "Sent response bytes");
+
+        Ok(())
     }
 
     /// Check that the request is OK to process.
@@ -98,10 +144,7 @@ pub trait SocketServer: Send + Sync {
 }
 
 /// Functionality for sending requests to other KIPA servers on a socket.
-pub trait SocketClient {
-    /// The socket type to send/receive data from.
-    type SocketType: Read + Write;
-
+pub trait SocketClient: SocketHandler {
     /// Get the logger for this instance
     fn get_log(&self) -> &Logger;
 
@@ -120,6 +163,8 @@ pub trait SocketClient {
         data_transformer: &DataTransformer,
         timeout: Duration,
     ) -> Result<ResponseMessage> {
+        let deadline = Instant::now() + timeout;
+
         let request_bytes = data_transformer.request_to_bytes(&request)?;
 
         trace!(
@@ -127,54 +172,21 @@ pub trait SocketClient {
             "Setting up socket";
             "node" => %node
         );
-        let mut socket = self.create_socket(node, timeout)?;
+        let mut socket = self.create_socket(node, deadline - Instant::now())?;
 
-        trace!(self.get_log(), "Sending request to another node");
-        send_data(&request_bytes, &mut socket)?;
+        trace!(
+            self.get_log(),
+            "Sending request to another node"
+        );
+        self.send_data(&request_bytes, &mut socket, Some(deadline))?;
 
-        trace!(self.get_log(), "Reading response from another node");
-        let response_data = receive_data(&mut socket)?;
+        trace!(
+            self.get_log(),
+            "Reading response from another node"
+        );
+        let response_data = self.receive_data(&mut socket, Some(deadline))?;
 
         trace!(self.get_log(), "Got response bytes");
         data_transformer.bytes_to_response(&response_data)
     }
-}
-
-/// Send data down a socket. Handles writing the length of the data.
-pub fn send_data<SocketType: Write>(
-    data: &Vec<u8>,
-    socket: &mut SocketType,
-) -> Result<()> {
-    let mut len_data = vec![];
-    len_data
-        .write_u32::<NetworkEndian>(data.len() as u32)
-        .chain_err(|| "Error on encoding length as byte array")?;
-    socket
-        .write(&len_data)
-        .chain_err(|| "Error on writing length")?;
-    socket
-        .write(&data)
-        .chain_err(|| "Error on writing response data")?;
-    Ok(())
-}
-
-/// Receive data from a socket. Handles reading the length of the data.
-pub fn receive_data<SocketType: Read>(
-    socket: &mut SocketType,
-) -> Result<Vec<u8>> {
-    const SIZE_OF_LEN: usize = size_of::<u32>();
-    let mut len_data: [u8; SIZE_OF_LEN] = [0; SIZE_OF_LEN];
-    socket
-        .read_exact(&mut len_data)
-        .chain_err(|| "Error on reading length data")?;
-    let mut cursor = Cursor::new(len_data);
-    let len = cursor
-        .read_u32::<NetworkEndian>()
-        .chain_err(|| "Error on casting length data to u32")?;
-    let mut data = vec![0 as u8; len as usize];
-    socket
-        .read_exact(&mut data)
-        .chain_err(|| "Error on read main data")?;
-
-    Ok(data)
 }

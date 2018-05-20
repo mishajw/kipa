@@ -4,6 +4,7 @@ use error::*;
 use node::Node;
 use api::{RequestMessage, RequestPayload, ResponseMessage};
 
+use std::thread::JoinHandle;
 use std::time::Duration;
 
 #[cfg(use_tcp)]
@@ -16,7 +17,11 @@ pub mod unix_socket;
 /// them to `PayloadHandler`.
 pub trait Server: Send + Sync {
     /// Start the server.
-    fn start(&self) -> Result<()>;
+    fn start(&self) -> Result<JoinHandle<()>>;
+    // TODO: Start function should be able to consume `self`, but we can't due
+    // to referencing types as `: Server` which is not sized. This leads to a
+    // redundant clone in implementations of `start()`, which is inexpensive but
+    // messy
 }
 
 /// Listen for requests from other KIPA nodes.

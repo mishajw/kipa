@@ -13,7 +13,6 @@ use kipa_lib::socket_server::DEFAULT_PORT;
 use kipa_lib::{Address, Node};
 
 use error_chain::ChainedError;
-use std::thread;
 
 fn main() {
     let log = create_logger("daemon");
@@ -151,20 +150,12 @@ fn run_servers(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
         log.new(o!("local_server" => true)),
     )?;
 
-    let global_server_thread = thread::spawn(move || {
-        global_server
-            .lock()
-            .unwrap()
-            .start()
-            .expect("Error on creating global server thread");
-    });
-    let local_server_thread = thread::spawn(move || {
-        local_server
-            .lock()
-            .unwrap()
-            .start()
-            .expect("Error on creating local server thread");
-    });
+    let global_server_thread = global_server
+        .start()
+        .chain_err(|| "Error on creating global server thread")?;
+    let local_server_thread = local_server
+        .start()
+        .chain_err(|| "Error on creating local server thread")?;
 
     global_server_thread
         .join()
