@@ -1,1 +1,10 @@
+required_version = "0.7.0"
 max_width = 80
+format_strings = true
+wrap_comments = true
+normalize_comments = true
+fn_single_line = true
+where_single_line = true
+imports_indent = "Block"
+condense_wildcard_suffixes = true
+error_on_unformatted = true

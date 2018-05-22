@@ -14,8 +14,8 @@ pub enum RequestPayload {
     SearchRequest(Key),
     /// Request a query for some key.
     ///
-    /// This returns the [`Node`]s that the local node is connected to, that are
-    /// closest to the [`Key`] given.
+    /// This returns the [`Node`]s that the local node is connected to, that
+    /// are closest to the [`Key`] given.
     QueryRequest(Key),
     /// Connect to a `Node`, and search for potential neighbours in the node's
     /// network.

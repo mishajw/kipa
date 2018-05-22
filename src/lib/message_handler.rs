@@ -1,7 +1,9 @@
 //! Handle messages received from a server.
 
-use api::{MessageSender, RequestMessage, RequestPayload, ResponseMessage,
-          ResponsePayload};
+use api::{
+    MessageSender, RequestMessage, RequestPayload, ResponseMessage,
+    ResponsePayload,
+};
 use error::*;
 use node::Node;
 use payload_handler::PayloadHandler;
@@ -24,7 +26,8 @@ impl MessageHandler {
         payload_handler: Arc<PayloadHandler>,
         local_node: Node,
         client: Arc<Client>,
-    ) -> Self {
+    ) -> Self
+    {
         MessageHandler {
             payload_handler: payload_handler,
             local_node: local_node,
@@ -77,7 +80,8 @@ impl PayloadClient {
         message_id: u32,
         local_node: Node,
         client: Arc<Client>,
-    ) -> PayloadClient {
+    ) -> PayloadClient
+    {
         PayloadClient {
             message_id: message_id,
             local_node: local_node,
@@ -91,7 +95,8 @@ impl PayloadClient {
         node: &Node,
         payload: RequestPayload,
         timeout: Duration,
-    ) -> Result<ResponsePayload> {
+    ) -> Result<ResponsePayload>
+    {
         let request_message = RequestMessage::new(
             payload,
             MessageSender::Node(self.local_node.clone()),
@@ -99,8 +104,7 @@ impl PayloadClient {
         );
 
         let response_message =
-            self.client
-                .send(node, request_message, timeout)?;
+            self.client.send(node, request_message, timeout)?;
 
         if response_message.id != self.message_id {
             return Err(ErrorKind::ResponseError(format!(

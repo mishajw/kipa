@@ -1,8 +1,10 @@
 //! Handles sending and receiving requests on a unix pipe for local processes,
 //! such as the CLI.
 
-use api::{ApiVisibility, MessageSender, RequestMessage, RequestPayload,
-          ResponseMessage};
+use api::{
+    ApiVisibility, MessageSender, RequestMessage, RequestPayload,
+    ResponseMessage,
+};
 use data_transformer::DataTransformer;
 use error::*;
 use message_handler::MessageHandler;
@@ -37,7 +39,8 @@ impl UnixSocketLocalServer {
         data_transformer: Arc<DataTransformer>,
         socket_path: String,
         log: Logger,
-    ) -> Result<Self> {
+    ) -> Result<Self>
+    {
         Ok(UnixSocketLocalServer {
             message_handler: message_handler,
             data_transformer: data_transformer,
@@ -56,10 +59,7 @@ impl LocalServer for UnixSocketLocalServer {
         }
 
         let listener = UnixListener::bind(&self.socket_path).chain_err(|| {
-            format!(
-                "Error on binding to socket path: {}",
-                self.socket_path
-            )
+            format!("Error on binding to socket path: {}", self.socket_path)
         })?;
         debug!(
             self.log,
@@ -92,7 +92,8 @@ impl SocketHandler for UnixSocketLocalServer {
         &self,
         _socket: &mut UnixStream,
         _timeout: Option<Duration>,
-    ) -> Result<()> {
+    ) -> Result<()>
+    {
         // Ignore timeouts on unix sockets, as there should be little to no
         // delay
         Ok(())
@@ -100,15 +101,10 @@ impl SocketHandler for UnixSocketLocalServer {
 }
 
 impl SocketServer for UnixSocketLocalServer {
-    fn get_log(&self) -> &Logger {
-        &self.log
-    }
+    fn get_log(&self) -> &Logger { &self.log }
 
     fn check_request(&self, request: &RequestMessage) -> Result<()> {
-        if !request
-            .payload
-            .is_visible(&ApiVisibility::Local())
-        {
+        if !request.payload.is_visible(&ApiVisibility::Local()) {
             Err(ErrorKind::RequestError(
                 "Request is not locally available".into(),
             ).into())
@@ -132,7 +128,8 @@ impl UnixSocketLocalClient {
         data_transformer: Arc<DataTransformer>,
         socket_path: &String,
         log: Logger,
-    ) -> Self {
+    ) -> Self
+    {
         UnixSocketLocalClient {
             socket_path: socket_path.clone(),
             data_transformer: data_transformer,
@@ -148,7 +145,8 @@ impl SocketHandler for UnixSocketLocalClient {
         &self,
         _socket: &mut UnixStream,
         _timeout: Option<Duration>,
-    ) -> Result<()> {
+    ) -> Result<()>
+    {
         // Ignore timeouts on unix sockets, as there should be little to no
         // delay
         Ok(())
@@ -160,14 +158,14 @@ impl LocalClient for UnixSocketLocalClient {
         &self,
         request_payload: RequestPayload,
         message_id: u32,
-    ) -> Result<ResponseMessage> {
+    ) -> Result<ResponseMessage>
+    {
         let request = RequestMessage::new(
             request_payload,
             MessageSender::Cli(),
             message_id,
         );
-        let request_bytes = self.data_transformer
-            .request_to_bytes(&request)?;
+        let request_bytes = self.data_transformer.request_to_bytes(&request)?;
 
         trace!(self.log, "Setting up socket to daemon");
         let mut socket = UnixStream::connect(&self.socket_path)
@@ -180,7 +178,6 @@ impl LocalClient for UnixSocketLocalClient {
         let response_data = self.receive_data(&mut socket, None)?;
 
         trace!(self.log, "Got response bytes");
-        self.data_transformer
-            .bytes_to_response(&response_data)
+        self.data_transformer.bytes_to_response(&response_data)
     }
 }

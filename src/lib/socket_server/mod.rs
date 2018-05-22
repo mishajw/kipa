@@ -41,7 +41,8 @@ pub trait SocketHandler {
         data: &Vec<u8>,
         socket: &mut Self::SocketType,
         deadline: Option<Instant>,
-    ) -> Result<()> {
+    ) -> Result<()>
+    {
         let mut len_data = vec![];
         len_data
             .write_u32::<NetworkEndian>(data.len() as u32)
@@ -65,7 +66,8 @@ pub trait SocketHandler {
         &self,
         socket: &mut Self::SocketType,
         deadline: Option<Instant>,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<Vec<u8>>
+    {
         const SIZE_OF_LEN: usize = size_of::<u32>();
         let mut len_data: [u8; SIZE_OF_LEN] = [0; SIZE_OF_LEN];
 
@@ -101,7 +103,8 @@ pub trait SocketServer: SocketHandler + Send + Sync {
         socket_result: Result<Self::SocketType>,
         message_handler: Arc<MessageHandler>,
         data_transformer: Arc<DataTransformer>,
-    ) {
+    )
+    {
         let result = socket_result
             .map(|s| self.handle_socket(s, message_handler, data_transformer));
 
@@ -119,7 +122,8 @@ pub trait SocketServer: SocketHandler + Send + Sync {
         socket: Self::SocketType,
         message_handler: Arc<MessageHandler>,
         data_transformer: Arc<DataTransformer>,
-    ) -> Result<()> {
+    ) -> Result<()>
+    {
         let log = self.get_log();
 
         let mut inner_socket = socket;
@@ -162,7 +166,8 @@ pub trait SocketClient: SocketHandler {
         request: RequestMessage,
         data_transformer: &DataTransformer,
         timeout: Duration,
-    ) -> Result<ResponseMessage> {
+    ) -> Result<ResponseMessage>
+    {
         let deadline = Instant::now() + timeout;
 
         let request_bytes = data_transformer.request_to_bytes(&request)?;
@@ -174,16 +179,10 @@ pub trait SocketClient: SocketHandler {
         );
         let mut socket = self.create_socket(node, deadline - Instant::now())?;
 
-        trace!(
-            self.get_log(),
-            "Sending request to another node"
-        );
+        trace!(self.get_log(), "Sending request to another node");
         self.send_data(&request_bytes, &mut socket, Some(deadline))?;
 
-        trace!(
-            self.get_log(),
-            "Reading response from another node"
-        );
+        trace!(self.get_log(), "Reading response from another node");
         let response_data = self.receive_data(&mut socket, Some(deadline))?;
 
         trace!(self.get_log(), "Got response bytes");

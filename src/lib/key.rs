@@ -21,14 +21,10 @@ impl Key {
     }
 
     /// Get the data of some key.
-    pub fn get_data(&self) -> &Vec<u8> {
-        &self.data
-    }
+    pub fn get_data(&self) -> &Vec<u8> { &self.data }
 
     /// Get the key ID of some key.
-    pub fn get_key_id(&self) -> &String {
-        &self.key_id
-    }
+    pub fn get_key_id(&self) -> &String { &self.key_id }
 }
 
 impl fmt::Display for Key {

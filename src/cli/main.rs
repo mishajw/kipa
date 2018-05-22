@@ -9,11 +9,11 @@ extern crate slog_term;
 
 use kipa_lib::api::{RequestPayload, ResponsePayload};
 use kipa_lib::creators::*;
+use kipa_lib::data_transformer::DataTransformer;
 use kipa_lib::error::*;
 use kipa_lib::gpg_key::GpgKeyHandler;
-use kipa_lib::{Address, Node};
-use kipa_lib::data_transformer::DataTransformer;
 use kipa_lib::server::{LocalClient, LocalServer};
+use kipa_lib::{Address, Node};
 
 use error_chain::ChainedError;
 use rand::{thread_rng, Rng};
@@ -77,7 +77,10 @@ fn message_daemon(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
     let mut gpg_key_handler = GpgKeyHandler::new(log.new(o!("gpg" => true)))?;
 
     let data_transformer: Arc<DataTransformer> = DataTransformer::create(
-        (), args, log.new(o!("data_transformer" => true)))?.into();
+        (),
+        args,
+        log.new(o!("data_transformer" => true)),
+    )?.into();
 
     let local_client = LocalClient::create(
         data_transformer.clone(),
@@ -89,13 +92,10 @@ fn message_daemon(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
     info!(log, "Created message ID"; "message_id" => message_id);
 
     if let Some(search_args) = args.subcommand_matches("search") {
-        let search_key = gpg_key_handler.get_key(String::from(
-            search_args.value_of("key_id").unwrap(),
-        ))?;
-        let response = local_client.send(
-            RequestPayload::SearchRequest(search_key),
-            message_id,
-        )?;
+        let search_key = gpg_key_handler
+            .get_key(String::from(search_args.value_of("key_id").unwrap()))?;
+        let response = local_client
+            .send(RequestPayload::SearchRequest(search_key), message_id)?;
 
         match response.payload {
             ResponsePayload::SearchResponse(Some(ref node)) => {
@@ -107,14 +107,13 @@ fn message_daemon(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
                 Ok(())
             }
             _ => Err(
-                ErrorKind::ParseError("Unrecognized response".into()).into(),
+                ErrorKind::ParseError("Unrecognized response".into()).into()
             ),
         }
     } else if let Some(connect_args) = args.subcommand_matches("connect") {
         // Get node from arguments
-        let node_key = gpg_key_handler.get_key(String::from(
-            connect_args.value_of("key_id").unwrap(),
-        ))?;
+        let node_key = gpg_key_handler
+            .get_key(String::from(connect_args.value_of("key_id").unwrap()))?;
         let node_address =
             Address::from_string(connect_args.value_of("address").unwrap())?;
         let node = Node::new(node_address, node_key);
@@ -128,14 +127,12 @@ fn message_daemon(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
                 Ok(())
             }
             _ => Err(
-                ErrorKind::ParseError("Unrecognized response".into()).into(),
+                ErrorKind::ParseError("Unrecognized response".into()).into()
             ),
         }
     } else if let Some(_) = args.subcommand_matches("list-neighbours") {
-        let response = local_client.send(
-            RequestPayload::ListNeighboursRequest(),
-            message_id,
-        )?;
+        let response = local_client
+            .send(RequestPayload::ListNeighboursRequest(), message_id)?;
         match response.payload {
             ResponsePayload::ListNeighboursResponse(neighbours) => {
                 println!("Found neighbours:");
@@ -145,7 +142,7 @@ fn message_daemon(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
                 Ok(())
             }
             _ => Err(
-                ErrorKind::ParseError("Unrecognized response".into()).into(),
+                ErrorKind::ParseError("Unrecognized response".into()).into()
             ),
         }
     } else {

@@ -7,7 +7,9 @@ use payload_handler::graph::key_space::KeySpaceManager;
 
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashSet};
-use std::sync::{Arc, Mutex, mpsc::{channel, Receiver}};
+use std::sync::{
+    mpsc::{channel, Receiver}, Arc, Mutex,
+};
 use std::thread;
 use std::time::Duration;
 
@@ -50,9 +52,7 @@ struct SearchNode {
 }
 
 impl PartialEq for SearchNode {
-    fn eq(&self, other: &SearchNode) -> bool {
-        self.node.key == other.node.key
-    }
+    fn eq(&self, other: &SearchNode) -> bool { self.node.key == other.node.key }
 }
 
 impl Eq for SearchNode {}
@@ -104,7 +104,8 @@ impl GraphSearch {
         max_num_active_threads: usize,
         timeout_sec: usize,
         log: Logger,
-    ) -> Result<Option<T>> {
+    ) -> Result<Option<T>>
+    {
         // Algorithm outline:
         // 1. Set up:
         //   a. Set `to_explore` to contain initial node(s)
@@ -162,7 +163,8 @@ impl GraphSearch {
         let wait_for_threads =
             |rx: &Receiver<(Node, Result<Vec<Node>>)>| -> Result<()> {
                 // Wait for `recv` to resolve
-                let recv = rx.recv_timeout(timeout)
+                let recv = rx
+                    .recv_timeout(timeout)
                     .chain_err(|| "Error on `recv` when waiting for threads")?;
                 // And send it back down the channel
                 wait_explored_channel_tx
@@ -309,7 +311,8 @@ impl GraphSearch {
         num_active_threads: usize,
         timeout_sec: usize,
         log: Logger,
-    ) -> Result<Option<T>> {
+    ) -> Result<Option<T>>
+    {
         // Continue the graph search looking for a key, until the `n`
         // closest nodes have also been explored.
 
@@ -434,10 +437,7 @@ mod test {
                 }),
                 Arc::new(|_n| Ok(SearchCallbackReturn::Continue())),
                 Arc::new(move |n| {
-                    search_explored_nodes
-                        .lock()
-                        .unwrap()
-                        .push(n.clone());
+                    search_explored_nodes.lock().unwrap().push(n.clone());
                     Ok(SearchCallbackReturn::Continue())
                 }),
                 1,

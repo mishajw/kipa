@@ -34,7 +34,8 @@ impl TcpGlobalServer {
         data_transformer: Arc<DataTransformer>,
         local_node: Node,
         log: Logger,
-    ) -> Self {
+    ) -> Self
+    {
         TcpGlobalServer {
             message_handler: message_handler,
             data_transformer: data_transformer,
@@ -81,7 +82,8 @@ impl SocketHandler for TcpGlobalServer {
         &self,
         socket: &mut TcpStream,
         timeout: Option<Duration>,
-    ) -> Result<()> {
+    ) -> Result<()>
+    {
         socket
             .set_read_timeout(timeout)
             .chain_err(|| "Error on setting read timeout on TCP socket")?;
@@ -93,15 +95,10 @@ impl SocketHandler for TcpGlobalServer {
 }
 
 impl SocketServer for TcpGlobalServer {
-    fn get_log(&self) -> &Logger {
-        &self.log
-    }
+    fn get_log(&self) -> &Logger { &self.log }
 
     fn check_request(&self, request: &RequestMessage) -> Result<()> {
-        if !request
-            .payload
-            .is_visible(&ApiVisibility::Global())
-        {
+        if !request.payload.is_visible(&ApiVisibility::Global()) {
             Err(ErrorKind::RequestError(
                 "Request is not globally available".into(),
             ).into())
@@ -135,7 +132,8 @@ impl SocketHandler for TcpGlobalClient {
         &self,
         socket: &mut TcpStream,
         timeout: Option<Duration>,
-    ) -> Result<()> {
+    ) -> Result<()>
+    {
         socket
             .set_read_timeout(timeout)
             .chain_err(|| "Error on setting read timeout on TCP socket")?;
@@ -147,15 +145,14 @@ impl SocketHandler for TcpGlobalClient {
 }
 
 impl SocketClient for TcpGlobalClient {
-    fn get_log(&self) -> &Logger {
-        &self.log
-    }
+    fn get_log(&self) -> &Logger { &self.log }
 
     fn create_socket(
         &self,
         node: &Node,
         timeout: Duration,
-    ) -> Result<TcpStream> {
+    ) -> Result<TcpStream>
+    {
         TcpStream::connect_timeout(&node.address.get_socket_addr(), timeout)
             .chain_err(|| {
                 format!("Error on trying to connect to node {}", node)
@@ -169,7 +166,8 @@ impl Client for TcpGlobalClient {
         node: &Node,
         request: RequestMessage,
         timeout: Duration,
-    ) -> Result<ResponseMessage> {
+    ) -> Result<ResponseMessage>
+    {
         SocketClient::send(
             self,
             node,

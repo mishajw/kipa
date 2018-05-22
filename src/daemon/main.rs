@@ -7,14 +7,14 @@ extern crate slog_async;
 extern crate slog_term;
 
 use kipa_lib::creators::*;
+use kipa_lib::data_transformer::DataTransformer;
 use kipa_lib::error::*;
 use kipa_lib::gpg_key::GpgKeyHandler;
+use kipa_lib::message_handler::MessageHandler;
+use kipa_lib::payload_handler::PayloadHandler;
+use kipa_lib::server::{Client, LocalServer, Server};
 use kipa_lib::socket_server::DEFAULT_PORT;
 use kipa_lib::{Address, Node};
-use kipa_lib::data_transformer::DataTransformer;
-use kipa_lib::server::{Client, Server, LocalServer};
-use kipa_lib::payload_handler::PayloadHandler;
-use kipa_lib::message_handler::MessageHandler;
 
 use error_chain::ChainedError;
 use std::sync::Arc;
@@ -66,7 +66,8 @@ fn run_servers(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
     let mut gpg_key_handler = GpgKeyHandler::new(log.new(o!("gpg" => true)))?;
 
     // Create local node
-    let port = args.value_of("port")
+    let port = args
+        .value_of("port")
         .unwrap_or(&DEFAULT_PORT.to_string())
         .parse::<u16>()
         .chain_err(|| "")?;
@@ -85,13 +86,16 @@ fn run_servers(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
 
     // Set up transformer for protobufs
     let data_transformer: Arc<DataTransformer> = DataTransformer::create(
-            (), args, log.new(o!("data_transformer" => true)))?.into();
+        (),
+        args,
+        log.new(o!("data_transformer" => true)),
+    )?.into();
 
     // Set up out communication
     let global_client: Arc<Client> = Client::create(
         data_transformer.clone(),
         args,
-        log.new(o!("global_client" => true))
+        log.new(o!("global_client" => true)),
     )?.into();
 
     // Set up request handler
@@ -109,7 +113,11 @@ fn run_servers(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
 
     // Set up listening for connections
     let global_server = Server::create(
-        (message_handler.clone(), data_transformer.clone(), local_node.clone()),
+        (
+            message_handler.clone(),
+            data_transformer.clone(),
+            local_node.clone(),
+        ),
         args,
         log.new(o!("global_server" => true)),
     )?;

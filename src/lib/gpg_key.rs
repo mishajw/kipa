@@ -29,7 +29,8 @@ impl GpgKeyHandler {
     pub fn get_key(&mut self, key_id: String) -> Result<Key> {
         trace!(self.log, "Requested key ID"; "key_id" => &key_id);
 
-        let key = self.context
+        let key = self
+            .context
             .find_key(key_id.clone())
             .chain_err(|| "Error on finding key")?;
         assert!(key.id().unwrap().ends_with(key_id.as_str()));

@@ -4,12 +4,13 @@ mod key_space;
 mod neighbours_store;
 mod search;
 
-pub use payload_handler::graph::key_space::{KeySpaceManager,
-                                            DEFAULT_KEY_SPACE_SIZE};
-pub use payload_handler::graph::neighbours_store::{NeighboursStore,
-                                                   DEFAULT_ANGLE_WEIGHTING,
-                                                   DEFAULT_DISTANCE_WEIGHTING,
-                                                   DEFAULT_MAX_NUM_NEIGHBOURS};
+pub use payload_handler::graph::key_space::{
+    KeySpaceManager, DEFAULT_KEY_SPACE_SIZE,
+};
+pub use payload_handler::graph::neighbours_store::{
+    NeighboursStore, DEFAULT_ANGLE_WEIGHTING, DEFAULT_DISTANCE_WEIGHTING,
+    DEFAULT_MAX_NUM_NEIGHBOURS,
+};
 
 use address::Address;
 use api::{RequestPayload, ResponsePayload};
@@ -17,9 +18,10 @@ use error::*;
 use key::Key;
 use message_handler::PayloadClient;
 use node::Node;
+use payload_handler::graph::search::{
+    GetNeighboursFn, GraphSearch, SearchCallbackReturn,
+};
 use payload_handler::PayloadHandler;
-use payload_handler::graph::search::{GetNeighboursFn, GraphSearch,
-                                     SearchCallbackReturn};
 
 use slog::Logger;
 use std::sync::{Arc, Mutex};
@@ -64,7 +66,8 @@ impl GraphPayloadHandler {
         key_space_manager: Arc<KeySpaceManager>,
         neighbours_store: Arc<Mutex<NeighboursStore>>,
         log: Logger,
-    ) -> Self {
+    ) -> Self
+    {
         GraphPayloadHandler {
             key: key.clone(),
             search_breadth,
@@ -82,7 +85,8 @@ impl GraphPayloadHandler {
         key: &Key,
         payload_client: Arc<PayloadClient>,
         log: Logger,
-    ) -> Result<Option<Node>> {
+    ) -> Result<Option<Node>>
+    {
         let callback_key = key.clone();
         let found_log = self.log.new(o!());
         let found_callback = move |n: &Node| {
@@ -101,12 +105,10 @@ impl GraphPayloadHandler {
         self.graph_search.search_with_breadth(
             &key,
             self.search_breadth,
-            vec![
-                Node::new(
-                    Address::new(vec![0, 0, 0, 0], 10842),
-                    self.key.clone(),
-                ),
-            ],
+            vec![Node::new(
+                Address::new(vec![0, 0, 0, 0], 10842),
+                self.key.clone(),
+            )],
             self.create_get_neighbours_fn(payload_client.clone()),
             Arc::new(found_callback),
             Arc::new(move |n| {
@@ -127,7 +129,8 @@ impl GraphPayloadHandler {
         node: &Node,
         payload_client: Arc<PayloadClient>,
         log: Logger,
-    ) -> Result<()> {
+    ) -> Result<()>
+    {
         let found_neighbours_store = self.neighbours_store.clone();
         let found_log = self.log.new(o!());
         let found_callback = move |n: &Node| {
@@ -169,7 +172,8 @@ impl GraphPayloadHandler {
     fn create_get_neighbours_fn(
         &self,
         payload_client: Arc<PayloadClient>,
-    ) -> GetNeighboursFn {
+    ) -> GetNeighboursFn
+    {
         let neighbours_store = self.neighbours_store.clone();
         let key = self.key.clone();
         let timeout = Duration::from_secs(self.search_timeout_sec as u64);
@@ -201,7 +205,8 @@ impl PayloadHandler for GraphPayloadHandler {
         sender: Option<&Node>,
         payload_client: Arc<PayloadClient>,
         message_id: u32,
-    ) -> Result<ResponsePayload> {
+    ) -> Result<ResponsePayload>
+    {
         info!(
             self.log,
             "Received request";
@@ -220,10 +225,8 @@ impl PayloadHandler for GraphPayloadHandler {
                     self.log,
                     "Received query request";
                     "key" => %key);
-                let nodes = self.neighbours_store
-                    .lock()
-                    .unwrap()
-                    .get_n_closest(key, 3);
+                let nodes =
+                    self.neighbours_store.lock().unwrap().get_n_closest(key, 3);
                 trace!(
                     self.log,
                     "Replying";
@@ -241,16 +244,14 @@ impl PayloadHandler for GraphPayloadHandler {
                     self.log,
                     "Received search request";
                     "key" => %key);
-                Ok(ResponsePayload::SearchResponse(
-                    self.search(
-                        &key,
-                        payload_client,
-                        self.log.new(o!(
+                Ok(ResponsePayload::SearchResponse(self.search(
+                    &key,
+                    payload_client,
+                    self.log.new(o!(
                             "message_id" => message_id,
                             "search_request" => true
                         )),
-                    )?,
-                ))
+                )?))
             }
             &RequestPayload::ConnectRequest(ref node) => {
                 trace!(
@@ -268,10 +269,7 @@ impl PayloadHandler for GraphPayloadHandler {
                 Ok(ResponsePayload::ConnectResponse())
             }
             &RequestPayload::ListNeighboursRequest() => {
-                trace!(
-                    self.log,
-                    "Replying recieved list neigbours request"
-                );
+                trace!(self.log, "Replying recieved list neigbours request");
                 let neighbours =
                     self.neighbours_store.lock().unwrap().get_all();
                 trace!(
@@ -284,9 +282,7 @@ impl PayloadHandler for GraphPayloadHandler {
                         .map(|n| n.key.get_key_id().clone())
                         .collect::<Vec<String>>()
                         .join(", "));
-                Ok(ResponsePayload::ListNeighboursResponse(
-                    neighbours,
-                ))
+                Ok(ResponsePayload::ListNeighboursResponse(neighbours))
             }
         }
     }

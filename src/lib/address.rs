@@ -28,8 +28,8 @@ impl Address {
 
     /// Create a new address from a string.
     pub fn from_string(s: &str) -> Result<Address> {
-        let socket_addr: SocketAddr = s.parse()
-            .chain_err(|| "Error on parsing IP address")?;
+        let socket_addr: SocketAddr =
+            s.parse().chain_err(|| "Error on parsing IP address")?;
 
         match socket_addr {
             SocketAddr::V4(addr) => Ok(Address {
@@ -45,7 +45,8 @@ impl Address {
         port: u16,
         interface_name: Option<&str>,
         log: Logger,
-    ) -> Result<Address> {
+    ) -> Result<Address>
+    {
         for interface in datalink::interfaces() {
             // Skip interfaces that are loopback or have no IPs
             if interface_name.is_none() && (interface.name == "lo")
@@ -63,8 +64,8 @@ impl Address {
 
             if interface.ips.len() == 0 {
                 return Err(ErrorKind::IpAddressError(format!(
-                    "Could not find any IP address on interface {}, \
-                     found: {:?}",
+                    "Could not find any IP address on interface {}, found: \
+                     {:?}",
                     interface.name, interface.ips
                 )).into());
             }
