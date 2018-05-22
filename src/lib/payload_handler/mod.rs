@@ -7,10 +7,10 @@ use node::Node;
 
 use std::sync::Arc;
 
-#[cfg(use_graph)]
+#[cfg(feature = "use-graph")]
 pub mod graph;
 
-#[cfg(use_black_hole)]
+#[cfg(feature = "use-black-hole")]
 pub mod black_hole;
 
 /// Trait for any type that handles requests.

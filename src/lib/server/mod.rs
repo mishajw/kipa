@@ -7,10 +7,10 @@ use node::Node;
 use std::thread::JoinHandle;
 use std::time::Duration;
 
-#[cfg(use_tcp)]
+#[cfg(feature = "use-tcp")]
 pub mod tcp;
 
-#[cfg(use_unix_socket)]
+#[cfg(feature = "use-unix-socket")]
 pub mod unix_socket;
 
 /// Create a server that can listen for requests from remote KIPA nodes and pass
@@ -33,6 +33,14 @@ pub trait Client: Send + Sync {
         request: RequestMessage,
         timeout: Duration,
     ) -> Result<ResponseMessage>;
+}
+
+/// Create a server that can listen for requests from local clients.
+///
+/// Identical to `Server`.
+pub trait LocalServer: Send + Sync {
+    /// Start the server.
+    fn start(&self) -> Result<JoinHandle<()>>;
 }
 
 /// Trait for sending requests to local KIPA daemon.

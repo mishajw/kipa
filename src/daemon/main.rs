@@ -11,12 +11,25 @@ use kipa_lib::error::*;
 use kipa_lib::gpg_key::GpgKeyHandler;
 use kipa_lib::socket_server::DEFAULT_PORT;
 use kipa_lib::{Address, Node};
+use kipa_lib::data_transformer::DataTransformer;
+use kipa_lib::server::{Client, Server, LocalServer};
+use kipa_lib::payload_handler::PayloadHandler;
+use kipa_lib::message_handler::MessageHandler;
 
 use error_chain::ChainedError;
+use std::sync::Arc;
 
 fn main() {
     let log = create_logger("daemon");
     info!(log, "Starting servers");
+
+    let mut creator_args = vec![];
+    creator_args.append(&mut DataTransformer::get_clap_args());
+    creator_args.append(&mut PayloadHandler::get_clap_args());
+    creator_args.append(&mut MessageHandler::get_clap_args());
+    creator_args.append(&mut Client::get_clap_args());
+    creator_args.append(&mut Server::get_clap_args());
+    creator_args.append(&mut LocalServer::get_clap_args());
 
     let args = clap::App::new("kipa_daemon")
         .arg(
@@ -24,13 +37,6 @@ fn main() {
                 .long("port")
                 .short("p")
                 .help("Port exposed for communicating with other nodes")
-                .takes_value(true),
-        )
-        .arg(
-            clap::Arg::with_name("socket_path")
-                .long("socket-path")
-                .short("s")
-                .help("Socket to listen for local queries from CLI from")
                 .takes_value(true),
         )
         .arg(
@@ -48,42 +54,7 @@ fn main() {
                 .help("Interface to operate on")
                 .takes_value(true),
         )
-        .arg(
-            clap::Arg::with_name("key_space_size")
-                .long("key-space-size")
-                .help("Number of dimensions to use for key space")
-                .takes_value(true),
-        )
-        .arg(
-            clap::Arg::with_name("neighbours_size")
-                .long("neighbours-size")
-                .help("Maximum number of neighbours to store")
-                .takes_value(true),
-        )
-        .arg(
-            clap::Arg::with_name("distance_weighting")
-                .long("distance-weighting")
-                .help("Weight of the distance when considering neighbours")
-                .takes_value(true),
-        )
-        .arg(
-            clap::Arg::with_name("angle_weighting")
-                .long("angle-weighting")
-                .help("Weight of the angle when considering neighbours")
-                .takes_value(true),
-        )
-        .arg(
-            clap::Arg::with_name("search_breadth")
-                .long("search-breadth")
-                .help("Breadth of the search when searching for keys")
-                .takes_value(true),
-        )
-        .arg(
-            clap::Arg::with_name("connect_search_breadth")
-                .long("connect-search-breadth")
-                .help("Breadth of the search when connecting to the network")
-                .takes_value(true),
-        )
+        .args(&creator_args)
         .get_matches();
 
     if let Err(err) = run_servers(&args, &log) {
@@ -113,39 +84,39 @@ fn run_servers(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
     );
 
     // Set up transformer for protobufs
-    let data_transformer = create_data_transformer()?;
+    let data_transformer: Arc<DataTransformer> = DataTransformer::create(
+            (), args, log.new(o!("data_transformer" => true)))?.into();
 
     // Set up out communication
-    let global_client = create_global_client(
+    let global_client: Arc<Client> = Client::create(
         data_transformer.clone(),
-        log.new(o!("global_client" => true)),
-    )?;
+        args,
+        log.new(o!("global_client" => true))
+    )?.into();
 
     // Set up request handler
-    let payload_handler = create_payload_handler(
+    let payload_handler: Arc<PayloadHandler> = PayloadHandler::create(
         local_node.clone(),
         args,
         log.new(o!("request_handler" => true)),
-    )?;
+    )?.into();
 
-    let message_handler = create_message_handler(
-        payload_handler,
-        global_client,
-        local_node.clone(),
-    );
+    let message_handler: Arc<MessageHandler> = MessageHandler::create(
+        (payload_handler, local_node.clone(), global_client),
+        args,
+        log.new(o!("message_handler" => true)),
+    )?.into();
 
     // Set up listening for connections
-    let global_server = create_global_server(
-        message_handler.clone(),
-        data_transformer.clone(),
-        local_node.clone(),
+    let global_server = Server::create(
+        (message_handler.clone(), data_transformer.clone(), local_node.clone()),
+        args,
         log.new(o!("global_server" => true)),
     )?;
 
     // Set up local listening for requests
-    let local_server = create_local_server(
-        message_handler.clone(),
-        data_transformer.clone(),
+    let local_server = LocalServer::create(
+        (message_handler.clone(), data_transformer.clone()),
         args,
         log.new(o!("local_server" => true)),
     )?;

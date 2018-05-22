@@ -12,22 +12,23 @@ use kipa_lib::creators::*;
 use kipa_lib::error::*;
 use kipa_lib::gpg_key::GpgKeyHandler;
 use kipa_lib::{Address, Node};
+use kipa_lib::data_transformer::DataTransformer;
+use kipa_lib::server::{LocalClient, LocalServer};
 
 use error_chain::ChainedError;
 use rand::{thread_rng, Rng};
+use std::sync::Arc;
 
 fn main() {
     let log = create_logger("cli");
     info!(log, "Starting CLI");
 
+    let mut creator_args = vec![];
+    creator_args.append(&mut DataTransformer::get_clap_args());
+    creator_args.append(&mut LocalServer::get_clap_args());
+    creator_args.append(&mut LocalClient::get_clap_args());
+
     let args = clap::App::new("kipa_daemon")
-        .arg(
-            clap::Arg::with_name("socket_path")
-                .long("socket-path")
-                .short("s")
-                .help("Socket to communicate with daemon")
-                .takes_value(true),
-        )
         .subcommand(
             clap::SubCommand::with_name("search")
                 .about("Search for a node given a key")
@@ -64,6 +65,7 @@ fn main() {
             clap::SubCommand::with_name("list-neighbours")
                 .about("List all neighbours"),
         )
+        .args(&creator_args)
         .get_matches();
 
     if let Err(err) = message_daemon(&args, &log) {
@@ -74,9 +76,10 @@ fn main() {
 fn message_daemon(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
     let mut gpg_key_handler = GpgKeyHandler::new(log.new(o!("gpg" => true)))?;
 
-    let data_transformer = create_data_transformer()?;
+    let data_transformer: Arc<DataTransformer> = DataTransformer::create(
+        (), args, log.new(o!("data_transformer" => true)))?.into();
 
-    let local_client = create_local_client(
+    let local_client = LocalClient::create(
         data_transformer.clone(),
         args,
         log.new(o!("local_client" => true)),

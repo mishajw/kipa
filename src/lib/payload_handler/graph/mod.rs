@@ -26,16 +26,16 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 /// The default breadth to use when searching
-pub const DEFAULT_SEARCH_BREADTH: usize = 3;
+pub const DEFAULT_SEARCH_BREADTH: &str = "3";
 
 /// The default breadth of the search to use when connecting
-pub const DEFAULT_CONNECT_SEARCH_BREADTH: usize = 3;
+pub const DEFAULT_CONNECT_SEARCH_BREADTH: &str = "3";
 
 /// The default maximum number of concurrent threads to have when searching
-pub const DEFAULT_MAX_NUM_SEARCH_THREADS: usize = 3;
+pub const DEFAULT_MAX_NUM_SEARCH_THREADS: &str = "3";
 
 /// The default timeout for queries when performing a search
-pub const DEFAULT_SEARCH_TIMEOUT_SEC: usize = 2;
+pub const DEFAULT_SEARCH_TIMEOUT_SEC: &str = "2";
 
 /// Contains graph search information.
 pub struct GraphPayloadHandler {

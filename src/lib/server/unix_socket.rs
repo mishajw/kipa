@@ -6,7 +6,7 @@ use api::{ApiVisibility, MessageSender, RequestMessage, RequestPayload,
 use data_transformer::DataTransformer;
 use error::*;
 use message_handler::MessageHandler;
-use server::{LocalClient, Server};
+use server::{LocalClient, LocalServer};
 use socket_server::{SocketHandler, SocketServer};
 
 use std::fs;
@@ -47,7 +47,7 @@ impl UnixSocketLocalServer {
     }
 }
 
-impl Server for UnixSocketLocalServer {
+impl LocalServer for UnixSocketLocalServer {
     fn start(&self) -> Result<thread::JoinHandle<()>> {
         // Remove the old unix socket file if it exists
         if fs::metadata(&self.socket_path).is_ok() {

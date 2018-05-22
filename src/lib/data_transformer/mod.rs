@@ -4,9 +4,9 @@
 use api::{RequestMessage, ResponseMessage};
 use error::*;
 
-#[cfg(use_protobuf)]
+#[cfg(feature = "use-protobuf")]
 mod proto_api;
-#[cfg(use_protobuf)]
+#[cfg(feature = "use-protobuf")]
 pub mod protobuf;
 
 /// Implementors must be able to convert `Request`s and `Response`s to and from

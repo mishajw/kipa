@@ -9,13 +9,13 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 /// The default size of the neighbours store.
-pub const DEFAULT_MAX_NUM_NEIGHBOURS: usize = 3;
+pub const DEFAULT_MAX_NUM_NEIGHBOURS: &str = "3";
 
 /// The default weight for distance when considering neighbours.
-pub const DEFAULT_DISTANCE_WEIGHTING: f32 = 0.5;
+pub const DEFAULT_DISTANCE_WEIGHTING: &str = "0.5";
 
 /// The default weight for angle when considering neighbours.
-pub const DEFAULT_ANGLE_WEIGHTING: f32 = 0.5;
+pub const DEFAULT_ANGLE_WEIGHTING: &str = "0.5";
 
 /// Holds the neighbour store data
 pub struct NeighboursStore {

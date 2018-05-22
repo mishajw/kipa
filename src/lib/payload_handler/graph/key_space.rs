@@ -9,7 +9,7 @@ use std::mem::size_of;
 use std::ops::{BitXor, Deref};
 
 /// The default dimension size for key space
-pub const DEFAULT_KEY_SPACE_SIZE: usize = 2;
+pub const DEFAULT_KEY_SPACE_SIZE: &str = "2";
 
 /// A key space value with a set of coordinates.
 #[derive(Clone, PartialEq)]

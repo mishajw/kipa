@@ -6,9 +6,10 @@ use data_transformer::DataTransformer;
 use error::*;
 use message_handler::MessageHandler;
 use node::Node;
+use key::Key;
 use payload_handler::PayloadHandler;
 #[allow(unused)]
-use server::{Client, LocalClient, Server};
+use server::{Client, LocalClient, LocalServer, Server};
 
 use clap;
 use slog;
@@ -41,252 +42,304 @@ pub fn create_logger(name: &'static str) -> Logger {
     )
 }
 
-#[cfg(use_protobuf)]
-/// Create a `DataTransformer`
-pub fn create_data_transformer() -> Result<Arc<DataTransformer>> {
-    use data_transformer::protobuf::ProtobufDataTransformer;
-    Ok(Arc::new(ProtobufDataTransformer {}))
+/// Implementors can be constructed from `clap` arguments
+pub trait Creator {
+    /// Parameters needed for creating the type
+    type Parameters;
+
+    /// Add `clap` arguments to the command line options
+    fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> { vec![] }
+
+    /// Create the type, given `clap` arguments and parameters
+    fn create(
+        _parameters: Self::Parameters, _args: &clap::ArgMatches, _log: Logger
+    ) -> Result<Box<Self>> {
+        Err(ErrorKind::ConfigError(
+            "Unselected feature".into(),
+        ).into())
+    }
 }
 
-#[cfg(no_data_handler)]
-#[allow(missing_docs)]
-pub fn create_data_transformer() -> Result<Arc<DataTransformer>> {
-    Err(ErrorKind::ConfigError(
-        "A data transformer feature was not selected".into(),
-    ).into())
+impl Creator for DataTransformer {
+    type Parameters = ();
+    #[cfg(feature = "use-protobuf")]
+    fn create(
+        _parameters: Self::Parameters, _args: &clap::ArgMatches, _log: Logger
+    ) -> Result<Box<Self>> {
+        use data_transformer::protobuf::ProtobufDataTransformer;
+        Ok(Box::new(ProtobufDataTransformer {}))
+    }
 }
 
-#[cfg(use_tcp)]
-/// Create a `GlobalSendServer`
-pub fn create_global_client(
-    data_transformer: Arc<DataTransformer>,
-    log: Logger,
-) -> Result<Arc<Client>> {
-    use server::tcp::TcpGlobalClient;
-    Ok(Arc::new(TcpGlobalClient::new(
-        data_transformer,
-        log,
-    )))
+impl Creator for Client {
+    type Parameters = Arc<DataTransformer>;
+    #[cfg(feature = "use-tcp")]
+    fn create(
+        data_transformer: Self::Parameters,
+        _args: &clap::ArgMatches,
+        log: Logger
+    ) -> Result<Box<Self>> {
+        use server::tcp::TcpGlobalClient;
+        Ok(Box::new(TcpGlobalClient::new(
+            data_transformer,
+            log,
+        )))
+    }
 }
 
-#[cfg(use_tcp)]
-/// Create a `GlobalRecieveServer`
-pub fn create_global_server(
-    message_handler: Arc<MessageHandler>,
-    data_transformer: Arc<DataTransformer>,
-    local_node: Node,
-    log: Logger,
-) -> Result<Box<Server>> {
-    use server::tcp::TcpGlobalServer;
-    Ok(Box::new(TcpGlobalServer::new(
-        message_handler,
-        data_transformer.clone(),
-        local_node,
-        log,
-    )))
+impl Creator for Server {
+    type Parameters = (Arc<MessageHandler>, Arc<DataTransformer>, Node);
+    #[cfg(feature = "use-tcp")]
+    fn create(
+        parameters: Self::Parameters, _args: &clap::ArgMatches, log: Logger
+    ) -> Result<Box<Self>> {
+        use server::tcp::TcpGlobalServer;
+        let (message_handler, data_transformer, local_node) = parameters;
+        Ok(Box::new(TcpGlobalServer::new(
+            message_handler,
+            data_transformer.clone(),
+            local_node,
+            log,
+        )))
+    }
 }
 
-#[cfg(no_global_server)]
-#[allow(missing_docs)]
-pub fn create_global_client(
-    _data_transformer: Arc<DataTransformer>,
-    _log: Logger,
-) -> Result<Arc<Client>> {
-    Err(
-        ErrorKind::ConfigError("A server feature was not selected".into())
-            .into(),
-    )
+impl Creator for LocalServer {
+    type Parameters = (Arc<MessageHandler>, Arc<DataTransformer>);
+
+    #[cfg(feature = "use-unix-socket")]
+    fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
+        use server::unix_socket::DEFAULT_UNIX_SOCKET_PATH;
+        vec![
+            clap::Arg::with_name("socket_path")
+                .long("socket-path")
+                .short("s")
+                .help("Socket to listen for local queries from CLI from")
+                .takes_value(true)
+                .default_value(DEFAULT_UNIX_SOCKET_PATH)
+        ]
+    }
+
+    #[cfg(feature = "use-unix-socket")]
+    fn create(
+        parameters: Self::Parameters, args: &clap::ArgMatches, log: Logger
+    ) -> Result<Box<Self>> {
+        use server::unix_socket::UnixSocketLocalServer;
+        let (message_handler, data_transformer) = parameters;
+        let socket_path = args.value_of("socket_path").unwrap();
+        Ok(Box::new(UnixSocketLocalServer::new(
+            message_handler,
+            data_transformer,
+            String::from(socket_path),
+            log,
+        )?))
+    }
 }
 
-#[cfg(no_global_server)]
-#[allow(missing_docs)]
-pub fn create_global_server(
-    _message_handler: Arc<MessageHandler>,
-    _data_transformer: Arc<DataTransformer>,
-    _local_node: Node,
-    _log: Logger,
-) -> Result<Box<Server>> {
-    Err(
-        ErrorKind::ConfigError("A server feature was not selected".into())
-            .into(),
-    )
+impl Creator for LocalClient {
+    type Parameters = Arc<DataTransformer>;
+    // Shares `socket_path` parameter with `LocalServer`
+    #[cfg(feature = "use-unix-socket")]
+    fn create(
+        data_transformer: Self::Parameters, args: &clap::ArgMatches, log: Logger
+    ) -> Result<Box<Self>> {
+        use server::unix_socket::UnixSocketLocalClient;
+        let socket_path = args.value_of("socket_path").unwrap();
+        Ok(Box::new(UnixSocketLocalClient::new(
+            data_transformer,
+            &String::from(socket_path),
+            log,
+        )))
+    }
 }
 
-#[cfg(use_unix_socket)]
-/// Create a `LocalReceiveServer`
-pub fn create_local_server(
-    message_handler: Arc<MessageHandler>,
-    data_transformer: Arc<DataTransformer>,
-    args: &clap::ArgMatches,
-    log: Logger,
-) -> Result<Box<Server>> {
-    use server::unix_socket::{UnixSocketLocalServer, DEFAULT_UNIX_SOCKET_PATH};
-    let socket_path = args.value_of("socket_path")
-        .unwrap_or(DEFAULT_UNIX_SOCKET_PATH);
-    Ok(Box::new(UnixSocketLocalServer::new(
-        message_handler,
-        data_transformer,
-        String::from(socket_path),
-        log,
-    )?))
+impl Creator for MessageHandler {
+    type Parameters = (Arc<PayloadHandler>, Node, Arc<Client>);
+    fn create(
+        parameters: Self::Parameters, _args: &clap::ArgMatches, _log: Logger
+    ) -> Result<Box<Self>> {
+        let (payload_handler, local_node, client) = parameters;
+        Ok(Box::new(MessageHandler::new(
+            payload_handler,
+            local_node,
+            client,
+        )))
+    }
 }
 
-#[cfg(use_unix_socket)]
-/// Create a `LocalSendServer`
-pub fn create_local_client(
-    data_transformer: Arc<DataTransformer>,
-    args: &clap::ArgMatches,
-    log: Logger,
-) -> Result<Arc<LocalClient>> {
-    use server::unix_socket::{UnixSocketLocalClient, DEFAULT_UNIX_SOCKET_PATH};
+#[cfg(feature = "use-graph")]
+use payload_handler::graph::KeySpaceManager;
+#[cfg(feature = "use-graph")]
+impl Creator for KeySpaceManager {
+    type Parameters = Node;
+    fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
+        use payload_handler::graph::DEFAULT_KEY_SPACE_SIZE;
+        vec![
+            clap::Arg::with_name("key_space_size")
+                .long("key-space-size")
+                .help("Number of dimensions to use for key space")
+                .takes_value(true)
+                .default_value(DEFAULT_KEY_SPACE_SIZE)
+        ]
+    }
 
-    let socket_path = args.value_of("socket_path")
-        .unwrap_or(DEFAULT_UNIX_SOCKET_PATH);
-    Ok(Arc::new(UnixSocketLocalClient::new(
-        data_transformer,
-        &String::from(socket_path),
-        log,
-    )))
+    fn create(
+        _parameters: Self::Parameters, args: &clap::ArgMatches, _log: Logger
+    ) -> Result<Box<Self>> {
+        let key_space_size = args.value_of("key_space_size").unwrap()
+            .parse::<usize>()
+            .chain_err(|| "Error on parsing key space size")?;
+        Ok(Box::new(KeySpaceManager::new(key_space_size)))
+    }
 }
 
-#[cfg(no_local_server)]
-#[allow(missing_docs)]
-pub fn create_local_server(
-    _message_handler: Arc<MessageHandler>,
-    _data_transformer: Arc<DataTransformer>,
-    _args: &clap::ArgMatches,
-    _log: Logger,
-) -> Result<Box<Server>> {
-    Err(ErrorKind::ConfigError(
-        "A local server feature was not selected".into(),
-    ).into())
+#[cfg(feature = "use-graph")]
+use payload_handler::graph::NeighboursStore;
+#[cfg(feature = "use-graph")]
+impl Creator for NeighboursStore {
+    type Parameters = (::key::Key, Arc<KeySpaceManager>);
+    fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
+        use payload_handler::graph::{DEFAULT_MAX_NUM_NEIGHBOURS,
+                                     DEFAULT_DISTANCE_WEIGHTING,
+                                     DEFAULT_ANGLE_WEIGHTING};
+        vec![
+            clap::Arg::with_name("neighbours_size")
+                .long("neighbours-size")
+                .help("Maximum number of neighbours to store")
+                .takes_value(true)
+                .default_value(DEFAULT_MAX_NUM_NEIGHBOURS),
+            clap::Arg::with_name("distance_weighting")
+                .long("distance-weighting")
+                .help("Weight of the distance when considering neighbours")
+                .takes_value(true)
+                .default_value(DEFAULT_DISTANCE_WEIGHTING),
+            clap::Arg::with_name("angle_weighting")
+                .long("angle-weighting")
+                .help("Weight of the angle when considering neighbours")
+                .takes_value(true)
+                .default_value(DEFAULT_ANGLE_WEIGHTING),
+        ]
+    }
+
+    fn create(
+        parameters: Self::Parameters, args: &clap::ArgMatches, log: Logger
+    ) -> Result<Box<Self>> {
+        let (local_key, key_space_manager) = parameters;
+
+        let neighbours_size = args.value_of("neighbours_size").unwrap()
+            .parse::<usize>()
+            .chain_err(|| "Error on parsing neighbour size")?;
+
+        let distance_weighting = args.value_of("distance_weighting").unwrap()
+            .parse::<f32>()
+            .chain_err(|| "Error on parsing distance weighting")?;
+
+        let angle_weighting = args.value_of("angle_weighting").unwrap()
+            .parse::<f32>()
+            .chain_err(|| "Error on parsing angle weighting")?;
+
+        Ok(Box::new(NeighboursStore::new(
+            local_key,
+            neighbours_size,
+            distance_weighting,
+            angle_weighting,
+            key_space_manager,
+            log.new(o!("neighbours_store" => true)),
+        )))
+    }
 }
 
-#[cfg(no_local_server)]
-#[allow(missing_docs)]
-pub fn create_local_client(
-    _data_transformer: Arc<DataTransformer>,
-    _args: &clap::ArgMatches,
-    _log: Logger,
-) -> Result<Arc<LocalClient>> {
-    Err(ErrorKind::ConfigError(
-        "A local server feature was not selected".into(),
-    ).into())
-}
+impl Creator for PayloadHandler {
+    type Parameters = Node;
 
-/// Create a `MessageHandler`.
-pub fn create_message_handler(
-    payload_handler: Arc<PayloadHandler>,
-    client: Arc<Client>,
-    local_node: Node,
-) -> Arc<MessageHandler> {
-    Arc::new(MessageHandler::new(
-        payload_handler,
-        local_node,
-        client,
-    ))
-}
+    #[cfg(feature = "use-graph")]
+    fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
+        use payload_handler::graph::{DEFAULT_SEARCH_BREADTH,
+                                     DEFAULT_CONNECT_SEARCH_BREADTH,
+                                     DEFAULT_MAX_NUM_SEARCH_THREADS,
+                                     DEFAULT_SEARCH_TIMEOUT_SEC};
 
-#[cfg(use_graph)]
-/// Create a `PayloadHandler`
-pub fn create_payload_handler(
-    local_node: Node,
-    args: &clap::ArgMatches,
-    log: Logger,
-) -> Result<Arc<PayloadHandler>> {
-    use payload_handler::graph::{GraphPayloadHandler, KeySpaceManager,
-                                 NeighboursStore, DEFAULT_ANGLE_WEIGHTING,
-                                 DEFAULT_CONNECT_SEARCH_BREADTH,
-                                 DEFAULT_DISTANCE_WEIGHTING,
-                                 DEFAULT_KEY_SPACE_SIZE,
-                                 DEFAULT_MAX_NUM_NEIGHBOURS,
-                                 DEFAULT_MAX_NUM_SEARCH_THREADS,
-                                 DEFAULT_SEARCH_BREADTH,
-                                 DEFAULT_SEARCH_TIMEOUT_SEC};
+        let mut args = vec![
+            clap::Arg::with_name("search_breadth")
+                .long("search-breadth")
+                .help("Breadth of the search when searching for keys")
+                .takes_value(true)
+                .default_value(DEFAULT_SEARCH_BREADTH),
+            clap::Arg::with_name("connect_search_breadth")
+                .long("connect-search-breadth")
+                .help("Breadth of the search when connecting to the network")
+                .takes_value(true)
+                .default_value(DEFAULT_CONNECT_SEARCH_BREADTH),
+            clap::Arg::with_name("max_num_search_threads")
+                .long("max-num-search-threads")
+                .help("Maximum number of threads to spawn when searching")
+                .takes_value(true)
+                .default_value(DEFAULT_MAX_NUM_SEARCH_THREADS),
+            clap::Arg::with_name("search_timeout_sec")
+                .long("search-timeout-sec")
+                .help("Timeout for querying other node's neighbours")
+                .takes_value(true)
+                .default_value(DEFAULT_SEARCH_TIMEOUT_SEC),
+        ];
 
-    // TODO: Clean this up
-    let neighbours_size = args.value_of("neighbours_size")
-        .unwrap_or(&DEFAULT_MAX_NUM_NEIGHBOURS.to_string())
-        .parse::<usize>()
-        .chain_err(|| "Error on parsing neighbour size")?;
+        args.append(&mut KeySpaceManager::get_clap_args());
+        args.append(&mut NeighboursStore::get_clap_args());
+        args
+    }
 
-    let key_space_size = args.value_of("key_space_size")
-        .unwrap_or(&DEFAULT_KEY_SPACE_SIZE.to_string())
-        .parse::<usize>()
-        .chain_err(|| "Error on parsing key space size")?;
+    #[cfg(feature = "use-graph")]
+    fn create(
+        local_node: Self::Parameters, args: &clap::ArgMatches, log: Logger
+    ) -> Result<Box<Self>> {
+        use payload_handler::graph::GraphPayloadHandler;
 
-    let distance_weighting = args.value_of("distance_weighting")
-        .unwrap_or(&DEFAULT_DISTANCE_WEIGHTING.to_string())
-        .parse::<f32>()
-        .chain_err(|| "Error on parsing distance weighting")?;
+        let search_breadth = args.value_of("search_breadth").unwrap()
+            .parse::<usize>()
+            .chain_err(|| "Error on parsing search breadth")?;
 
-    let angle_weighting = args.value_of("angle_weighting")
-        .unwrap_or(&DEFAULT_ANGLE_WEIGHTING.to_string())
-        .parse::<f32>()
-        .chain_err(|| "Error on parsing angle weighting")?;
+        let connect_search_breadth = args.value_of("connect_search_breadth")
+            .unwrap()
+            .parse::<usize>()
+            .chain_err(|| "Error on parsing connect search breadth")?;
 
-    let search_breadth = args.value_of("search_breadth")
-        .unwrap_or(&DEFAULT_SEARCH_BREADTH.to_string())
-        .parse::<usize>()
-        .chain_err(|| "Error on parsing search breadth")?;
+        let max_num_search_threads = args.value_of("max_num_search_threads")
+            .unwrap()
+            .parse::<usize>()
+            .chain_err(|| "Error on parsing connect search breadth")?;
 
-    let connect_search_breadth = args.value_of("connect_search_breadth")
-        .unwrap_or(&DEFAULT_CONNECT_SEARCH_BREADTH.to_string())
-        .parse::<usize>()
-        .chain_err(|| "Error on parsing connect search breadth")?;
+        let search_timeout_sec = args.value_of("search_timeout_sec").unwrap()
+            .parse::<usize>()
+            .chain_err(|| "Error on parsing search timeout")?;
 
-    let max_num_search_threads = args.value_of("max_num_search_threads")
-        .unwrap_or(&DEFAULT_MAX_NUM_SEARCH_THREADS.to_string())
-        .parse::<usize>()
-        .chain_err(|| "Error on parsing connect search breadth")?;
+        let key_space_manager: Arc<KeySpaceManager> = KeySpaceManager::create(
+            local_node.clone(), args, log.new(o!("key_space_manager" => true)))?
+            .into();
 
-    let search_timeout_sec = args.value_of("search_timeout_sec")
-        .unwrap_or(&DEFAULT_SEARCH_TIMEOUT_SEC.to_string())
-        .parse::<usize>()
-        .chain_err(|| "Error on parsing search timeout")?;
+        let neighbours_store = Arc::new(Mutex::new(*(NeighboursStore::create(
+            (local_node.key.clone(), key_space_manager.clone()),
+            args,
+            log.new(o!("neighbours_store" => true)))?)));
 
-    let key_space_manager = Arc::new(KeySpaceManager::new(key_space_size));
+        Ok(Box::new(GraphPayloadHandler::new(
+            local_node.key,
+            search_breadth,
+            connect_search_breadth,
+            max_num_search_threads,
+            search_timeout_sec,
+            key_space_manager,
+            neighbours_store,
+            log,
+        )))
+    }
 
-    let neighbours_store = Arc::new(Mutex::new(NeighboursStore::new(
-        local_node.key.clone(),
-        neighbours_size,
-        distance_weighting,
-        angle_weighting,
-        key_space_manager.clone(),
-        log.new(o!("neighbours_store" => true)),
-    )));
-
-    Ok(Arc::new(GraphPayloadHandler::new(
-        local_node.key,
-        search_breadth,
-        connect_search_breadth,
-        max_num_search_threads,
-        search_timeout_sec,
-        key_space_manager,
-        neighbours_store,
-        log,
-    )))
-}
-
-#[cfg(use_black_hole)]
-#[allow(missing_docs)]
-pub fn create_payload_handler(
-    _local_node: Node,
-    _args: &clap::ArgMatches,
-    log: Logger,
-) -> Result<Arc<PayloadHandler>> {
-    use payload_handler::black_hole::BlackHolePayloadHandler;
-    Ok(Arc::new(BlackHolePayloadHandler::new(log)))
-}
-
-#[cfg(no_payload_handler)]
-#[allow(missing_docs)]
-pub fn create_payload_handler(
-    _local_node: Node,
-    _args: &clap::ArgMatches,
-    _log: Logger,
-) -> Result<Arc<PayloadHandler>> {
-    Err(ErrorKind::ConfigError(
-        "A request handler feature was not selected".into(),
-    ).into())
+    #[cfg(feature = "use-black-hole")]
+    fn create(
+        _local_node: Self::Parameters,
+        _args: &clap::ArgMatches,
+        log: Logger,
+    ) -> Result<Box<Self>>
+    {
+        use payload_handler::black_hole::BlackHolePayloadHandler;
+        Ok(Box::new(BlackHolePayloadHandler::new(log)))
+    }
 }
