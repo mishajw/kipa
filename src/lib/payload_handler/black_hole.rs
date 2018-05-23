@@ -22,12 +22,13 @@ impl BlackHolePayloadHandler {
 impl PayloadHandler for BlackHolePayloadHandler {
     fn receive(
         &self,
-        request: &RequestPayload,
+        payload: &RequestPayload,
         _sender: Option<&Node>,
         _payload_client: Arc<PayloadClient>,
+        _message_id: u32,
     ) -> Result<ResponsePayload>
     {
-        match request {
+        match payload {
             &RequestPayload::QueryRequest(_) => {
                 trace!(self.log, "Received query request");
                 Ok(ResponsePayload::QueryResponse(vec![]))
