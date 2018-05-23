@@ -1,5 +1,6 @@
 //! Implementation of servers using TCP sockets.
 
+use address::Address;
 use api::{ApiVisibility, RequestMessage, ResponseMessage};
 use data_transformer::DataTransformer;
 use error::*;
@@ -92,6 +93,18 @@ impl SocketHandler for TcpGlobalServer {
             .chain_err(|| "Error on setting write timeout on TCP socket")?;
         Ok(())
     }
+
+    fn get_socket_peer_address(
+        &self,
+        socket: &Self::SocketType,
+    ) -> Option<Address>
+    {
+        socket
+            .peer_addr()
+            .chain_err(|| "Error on getting peer address")
+            .and_then(|s| Address::from_socket_addr(&s))
+            .ok()
+    }
 }
 
 impl SocketServer for TcpGlobalServer {
@@ -142,6 +155,18 @@ impl SocketHandler for TcpGlobalClient {
             .chain_err(|| "Error on setting write timeout on TCP socket")?;
         Ok(())
     }
+
+    fn get_socket_peer_address(
+        &self,
+        socket: &Self::SocketType,
+    ) -> Option<Address>
+    {
+        socket
+            .peer_addr()
+            .chain_err(|| "Error on getting peer address")
+            .and_then(|s| Address::from_socket_addr(&s))
+            .ok()
+    }
 }
 
 impl SocketClient for TcpGlobalClient {
@@ -153,7 +178,7 @@ impl SocketClient for TcpGlobalClient {
         timeout: Duration,
     ) -> Result<TcpStream>
     {
-        TcpStream::connect_timeout(&node.address.get_socket_addr(), timeout)
+        TcpStream::connect_timeout(&node.address.to_socket_addr(), timeout)
             .chain_err(|| {
                 format!("Error on trying to connect to node {}", node)
             })

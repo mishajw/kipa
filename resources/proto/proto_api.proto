@@ -16,8 +16,9 @@ message Node {
 }
 
 message MessageSender {
-  // If node is not set, assume command line interface sender.
-  Node node = 1;
+  // If key and port are not set, assume command line interface sender.
+  Key key = 1;
+  uint32 port = 2;
 }
 
 message GeneralRequest {

@@ -1,6 +1,7 @@
 //! Handles sending and receiving requests on a unix pipe for local processes,
 //! such as the CLI.
 
+use address::Address;
 use api::{
     ApiVisibility, MessageSender, RequestMessage, RequestPayload,
     ResponseMessage,
@@ -98,6 +99,14 @@ impl SocketHandler for UnixSocketLocalServer {
         // delay
         Ok(())
     }
+
+    fn get_socket_peer_address(
+        &self,
+        _socket: &Self::SocketType,
+    ) -> Option<Address>
+    {
+        None
+    }
 }
 
 impl SocketServer for UnixSocketLocalServer {
@@ -151,6 +160,14 @@ impl SocketHandler for UnixSocketLocalClient {
         // delay
         Ok(())
     }
+
+    fn get_socket_peer_address(
+        &self,
+        _socket: &Self::SocketType,
+    ) -> Option<Address>
+    {
+        None
+    }
 }
 
 impl LocalClient for UnixSocketLocalClient {
@@ -178,6 +195,7 @@ impl LocalClient for UnixSocketLocalClient {
         let response_data = self.receive_data(&mut socket, None)?;
 
         trace!(self.log, "Got response bytes");
-        self.data_transformer.bytes_to_response(&response_data)
+        self.data_transformer
+            .bytes_to_response(&response_data, None)
     }
 }

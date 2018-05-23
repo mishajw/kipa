@@ -15,5 +15,7 @@ error_chain! {
         ResponseError(s: String) { display("Response error: {}", s) }
         /// Error in retrieving IP address
         IpAddressError(s: String) { display("IP address error: {}", s) }
+        /// Error due to unimplemented functionality
+        UnimplementedError(s: String) { display("Unimplemented error: {}", s) }
     }
 }

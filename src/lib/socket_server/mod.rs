@@ -4,6 +4,7 @@
 //! sockets, and use `DataHandler` types to convert these into `Request`s and
 //! `Response`s.
 
+use address::Address;
 use api::{RequestMessage, ResponseMessage};
 use data_transformer::DataTransformer;
 use error::*;
@@ -34,6 +35,12 @@ pub trait SocketHandler {
         socket: &mut Self::SocketType,
         timeout: Option<Duration>,
     ) -> Result<()>;
+
+    /// Get the address of the peer connected to the other side of the socket
+    fn get_socket_peer_address(
+        &self,
+        socket: &Self::SocketType,
+    ) -> Option<Address>;
 
     /// Send data down a socket. Handles writing the length of the data.
     fn send_data(
@@ -125,6 +132,7 @@ pub trait SocketServer: SocketHandler + Send + Sync {
     ) -> Result<()>
     {
         let log = self.get_log();
+        let address = self.get_socket_peer_address(&socket);
 
         let mut inner_socket = socket;
         trace!(log, "Reading request from socket");
@@ -132,7 +140,7 @@ pub trait SocketServer: SocketHandler + Send + Sync {
 
         trace!(log, "Processing request");
         let request =
-            data_transformer.bytes_to_request(&request_data.to_vec())?;
+            data_transformer.bytes_to_request(&request_data.to_vec(), address)?;
 
         trace!(log, "Sending response");
         let response = message_handler.receive(request)?;
@@ -178,6 +186,7 @@ pub trait SocketClient: SocketHandler {
             "node" => %node
         );
         let mut socket = self.create_socket(node, deadline - Instant::now())?;
+        let address = self.get_socket_peer_address(&socket);
 
         trace!(self.get_log(), "Sending request to another node");
         self.send_data(&request_bytes, &mut socket, Some(deadline))?;
@@ -186,6 +195,7 @@ pub trait SocketClient: SocketHandler {
         let response_data = self.receive_data(&mut socket, Some(deadline))?;
 
         trace!(self.get_log(), "Got response bytes");
-        data_transformer.bytes_to_response(&response_data)
+        data_transformer
+            .bytes_to_response(&response_data, address)
     }
 }

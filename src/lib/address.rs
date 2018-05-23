@@ -30,14 +30,7 @@ impl Address {
     pub fn from_string(s: &str) -> Result<Address> {
         let socket_addr: SocketAddr =
             s.parse().chain_err(|| "Error on parsing IP address")?;
-
-        match socket_addr {
-            SocketAddr::V4(addr) => Ok(Address {
-                ip_data: addr.ip().octets().to_vec(),
-                port: addr.port(),
-            }),
-            SocketAddr::V6(_) => unimplemented!(),
-        }
+        Self::from_socket_addr(&socket_addr)
     }
 
     /// Get the local address on a specified interface
@@ -93,8 +86,21 @@ impl Address {
         ).into())
     }
 
+    /// Create an `Address` from a `SocketAddr`
+    pub fn from_socket_addr(socket_addr: &SocketAddr) -> Result<Self> {
+        match socket_addr {
+            SocketAddr::V4(addr) => Ok(Address {
+                ip_data: addr.ip().octets().to_vec(),
+                port: addr.port(),
+            }),
+            SocketAddr::V6(_) => Err(ErrorKind::UnimplementedError(
+                "IPv6 support is not implmented yet".into(),
+            ).into()),
+        }
+    }
+
     /// Get the `SocketAddr` for the address.
-    pub fn get_socket_addr(&self) -> SocketAddr {
+    pub fn to_socket_addr(&self) -> SocketAddr {
         if self.ip_data.len() == 4 {
             SocketAddr::new(
                 IpAddr::V4(Ipv4Addr::new(

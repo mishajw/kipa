@@ -67,7 +67,12 @@ impl DataTransformer for ProtobufDataTransformer {
             .chain_err(|| "Error on write request to bytes")
     }
 
-    fn bytes_to_request(&self, data: &Vec<u8>) -> Result<RequestMessage> {
+    fn bytes_to_request(
+        &self,
+        data: &Vec<u8>,
+        sender: Option<Address>,
+    ) -> Result<RequestMessage>
+    {
         // Parse the request to the protobuf type
         let request: proto_api::GeneralRequest =
             parse_from_bytes(data).chain_err(|| "Error on parsing request")?;
@@ -90,7 +95,8 @@ impl DataTransformer for ProtobufDataTransformer {
             );
         };
 
-        let sender: Result<MessageSender> = request.get_sender().clone().into();
+        let sender: Result<MessageSender> =
+            proto_to_message_sender(request.get_sender().clone(), sender);
 
         Ok(RequestMessage::new(payload, sender?, request.get_id()))
     }
@@ -138,7 +144,12 @@ impl DataTransformer for ProtobufDataTransformer {
             .chain_err(|| "Error on write response to bytes")
     }
 
-    fn bytes_to_response(&self, data: &Vec<u8>) -> Result<ResponseMessage> {
+    fn bytes_to_response(
+        &self,
+        data: &Vec<u8>,
+        sender: Option<Address>,
+    ) -> Result<ResponseMessage>
+    {
         // Parse the request to the protobuf type
         let response: proto_api::GeneralResponse =
             parse_from_bytes(data).chain_err(|| "Error on parsing response")?;
@@ -176,7 +187,7 @@ impl DataTransformer for ProtobufDataTransformer {
         };
 
         let sender: Result<MessageSender> =
-            response.get_sender().clone().into();
+            proto_to_message_sender(response.get_sender().clone(), sender);
 
         Ok(ResponseMessage::new(payload, sender?, response.get_id()))
     }
@@ -243,8 +254,10 @@ impl Into<Result<proto_api::MessageSender>> for MessageSender {
         let mut kipa_sender = proto_api::MessageSender::new();
         match self {
             MessageSender::Node(ref n) => {
-                let node: Result<proto_api::Node> = n.clone().into();
-                kipa_sender.set_node(node?)
+                let key = n.key.clone().into();
+                let port = n.address.port;
+                kipa_sender.set_key(key);
+                kipa_sender.set_port(u32::from(port));
             }
             MessageSender::Cli() => {}
         }
@@ -252,13 +265,27 @@ impl Into<Result<proto_api::MessageSender>> for MessageSender {
     }
 }
 
-impl Into<Result<MessageSender>> for proto_api::MessageSender {
-    fn into(self) -> Result<MessageSender> {
-        if self.has_node() {
-            let node: Result<Node> = self.get_node().clone().into();
-            Ok(MessageSender::Node(node?))
-        } else {
-            Ok(MessageSender::Cli())
-        }
+/// We can not define this function as a `Into` trait, as we also need the
+/// `Address` to create the `MessageSender`
+fn proto_to_message_sender(
+    message_sender: proto_api::MessageSender,
+    address: Option<Address>,
+) -> Result<MessageSender>
+{
+    if address.is_some() {
+        assert!(message_sender.has_key());
+        assert!(
+            message_sender.get_port() > 0 && message_sender.get_port() < 0xFFFF
+        );
+        let key = message_sender.get_key().clone().into();
+        Ok(MessageSender::Node(Node::new(
+            Address::new(
+                address.unwrap().ip_data,
+                message_sender.get_port() as u16,
+            ),
+            key,
+        )))
+    } else {
+        Ok(MessageSender::Cli())
     }
 }

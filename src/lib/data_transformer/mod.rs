@@ -1,6 +1,7 @@
 //! Serialize and deserialize requests and responses for communication over
 //! the wire between KIPA nodes/interfaces.
 
+use address::Address;
 use api::{RequestMessage, ResponseMessage};
 use error::*;
 
@@ -16,11 +17,19 @@ pub trait DataTransformer: Send + Sync {
     fn request_to_bytes(&self, request: &RequestMessage) -> Result<Vec<u8>>;
 
     /// Convert a bytes to a `Request`.
-    fn bytes_to_request(&self, data: &Vec<u8>) -> Result<RequestMessage>;
+    fn bytes_to_request(
+        &self,
+        data: &Vec<u8>,
+        sender: Option<Address>,
+    ) -> Result<RequestMessage>;
 
     /// Convert a `Response` to bytes.
     fn response_to_bytes(&self, response: &ResponseMessage) -> Result<Vec<u8>>;
 
     /// Convert a bytes to a `Response`.
-    fn bytes_to_response(&self, data: &Vec<u8>) -> Result<ResponseMessage>;
+    fn bytes_to_response(
+        &self,
+        data: &Vec<u8>,
+        sender: Option<Address>,
+    ) -> Result<ResponseMessage>;
 }
