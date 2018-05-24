@@ -1,9 +1,37 @@
-//! Holds the KIPA API `Request`s and `Response`s.
+//! Defines the API used to communicate from a node to a node, and from a CLI to
+//! a node
 
 use key::Key;
 use node::Node;
 
 use std::fmt;
+
+/// Generic message type that holds a payload and a sender.
+pub struct Message<T> {
+    /// The payload of the message.
+    pub payload: T,
+    /// The sender of the message.
+    pub sender: MessageSender,
+    /// The identifier of the message.
+    pub id: u32,
+}
+
+impl<T> Message<T> {
+    /// Construct a new message with a payload and sender.
+    pub fn new(payload: T, sender: MessageSender, id: u32) -> Self {
+        Message {
+            payload,
+            sender,
+            id,
+        }
+    }
+}
+
+/// Messages for requests with request payloads
+pub type RequestMessage = Message<RequestPayload>;
+
+/// Messages for responses with response payloads
+pub type ResponseMessage = Message<ResponsePayload>;
 
 /// A request for the request handler.
 pub enum RequestPayload {
@@ -23,16 +51,6 @@ pub enum RequestPayload {
     /// List all of the neighbour `Node`s.
     ListNeighboursRequest(),
 }
-
-/// The visibility of an API call.
-#[derive(PartialEq)]
-pub enum ApiVisibility {
-    /// The API call is available for local connections from the CLI.
-    Local(),
-    /// The API call is available for remote connections from other KIPA nodes.
-    Global(),
-}
-impl Eq for ApiVisibility {}
 
 /// The response for a given request.
 pub enum ResponsePayload {
@@ -66,6 +84,16 @@ impl RequestPayload {
     }
 }
 
+/// The visibility of an API call.
+#[derive(PartialEq)]
+pub enum ApiVisibility {
+    /// The API call is available for local connections from the CLI.
+    Local(),
+    /// The API call is available for remote connections from other KIPA nodes.
+    Global(),
+}
+impl Eq for ApiVisibility {}
+
 /// Store the sender of a request
 #[derive(Clone)]
 pub enum MessageSender {
@@ -83,30 +111,3 @@ impl fmt::Display for MessageSender {
         }
     }
 }
-
-/// Generic message type that holds a payload and a sender.
-pub struct Message<T> {
-    /// The payload of the message.
-    pub payload: T,
-    /// The sender of the message.
-    pub sender: MessageSender,
-    /// The identifier of the message.
-    pub id: u32,
-}
-
-impl<T> Message<T> {
-    /// Construct a new message with a payload and sender.
-    pub fn new(payload: T, sender: MessageSender, id: u32) -> Self {
-        Message {
-            payload,
-            sender,
-            id,
-        }
-    }
-}
-
-/// Messages for requests with request payloads
-pub type RequestMessage = Message<RequestPayload>;
-
-/// Messages for responses with response payloads
-pub type ResponseMessage = Message<ResponsePayload>;
