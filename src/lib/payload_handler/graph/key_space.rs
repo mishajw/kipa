@@ -43,9 +43,7 @@ pub struct KeySpaceManager {
 impl KeySpaceManager {
     /// Create a new key space manager with a key space dimensionality.
     pub fn new(num_key_space_dims: usize) -> Self {
-        KeySpaceManager {
-            num_key_space_dims: num_key_space_dims,
-        }
+        KeySpaceManager { num_key_space_dims }
     }
 
     /// Create a location in key space from a key.
@@ -66,7 +64,7 @@ impl KeySpaceManager {
             .chunks(size_of::<i32>() / size_of::<u8>())
             .map(|cs| Cursor::new(cs).read_i32::<BigEndian>().unwrap())
             .collect();
-        KeySpace { coords: coords }
+        KeySpace { coords }
     }
 
     /// Gets the euclidean distance between points in key space.
@@ -78,7 +76,7 @@ impl KeySpaceManager {
             .zip(&b_ks.coords)
             // Map to i64 so we have enough space to perform operations without
             // overflow
-            .map(|(a, b)| (*a as i64, *b as i64))
+            .map(|(a, b)| (i64::from(*a), i64::from(*b)))
             .map(|(a, b)| (a - b).abs())
             .fold(0 as i64, |a, b| a + (b as i64));
 
@@ -100,7 +98,7 @@ impl KeySpaceManager {
                 .iter()
                 .zip(&b2.coords)
                 .zip(&relative_to.coords)
-                .map(|((i, j), l)| ((i - l) as i64, (j - l) as i64))
+                .map(|((i, j), l)| (i64::from(i - l), i64::from(j - l)))
                 .map(|(i, j)| i * j)
                 .sum();
             result as f32

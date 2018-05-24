@@ -58,7 +58,7 @@ impl GraphPayloadHandler {
     /// - `remote_server` is used for communicating with other nodes.
     /// - `initial_node` is the initial other node in KIPA network.
     pub fn new(
-        key: Key,
+        key: &Key,
         search_breadth: usize,
         connect_search_breadth: usize,
         max_num_search_threads: usize,
@@ -74,9 +74,9 @@ impl GraphPayloadHandler {
             connect_search_breadth,
             max_num_search_threads,
             search_timeout_sec,
-            graph_search: Arc::new(GraphSearch::new(key_space_manager.clone())),
-            neighbours_store: neighbours_store,
-            log: log,
+            graph_search: Arc::new(GraphSearch::new(key_space_manager)),
+            neighbours_store,
+            log,
         }
     }
 
@@ -109,7 +109,7 @@ impl GraphPayloadHandler {
                 Address::new(vec![0, 0, 0, 0], 10842),
                 self.key.clone(),
             )],
-            self.create_get_neighbours_fn(payload_client.clone()),
+            self.create_get_neighbours_fn(payload_client),
             Arc::new(found_callback),
             Arc::new(move |n| {
                 trace!(
@@ -159,7 +159,7 @@ impl GraphPayloadHandler {
             &self.key,
             self.connect_search_breadth,
             vec![node.clone()],
-            self.create_get_neighbours_fn(payload_client.clone()),
+            self.create_get_neighbours_fn(payload_client),
             Arc::new(found_callback),
             Arc::new(explored_callback),
             self.max_num_search_threads,
@@ -210,7 +210,7 @@ impl PayloadHandler for GraphPayloadHandler {
         info!(
             self.log,
             "Received request";
-            "sender" => sender.map(|n| n.to_string()).unwrap_or("none".into()));
+            "sender" => sender.map(|n| n.to_string()).unwrap_or_else(|| "none".into()));
 
         if sender.is_some() {
             self.neighbours_store
@@ -219,8 +219,8 @@ impl PayloadHandler for GraphPayloadHandler {
                 .consider_candidate(&sender.unwrap());
         }
 
-        match payload {
-            &RequestPayload::QueryRequest(ref key) => {
+        match *payload {
+            RequestPayload::QueryRequest(ref key) => {
                 trace!(
                     self.log,
                     "Received query request";
@@ -239,7 +239,7 @@ impl PayloadHandler for GraphPayloadHandler {
 
                 Ok(ResponsePayload::QueryResponse(nodes))
             }
-            &RequestPayload::SearchRequest(ref key) => {
+            RequestPayload::SearchRequest(ref key) => {
                 trace!(
                     self.log,
                     "Received search request";
@@ -253,7 +253,7 @@ impl PayloadHandler for GraphPayloadHandler {
                         )),
                 )?))
             }
-            &RequestPayload::ConnectRequest(ref node) => {
+            RequestPayload::ConnectRequest(ref node) => {
                 trace!(
                     self.log,
                     "Received connect request";
@@ -268,7 +268,7 @@ impl PayloadHandler for GraphPayloadHandler {
                 )?;
                 Ok(ResponsePayload::ConnectResponse())
             }
-            &RequestPayload::ListNeighboursRequest() => {
+            RequestPayload::ListNeighboursRequest() => {
                 trace!(self.log, "Replying recieved list neigbours request");
                 let neighbours =
                     self.neighbours_store.lock().unwrap().get_all();

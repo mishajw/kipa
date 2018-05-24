@@ -27,7 +27,7 @@ pub trait Server: Send + Sync {
 /// Listen for requests from other KIPA nodes.
 pub trait Client: Send + Sync {
     /// Send a request to another `Node` and get the `Response`.
-    fn send<'a>(
+    fn send(
         &self,
         node: &Node,
         request: RequestMessage,
@@ -46,7 +46,7 @@ pub trait LocalServer: Send + Sync {
 /// Trait for sending requests to local KIPA daemon.
 pub trait LocalClient: Send + Sync {
     /// Send a request to local KIPA daemon
-    fn send<'a>(
+    fn send(
         &self,
         request: RequestPayload,
         message_id: u32,

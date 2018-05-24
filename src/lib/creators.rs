@@ -263,7 +263,7 @@ impl Creator for NeighboursStore {
             .chain_err(|| "Error on parsing angle weighting")?;
 
         Ok(Box::new(NeighboursStore::new(
-            local_key,
+            &local_key,
             neighbours_size,
             distance_weighting,
             angle_weighting,
@@ -359,7 +359,7 @@ impl Creator for PayloadHandler {
         ));
 
         Ok(Box::new(GraphPayloadHandler::new(
-            local_node.key,
+            &local_node.key,
             search_breadth,
             connect_search_breadth,
             max_num_search_threads,

@@ -32,7 +32,7 @@ impl NeighboursStore {
     /// Create a new neighbour store with a maximum number of neighbours and the
     /// key of the local node.
     pub fn new(
-        local_key: Key,
+        local_key: &Key,
         max_num_neighbours: usize,
         distance_weighting: f32,
         angle_weighting: f32,
@@ -40,19 +40,19 @@ impl NeighboursStore {
         log: Logger,
     ) -> Self
     {
-        let local_key_space = key_space_manager.create_from_key(&local_key);
+        let local_key_space = key_space_manager.create_from_key(local_key);
         info!(
             log,
             "Creating neighbours store";
             "local_key_space" => local_key_space.to_string());
         NeighboursStore {
-            local_key_space: local_key_space,
-            key_space_manager: key_space_manager,
-            max_num_neighbours: max_num_neighbours,
-            distance_weighting: distance_weighting,
-            angle_weighting: angle_weighting,
-            neighbours: vec![],
-            log: log,
+            local_key_space,
+            key_space_manager,
+            max_num_neighbours,
+            distance_weighting,
+            angle_weighting,
+            neighbours: Vec::new(),
+            log,
         }
     }
 
@@ -144,12 +144,12 @@ impl NeighboursStore {
             })
             .collect();
 
-        fn min_floats(v: &Vec<f32>) -> f32 {
+        fn min_floats(v: &[f32]) -> f32 {
             *v.iter()
                 .min_by(|a, b| a.partial_cmp(b).unwrap())
                 .expect("Error on unwrapping min")
         }
-        fn max_floats(v: &Vec<f32>) -> f32 {
+        fn max_floats(v: &[f32]) -> f32 {
             *v.iter()
                 .max_by(|a, b| a.partial_cmp(b).unwrap())
                 .expect("Error on unwrapping max")
@@ -166,17 +166,12 @@ impl NeighboursStore {
 
             let normalized_a = 1.0 - (a / ::std::f32::consts::PI);
 
-            // let normalized_a = if max_min_angle != min_min_angle {
-            //     1.0 - ((a - min_min_angle) / (max_min_angle - min_min_angle))
-            // } else {
-            //     0.0
-            // };
-
-            let normalized_d = if max_distance != min_distance {
-                (d - min_distance) / (max_distance - min_distance)
-            } else {
-                0.0
-            };
+            let normalized_d =
+                if (max_distance - min_distance).abs() > ::std::f32::EPSILON {
+                    (d - min_distance) / (max_distance - min_distance)
+                } else {
+                    0.0
+                };
 
             ((normalized_d * distance_weighting)
                 + (normalized_a * angle_weighting))
@@ -189,9 +184,9 @@ impl NeighboursStore {
         }
 
         self.neighbours.sort_by(|&(ref a, _), &(ref b, _)| {
-            let a_score = scores_map.get(a.key.get_key_id()).unwrap();
-            let b_score = scores_map.get(b.key.get_key_id()).unwrap();
-            a_score.partial_cmp(b_score).unwrap()
+            let a_score = scores_map[a.key.get_key_id()];
+            let b_score = scores_map[b.key.get_key_id()];
+            a_score.partial_cmp(&b_score).unwrap()
         });
 
         // ...remove the furthest neighbours.
@@ -225,7 +220,7 @@ mod test {
         ];
 
         let mut ns = NeighboursStore::new(
-            keys[keys.len() - 1].clone(),
+            &keys[keys.len() - 1],
             3,
             1.0,
             0.0,
@@ -260,7 +255,7 @@ mod test {
         ];
 
         let mut ns = NeighboursStore::new(
-            keys[2].clone(),
+            &keys[2],
             2,
             0.5,
             0.5,

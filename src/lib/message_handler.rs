@@ -29,17 +29,17 @@ impl MessageHandler {
     ) -> Self
     {
         MessageHandler {
-            payload_handler: payload_handler,
-            local_node: local_node,
-            client: client,
+            payload_handler,
+            local_node,
+            client,
         }
     }
 
     /// Receive and handle a request message, returning a response message.
-    pub fn receive(&self, message: RequestMessage) -> Result<ResponseMessage> {
-        let sender = match &message.sender {
-            &MessageSender::Node(ref n) => Some(n),
-            &MessageSender::Cli() => None,
+    pub fn receive(&self, message: &RequestMessage) -> Result<ResponseMessage> {
+        let sender = match message.sender {
+            MessageSender::Node(ref n) => Some(n),
+            MessageSender::Cli() => None,
         };
 
         let payload_client = Arc::new(PayloadClient::new(
@@ -83,9 +83,9 @@ impl PayloadClient {
     ) -> PayloadClient
     {
         PayloadClient {
-            message_id: message_id,
-            local_node: local_node,
-            client: client,
+            message_id,
+            local_node,
+            client,
         }
     }
 

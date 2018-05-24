@@ -45,7 +45,7 @@ pub trait SocketHandler {
     /// Send data down a socket. Handles writing the length of the data.
     fn send_data(
         &self,
-        data: &Vec<u8>,
+        data: &[u8],
         socket: &mut Self::SocketType,
         deadline: Option<Instant>,
     ) -> Result<()>
@@ -115,7 +115,7 @@ pub trait SocketServer: SocketHandler + Send + Sync {
         let result = socket_result
             .map(|s| self.handle_socket(s, message_handler, data_transformer));
 
-        if let &Err(ref err) = &result {
+        if let Err(ref err) = result {
             error!(
                 self.get_log(),
                 "Exception when handling socket";
@@ -143,7 +143,7 @@ pub trait SocketServer: SocketHandler + Send + Sync {
             data_transformer.bytes_to_request(&request_data.to_vec(), address)?;
 
         trace!(log, "Sending response");
-        let response = message_handler.receive(request)?;
+        let response = message_handler.receive(&request)?;
         let response_data = data_transformer.response_to_bytes(&response)?;
         self.send_data(&response_data, &mut inner_socket, None)?;
         trace!(log, "Sent response bytes");
@@ -168,7 +168,7 @@ pub trait SocketClient: SocketHandler {
     ) -> Result<Self::SocketType>;
 
     /// Send a request to another `Node` and get the `Response`.
-    fn send<'a>(
+    fn send(
         &self,
         node: &Node,
         request: RequestMessage,
@@ -195,7 +195,6 @@ pub trait SocketClient: SocketHandler {
         let response_data = self.receive_data(&mut socket, Some(deadline))?;
 
         trace!(self.get_log(), "Got response bytes");
-        data_transformer
-            .bytes_to_response(&response_data, address)
+        data_transformer.bytes_to_response(&response_data, address)
     }
 }

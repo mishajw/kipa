@@ -43,10 +43,10 @@ impl UnixSocketLocalServer {
     ) -> Result<Self>
     {
         Ok(UnixSocketLocalServer {
-            message_handler: message_handler,
-            data_transformer: data_transformer,
-            socket_path: socket_path,
-            log: log,
+            message_handler,
+            data_transformer,
+            socket_path,
+            log,
         })
     }
 }
@@ -135,14 +135,14 @@ impl UnixSocketLocalClient {
     /// before going on the line.
     pub fn new(
         data_transformer: Arc<DataTransformer>,
-        socket_path: &String,
+        socket_path: &str,
         log: Logger,
     ) -> Self
     {
         UnixSocketLocalClient {
-            socket_path: socket_path.clone(),
-            data_transformer: data_transformer,
-            log: log,
+            socket_path: socket_path.to_string(),
+            data_transformer,
+            log,
         }
     }
 }
@@ -171,7 +171,7 @@ impl SocketHandler for UnixSocketLocalClient {
 }
 
 impl LocalClient for UnixSocketLocalClient {
-    fn send<'a>(
+    fn send(
         &self,
         request_payload: RequestPayload,
         message_id: u32,

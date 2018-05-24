@@ -24,34 +24,30 @@ use std::convert::{From, Into};
 use std::io::Cursor;
 
 /// The protobuf data transformer type
+#[derive(Default)]
 pub struct ProtobufDataTransformer {}
-
-impl ProtobufDataTransformer {
-    /// Create a new protobuf data transformer
-    pub fn new() -> Self { ProtobufDataTransformer {} }
-}
 
 impl DataTransformer for ProtobufDataTransformer {
     fn request_to_bytes(&self, request: &RequestMessage) -> Result<Vec<u8>> {
         let mut general_request = proto_api::GeneralRequest::new();
-        match &request.payload {
-            &RequestPayload::QueryRequest(ref key) => {
+        match request.payload {
+            RequestPayload::QueryRequest(ref key) => {
                 let mut query = proto_api::QueryRequest::new();
                 query.set_key(key.clone().into());
                 general_request.set_query_request(query);
             }
-            &RequestPayload::SearchRequest(ref key) => {
+            RequestPayload::SearchRequest(ref key) => {
                 let mut search = proto_api::SearchRequest::new();
                 search.set_key(key.clone().into());
                 general_request.set_search_request(search);
             }
-            &RequestPayload::ConnectRequest(ref node) => {
+            RequestPayload::ConnectRequest(ref node) => {
                 let mut connect = proto_api::ConnectRequest::new();
                 let kipa_node: Result<proto_api::Node> = node.clone().into();
                 connect.set_node(kipa_node?);
                 general_request.set_connect_request(connect);
             }
-            &RequestPayload::ListNeighboursRequest() => {
+            RequestPayload::ListNeighboursRequest() => {
                 let mut list = proto_api::ListNeighboursRequest::new();
                 general_request.set_list_neighbours_request(list);
             }
@@ -69,7 +65,7 @@ impl DataTransformer for ProtobufDataTransformer {
 
     fn bytes_to_request(
         &self,
-        data: &Vec<u8>,
+        data: &[u8],
         sender: Option<Address>,
     ) -> Result<RequestMessage>
     {
@@ -96,7 +92,7 @@ impl DataTransformer for ProtobufDataTransformer {
         };
 
         let sender: Result<MessageSender> =
-            proto_to_message_sender(request.get_sender().clone(), sender);
+            proto_to_message_sender(&request.get_sender(), sender);
 
         Ok(RequestMessage::new(payload, sender?, request.get_id()))
     }
@@ -104,28 +100,25 @@ impl DataTransformer for ProtobufDataTransformer {
     fn response_to_bytes(&self, response: &ResponseMessage) -> Result<Vec<u8>> {
         let mut general_response = proto_api::GeneralResponse::new();
 
-        match &response.payload {
-            &ResponsePayload::QueryResponse(ref nodes) => {
+        match response.payload {
+            ResponsePayload::QueryResponse(ref nodes) => {
                 let mut query = proto_api::QueryResponse::new();
                 let kipa_nodes: Result<Vec<proto_api::Node>> =
                     nodes.iter().map(|n| n.clone().into()).collect();
                 query.set_nodes(RepeatedField::from_vec(kipa_nodes?));
                 general_response.set_query_response(query);
             }
-            &ResponsePayload::SearchResponse(ref node) => {
+            ResponsePayload::SearchResponse(ref node) => {
                 let mut search = proto_api::SearchResponse::new();
-                match node {
-                    &Some(ref node) => {
-                        let n: Result<proto_api::Node> = node.clone().into();
-                        search.set_node(n?);
-                    }
-                    &None => {}
+                if let Some(node) = node {
+                    let n: Result<proto_api::Node> = node.clone().into();
+                    search.set_node(n?);
                 }
                 general_response.set_search_response(search);
             }
-            &ResponsePayload::ConnectResponse() => general_response
+            ResponsePayload::ConnectResponse() => general_response
                 .set_connect_response(proto_api::ConnectResponse::new()),
-            &ResponsePayload::ListNeighboursResponse(ref nodes) => {
+            ResponsePayload::ListNeighboursResponse(ref nodes) => {
                 let mut list = proto_api::ListNeighboursResponse::new();
                 let kipa_nodes: Result<Vec<proto_api::Node>> =
                     nodes.iter().map(|n| n.clone().into()).collect();
@@ -146,7 +139,7 @@ impl DataTransformer for ProtobufDataTransformer {
 
     fn bytes_to_response(
         &self,
-        data: &Vec<u8>,
+        data: &[u8],
         sender: Option<Address>,
     ) -> Result<ResponseMessage>
     {
@@ -187,7 +180,7 @@ impl DataTransformer for ProtobufDataTransformer {
         };
 
         let sender: Result<MessageSender> =
-            proto_to_message_sender(response.get_sender().clone(), sender);
+            proto_to_message_sender(&response.get_sender(), sender);
 
         Ok(ResponseMessage::new(payload, sender?, response.get_id()))
     }
@@ -216,7 +209,7 @@ impl Into<Result<proto_api::Address>> for Address {
             .chain_err(|| "Error casting address IP data to IPv4")?;
         let mut kipa_address = proto_api::Address::new();
         kipa_address.set_ipv4(ipv4);
-        kipa_address.set_port(self.port as u32);
+        kipa_address.set_port(u32::from(self.port));
         Ok(kipa_address)
     }
 }
@@ -268,7 +261,7 @@ impl Into<Result<proto_api::MessageSender>> for MessageSender {
 /// We can not define this function as a `Into` trait, as we also need the
 /// `Address` to create the `MessageSender`
 fn proto_to_message_sender(
-    message_sender: proto_api::MessageSender,
+    message_sender: &proto_api::MessageSender,
     address: Option<Address>,
 ) -> Result<MessageSender>
 {

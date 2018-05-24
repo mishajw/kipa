@@ -20,10 +20,7 @@ pub struct Address {
 impl Address {
     /// Create a new address with some address and port.
     pub fn new(ip_data: Vec<u8>, port: u16) -> Self {
-        Address {
-            ip_data: ip_data,
-            port: port,
-        }
+        Address { ip_data, port }
     }
 
     /// Create a new address from a string.
@@ -43,7 +40,7 @@ impl Address {
         for interface in datalink::interfaces() {
             // Skip interfaces that are loopback or have no IPs
             if interface_name.is_none() && (interface.name == "lo")
-                || interface.ips.len() == 0
+                || interface.ips.is_empty()
             {
                 continue;
             }
@@ -55,7 +52,7 @@ impl Address {
                 continue;
             }
 
-            if interface.ips.len() == 0 {
+            if interface.ips.is_empty() {
                 return Err(ErrorKind::IpAddressError(format!(
                     "Could not find any IP address on interface {}, found: \
                      {:?}",
@@ -74,7 +71,7 @@ impl Address {
                 IpAddr::V4(addr) => {
                     return Ok(Address {
                         ip_data: addr.octets().to_vec(),
-                        port: port,
+                        port,
                     })
                 }
                 _ => unimplemented!(),

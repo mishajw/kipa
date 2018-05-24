@@ -49,17 +49,17 @@ pub enum ResponsePayload {
 impl RequestPayload {
     /// Check if the request is visible in a API visibility.
     pub fn is_visible(&self, visibility: &ApiVisibility) -> bool {
-        match self {
-            &RequestPayload::SearchRequest(_) => {
+        match *self {
+            RequestPayload::SearchRequest(_) => {
                 visibility == &ApiVisibility::Local()
             }
-            &RequestPayload::QueryRequest(_) => {
+            RequestPayload::QueryRequest(_) => {
                 visibility == &ApiVisibility::Global()
             }
-            &RequestPayload::ConnectRequest(_) => {
+            RequestPayload::ConnectRequest(_) => {
                 visibility == &ApiVisibility::Local()
             }
-            &RequestPayload::ListNeighboursRequest() => {
+            RequestPayload::ListNeighboursRequest() => {
                 visibility == &ApiVisibility::Local()
             }
         }
@@ -77,9 +77,9 @@ pub enum MessageSender {
 
 impl fmt::Display for MessageSender {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            &MessageSender::Node(ref n) => n.fmt(f),
-            &MessageSender::Cli() => write!(f, "CLI"),
+        match *self {
+            MessageSender::Node(ref n) => n.fmt(f),
+            MessageSender::Cli() => write!(f, "CLI"),
         }
     }
 }
@@ -98,9 +98,9 @@ impl<T> Message<T> {
     /// Construct a new message with a payload and sender.
     pub fn new(payload: T, sender: MessageSender, id: u32) -> Self {
         Message {
-            payload: payload,
-            sender: sender,
-            id: id,
+            payload,
+            sender,
+            id,
         }
     }
 }

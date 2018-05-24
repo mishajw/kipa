@@ -73,9 +73,7 @@ impl GraphSearch {
     /// Create a new graph search with a function for retrieving the neighbours
     /// of the node.
     pub fn new(key_space_manager: Arc<KeySpaceManager>) -> Self {
-        GraphSearch {
-            key_space_manager: key_space_manager,
-        }
+        GraphSearch { key_space_manager }
     }
 
     /// Search for a key through looking up the neighbours of nodes in the KIPA
@@ -219,12 +217,12 @@ impl GraphSearch {
                 return_callback!(explored_node_callback(&explored_node)?);
             }
 
-            if to_explore.len() == 0 && num_active_threads == 0 {
+            if to_explore.is_empty() && num_active_threads == 0 {
                 // If we have nothing left to explore, and no working threads,
                 // the search has failed
                 info!(log, "Failed to find key"; "key" => %key);
                 return Ok(None);
-            } else if to_explore.len() == 0 && num_active_threads > 0 {
+            } else if to_explore.is_empty() && num_active_threads > 0 {
                 // If there's nothing left to explore, we can wait for a thread
                 // to finish with some results
                 trace!(
@@ -246,7 +244,7 @@ impl GraphSearch {
             }
 
             // Pop a node off the `to_explore` queue
-            assert!(to_explore.len() > 0);
+            assert!(!to_explore.is_empty());
             let current_node = to_explore.pop().unwrap();
             trace!(
                 log, "Search loop iteration";
@@ -276,8 +274,8 @@ impl GraphSearch {
                     "node" => %current_node.node);
                 let neighbours =
                     spawn_get_neighbours_fn(&current_node.node, &spawn_key);
-                match &neighbours {
-                    &Ok(ref neighbours) => trace!(
+                match neighbours {
+                    Ok(ref neighbours) => trace!(
                         spawn_log, "Found neighbours for node";
                         "found" => true,
                         "node" => %current_node.node,
@@ -286,7 +284,7 @@ impl GraphSearch {
                             .map(|n| n.key.get_key_id().clone())
                             .collect::<Vec<String>>()
                             .join(", ")),
-                    &Err(ref err) => info!(
+                    Err(ref err) => info!(
                         spawn_log, "Error on querying for neighbours";
                         "node" => %current_node.node,
                         "err" => %err.display_chain()),

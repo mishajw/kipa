@@ -18,10 +18,7 @@ impl GpgKeyHandler {
         let context = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)
             .chain_err(|| "Error on creating GPGME context")?;
         debug!(log, "Created GPG key handler");
-        Ok(GpgKeyHandler {
-            context: context,
-            log: log,
-        })
+        Ok(GpgKeyHandler { context, log })
     }
 
     /// Get the key for a key ID string. The string must be eight characters

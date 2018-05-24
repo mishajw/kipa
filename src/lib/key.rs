@@ -14,10 +14,7 @@ impl Key {
     /// Create a new key for some data.
     pub fn new(key_id: String, data: Vec<u8>) -> Self {
         assert!(key_id.len() == 8);
-        Key {
-            key_id: key_id,
-            data: data,
-        }
+        Key { key_id, data }
     }
 
     /// Get the data of some key.

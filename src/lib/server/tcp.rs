@@ -38,10 +38,10 @@ impl TcpGlobalServer {
     ) -> Self
     {
         TcpGlobalServer {
-            message_handler: message_handler,
-            data_transformer: data_transformer,
-            local_node: local_node,
-            log: log,
+            message_handler,
+            data_transformer,
+            local_node,
+            log,
         }
     }
 }
@@ -132,8 +132,8 @@ impl TcpGlobalClient {
     /// before going on the line.
     pub fn new(data_transformer: Arc<DataTransformer>, log: Logger) -> Self {
         TcpGlobalClient {
-            data_transformer: data_transformer,
-            log: log,
+            data_transformer,
+            log,
         }
     }
 }
@@ -186,7 +186,7 @@ impl SocketClient for TcpGlobalClient {
 }
 
 impl Client for TcpGlobalClient {
-    fn send<'a>(
+    fn send(
         &self,
         node: &Node,
         request: RequestMessage,

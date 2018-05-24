@@ -19,7 +19,7 @@ pub trait DataTransformer: Send + Sync {
     /// Convert a bytes to a `Request`.
     fn bytes_to_request(
         &self,
-        data: &Vec<u8>,
+        data: &[u8],
         sender: Option<Address>,
     ) -> Result<RequestMessage>;
 
@@ -29,7 +29,7 @@ pub trait DataTransformer: Send + Sync {
     /// Convert a bytes to a `Response`.
     fn bytes_to_response(
         &self,
-        data: &Vec<u8>,
+        data: &[u8],
         sender: Option<Address>,
     ) -> Result<ResponseMessage>;
 }
