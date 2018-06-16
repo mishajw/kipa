@@ -22,5 +22,5 @@ pub trait PayloadHandler: Send + Sync {
         sender: Option<&Node>,
         payload_client: Arc<PayloadClient>,
         message_id: u32,
-    ) -> Result<ResponsePayload>;
+    ) -> InternalResult<ResponsePayload>;
 }

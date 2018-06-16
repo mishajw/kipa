@@ -15,6 +15,10 @@ message Node {
   Address address = 2;
 }
 
+message ApiError {
+  string msg = 1;
+}
+
 message MessageSender {
   // If key and port are not set, assume command line interface sender.
   Key key = 1;
@@ -35,8 +39,9 @@ message GeneralResponse {
   SearchResponse search_response = 2;
   ConnectResponse connect_response = 3;
   ListNeighboursResponse list_neighbours_response = 4;
-  MessageSender sender =  5;
-  uint32 id = 6;
+  ApiError api_error = 5;
+  MessageSender sender =  6;
+  uint32 id = 7;
 }
 
 message QueryRequest {

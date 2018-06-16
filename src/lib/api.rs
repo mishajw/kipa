@@ -31,7 +31,7 @@ impl<T> Message<T> {
 pub type RequestMessage = Message<RequestPayload>;
 
 /// Messages for responses with response payloads
-pub type ResponseMessage = Message<ResponsePayload>;
+pub type ResponseMessage = Message<ApiResult<ResponsePayload>>;
 
 /// A request for the request handler.
 pub enum RequestPayload {
@@ -83,6 +83,28 @@ impl RequestPayload {
         }
     }
 }
+
+/// Error returned when a request has failed
+#[derive(Clone)]
+pub struct ApiError {
+    /// Description of the error
+    pub message: String,
+    // TODO: Add error codes
+}
+
+impl ApiError {
+    /// Create with message
+    pub fn new(message: String) -> Self { ApiError { message } }
+}
+
+impl fmt::Display for ApiError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "ApiError({})", self.message)
+    }
+}
+
+/// Result for `ApiError`s
+pub type ApiResult<T> = Result<T, ApiError>;
 
 /// The visibility of an API call.
 #[derive(PartialEq)]

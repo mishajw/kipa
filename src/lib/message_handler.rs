@@ -48,15 +48,15 @@ impl MessageHandler {
             self.client.clone(),
         ));
 
-        let response_payload = self.payload_handler.receive(
+        let response_payload_result = self.payload_handler.receive(
             &message.payload,
             sender,
             payload_client,
             message.id,
-        )?;
+        );
 
         let response = ResponseMessage::new(
-            response_payload,
+            to_api_result(response_payload_result),
             MessageSender::Node(self.local_node.clone()),
             message.id,
         );
@@ -95,7 +95,7 @@ impl PayloadClient {
         node: &Node,
         payload: RequestPayload,
         timeout: Duration,
-    ) -> Result<ResponsePayload>
+    ) -> ResponseResult<ResponsePayload>
     {
         let request_message = RequestMessage::new(
             payload,
@@ -103,16 +103,27 @@ impl PayloadClient {
             self.message_id,
         );
 
-        let response_message =
-            self.client.send(node, request_message, timeout)?;
+        let response_message = to_internal_result(self.client.send(
+            node,
+            request_message,
+            timeout,
+        ))?;
 
         if response_message.id != self.message_id {
-            return Err(ErrorKind::ResponseError(format!(
-                "Response had incorrect ID, expected {}, received {}",
-                self.message_id, response_message.id
-            )).into());
+            // TODO: We need to reference `InternalError` here instead of
+            // `ResponseError` - seems that when you typedef enums, referencing
+            // the instances of the enum still needs to be done through the
+            // original enum type. Find a solution to this, and make sure that
+            // *all* mentions of `{Public,Private}Error` are to the correct enum
+            // type.
+            return Err(InternalError::PrivateError(
+                ErrorKind::ResponseError(format!(
+                    "Response had incorrect ID, expected {}, received {}",
+                    self.message_id, response_message.id
+                )).into(),
+            ));
         }
 
-        Ok(response_message.payload)
+        api_to_internal_result(response_message.payload)
     }
 }

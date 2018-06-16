@@ -10,8 +10,8 @@
 
 use address::Address;
 use api::{
-    MessageSender, RequestMessage, RequestPayload, ResponseMessage,
-    ResponsePayload,
+    ApiError, ApiResult, MessageSender, RequestMessage, RequestPayload,
+    ResponseMessage, ResponsePayload,
 };
 use data_transformer::{proto_api, DataTransformer};
 use error::*;
@@ -100,15 +100,15 @@ impl DataTransformer for ProtobufDataTransformer {
     fn response_to_bytes(&self, response: &ResponseMessage) -> Result<Vec<u8>> {
         let mut general_response = proto_api::GeneralResponse::new();
 
-        match response.payload {
-            ResponsePayload::QueryResponse(ref nodes) => {
+        match &response.payload {
+            Ok(ResponsePayload::QueryResponse(ref nodes)) => {
                 let mut query = proto_api::QueryResponse::new();
                 let kipa_nodes: Result<Vec<proto_api::Node>> =
                     nodes.iter().map(|n| n.clone().into()).collect();
                 query.set_nodes(RepeatedField::from_vec(kipa_nodes?));
                 general_response.set_query_response(query);
             }
-            ResponsePayload::SearchResponse(ref node) => {
+            Ok(ResponsePayload::SearchResponse(ref node)) => {
                 let mut search = proto_api::SearchResponse::new();
                 if let Some(node) = node {
                     let n: Result<proto_api::Node> = node.clone().into();
@@ -116,14 +116,18 @@ impl DataTransformer for ProtobufDataTransformer {
                 }
                 general_response.set_search_response(search);
             }
-            ResponsePayload::ConnectResponse() => general_response
+            Ok(ResponsePayload::ConnectResponse()) => general_response
                 .set_connect_response(proto_api::ConnectResponse::new()),
-            ResponsePayload::ListNeighboursResponse(ref nodes) => {
+            Ok(ResponsePayload::ListNeighboursResponse(ref nodes)) => {
                 let mut list = proto_api::ListNeighboursResponse::new();
                 let kipa_nodes: Result<Vec<proto_api::Node>> =
                     nodes.iter().map(|n| n.clone().into()).collect();
                 list.set_nodes(RepeatedField::from_vec(kipa_nodes?));
                 general_response.set_list_neighbours_response(list);
+            }
+            Err(api_error) => {
+                let proto_error = api_error.clone().into();
+                general_response.set_api_error(proto_error);
             }
         };
 
@@ -147,24 +151,26 @@ impl DataTransformer for ProtobufDataTransformer {
         let response: proto_api::GeneralResponse =
             parse_from_bytes(data).chain_err(|| "Error on parsing response")?;
 
-        let payload = if response.has_query_response() {
+        let payload: ApiResult<ResponsePayload> = if response
+            .has_query_response()
+        {
             let nodes: Result<Vec<Node>> = response
                 .get_query_response()
                 .get_nodes()
                 .iter()
                 .map(|n| n.clone().into())
                 .collect();
-            ResponsePayload::QueryResponse(nodes?)
+            Ok(ResponsePayload::QueryResponse(nodes?))
         } else if response.has_search_response() {
             if response.get_search_response().has_node() {
                 let node: Result<Node> =
                     response.get_search_response().get_node().clone().into();
-                ResponsePayload::SearchResponse(Some(node?))
+                Ok(ResponsePayload::SearchResponse(Some(node?)))
             } else {
-                ResponsePayload::SearchResponse(None)
+                Ok(ResponsePayload::SearchResponse(None))
             }
         } else if response.has_connect_response() {
-            ResponsePayload::ConnectResponse()
+            Ok(ResponsePayload::ConnectResponse())
         } else if response.has_list_neighbours_response() {
             let nodes: Result<Vec<Node>> = response
                 .get_list_neighbours_response()
@@ -172,8 +178,11 @@ impl DataTransformer for ProtobufDataTransformer {
                 .iter()
                 .map(|n| n.clone().into())
                 .collect();
-            ResponsePayload::ListNeighboursResponse(nodes?)
+            Ok(ResponsePayload::ListNeighboursResponse(nodes?))
+        } else if response.has_api_error() {
+            Err(response.get_api_error().clone().into())
         } else {
+            // This return is scoped to the function, not to the payload
             return Err(
                 ErrorKind::ParseError("Unrecognized response".into()).into()
             );
@@ -280,5 +289,17 @@ fn proto_to_message_sender(
         )))
     } else {
         Ok(MessageSender::Cli())
+    }
+}
+
+impl Into<ApiError> for proto_api::ApiError {
+    fn into(self) -> ApiError { ApiError::new(self.get_msg().to_string()) }
+}
+
+impl Into<proto_api::ApiError> for ApiError {
+    fn into(self) -> proto_api::ApiError {
+        let mut api_error = proto_api::ApiError::new();
+        api_error.set_msg(self.message);
+        api_error
     }
 }

@@ -21,7 +21,7 @@ use node::Node;
 use payload_handler::graph::search::{
     GetNeighboursFn, GraphSearch, SearchCallbackReturn,
 };
-use payload_handler::PayloadHandler;
+use payload_handler::{InternalResult, PayloadHandler};
 
 use slog::Logger;
 use std::sync::{Arc, Mutex};
@@ -85,7 +85,7 @@ impl GraphPayloadHandler {
         key: &Key,
         payload_client: Arc<PayloadClient>,
         log: Logger,
-    ) -> Result<Option<Node>>
+    ) -> InternalResult<Option<Node>>
     {
         let callback_key = key.clone();
         let found_log = self.log.new(o!());
@@ -102,7 +102,7 @@ impl GraphPayloadHandler {
 
         let explored_log = self.log.new(o!());
 
-        self.graph_search.search_with_breadth(
+        let search_result = self.graph_search.search_with_breadth(
             &key,
             self.search_breadth,
             vec![Node::new(
@@ -121,7 +121,9 @@ impl GraphPayloadHandler {
             self.max_num_search_threads,
             self.search_timeout_sec,
             log,
-        )
+        );
+
+        to_internal_result(search_result)
     }
 
     fn connect(
@@ -129,7 +131,7 @@ impl GraphPayloadHandler {
         node: &Node,
         payload_client: Arc<PayloadClient>,
         log: Logger,
-    ) -> Result<()>
+    ) -> InternalResult<()>
     {
         let found_neighbours_store = self.neighbours_store.clone();
         let found_log = self.log.new(o!());
@@ -155,7 +157,7 @@ impl GraphPayloadHandler {
             Ok(SearchCallbackReturn::Continue())
         };
 
-        self.graph_search.search_with_breadth::<()>(
+        let result = self.graph_search.search_with_breadth::<()>(
             &self.key,
             self.connect_search_breadth,
             vec![node.clone()],
@@ -165,7 +167,9 @@ impl GraphPayloadHandler {
             self.max_num_search_threads,
             self.search_timeout_sec,
             log,
-        )?;
+        );
+        to_internal_result(result)?;
+
         Ok(())
     }
 
@@ -186,13 +190,16 @@ impl GraphPayloadHandler {
                 n,
                 RequestPayload::QueryRequest(k.clone()),
                 timeout,
-            )?;
+            );
 
             match response {
-                ResponsePayload::QueryResponse(ref nodes) => Ok(nodes.clone()),
-                _ => Err(ErrorKind::ResponseError(
+                Ok(ResponsePayload::QueryResponse(ref nodes)) => {
+                    Ok(nodes.clone())
+                }
+                Ok(_) => to_internal_result(Err(ErrorKind::ResponseError(
                     "Incorrect response for query request".into(),
-                ).into()),
+                ).into())),
+                Err(err) => Err(err),
             }
         })
     }
@@ -205,7 +212,7 @@ impl PayloadHandler for GraphPayloadHandler {
         sender: Option<&Node>,
         payload_client: Arc<PayloadClient>,
         message_id: u32,
-    ) -> Result<ResponsePayload>
+    ) -> InternalResult<ResponsePayload>
     {
         info!(
             self.log,

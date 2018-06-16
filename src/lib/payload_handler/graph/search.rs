@@ -13,7 +13,6 @@ use std::sync::{
 use std::thread;
 use std::time::Duration;
 
-use error_chain::ChainedError;
 use slog::Logger;
 
 pub enum SearchCallbackReturn<T> {
@@ -24,7 +23,7 @@ pub enum SearchCallbackReturn<T> {
 }
 
 pub type GetNeighboursFn =
-    Arc<Fn(&Node, &Key) -> Result<Vec<Node>> + Send + Sync>;
+    Arc<Fn(&Node, &Key) -> ResponseResult<Vec<Node>> + Send + Sync>;
 type FoundNodeCallback<T> =
     Arc<Fn(&Node) -> Result<SearchCallbackReturn<T>> + Send + Sync>;
 type ExploredNodeCallback<T> =
@@ -139,7 +138,7 @@ impl GraphSearch {
 
         // Set up channels for returning results from spawned threads
         let (explored_channel_tx, explored_channel_rx) =
-            channel::<(Node, Result<Vec<Node>>)>();
+            channel::<(Node, ResponseResult<Vec<Node>>)>();
 
         // Counter of active threads
         let mut num_active_threads = 0 as usize;
@@ -159,7 +158,7 @@ impl GraphSearch {
 
         let wait_explored_channel_tx = explored_channel_tx.clone();
         let wait_for_threads =
-            |rx: &Receiver<(Node, Result<Vec<Node>>)>| -> Result<()> {
+            |rx: &Receiver<(Node, ResponseResult<Vec<Node>>)>| -> Result<()> {
                 // Wait for `recv` to resolve
                 let recv = rx
                     .recv_timeout(timeout)
@@ -190,8 +189,13 @@ impl GraphSearch {
                 // If we pop something off the channel, a thread has finished
                 num_active_threads -= 1;
 
+                // Strip errors from result - if there's an error, set to an
+                // empty list. Logging of the error has already been done, so
+                // we can ignore it here.
+                let flattened_found_nodes: Vec<Node> =
+                    found_nodes.unwrap_or(vec![]);
                 // Check all found nodes
-                for found_node in found_nodes.unwrap_or(vec![]) {
+                for found_node in flattened_found_nodes {
                     let search_node = into_search_node(found_node);
 
                     // If we've seen it before, ignore it
@@ -287,7 +291,7 @@ impl GraphSearch {
                     Err(ref err) => info!(
                         spawn_log, "Error on querying for neighbours";
                         "node" => %current_node.node,
-                        "err" => %err.display_chain()),
+                        "err" => %err),
                 }
 
                 spawn_explored_channel_tx

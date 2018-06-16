@@ -7,7 +7,7 @@ extern crate slog;
 extern crate slog_async;
 extern crate slog_term;
 
-use kipa_lib::api::{RequestPayload, ResponsePayload};
+use kipa_lib::api::{ApiResult, RequestPayload, ResponsePayload};
 use kipa_lib::creators::*;
 use kipa_lib::data_transformer::DataTransformer;
 use kipa_lib::error::*;
@@ -73,7 +73,11 @@ fn main() {
     }
 }
 
-fn message_daemon(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
+fn message_daemon(
+    args: &clap::ArgMatches,
+    log: &slog::Logger,
+) -> Result<ApiResult<()>>
+{
     let mut gpg_key_handler = GpgKeyHandler::new(log.new(o!("gpg" => true)))?;
 
     let data_transformer: Arc<DataTransformer> = DataTransformer::create(
@@ -98,18 +102,21 @@ fn message_daemon(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
             .send(RequestPayload::SearchRequest(search_key), message_id)?;
 
         match response.payload {
-            ResponsePayload::SearchResponse(Some(ref node)) => {
+            Ok(ResponsePayload::SearchResponse(Some(ref node))) => {
                 println!("Search success: {}.", node);
-                Ok(())
             }
-            ResponsePayload::SearchResponse(None) => {
+            Ok(ResponsePayload::SearchResponse(None)) => {
                 println!("Search unsuccessful.");
-                Ok(())
             }
-            _ => Err(
-                ErrorKind::ParseError("Unrecognized response".into()).into()
-            ),
-        }
+            Ok(_) => {
+                return Err(ErrorKind::ParseError(
+                    "Unrecognized response".into(),
+                ).into())
+            }
+            _ => (),
+        };
+
+        Ok(response.payload.map(|_| ()))
     } else if let Some(connect_args) = args.subcommand_matches("connect") {
         // Get node from arguments
         let node_key = gpg_key_handler
@@ -122,29 +129,37 @@ fn message_daemon(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
             .send(RequestPayload::ConnectRequest(node), message_id)?;
 
         match response.payload {
-            ResponsePayload::ConnectResponse() => {
+            Ok(ResponsePayload::ConnectResponse()) => {
                 println!("Connect successful");
-                Ok(())
             }
-            _ => Err(
-                ErrorKind::ParseError("Unrecognized response".into()).into()
-            ),
-        }
+            Ok(_) => {
+                return Err(ErrorKind::ParseError(
+                    "Unrecognized response".into(),
+                ).into())
+            }
+            _ => (),
+        };
+
+        Ok(response.payload.map(|_| ()))
     } else if let Some(_) = args.subcommand_matches("list-neighbours") {
         let response = local_client
             .send(RequestPayload::ListNeighboursRequest(), message_id)?;
         match response.payload {
-            ResponsePayload::ListNeighboursResponse(neighbours) => {
+            Ok(ResponsePayload::ListNeighboursResponse(ref neighbours)) => {
                 println!("Found neighbours:");
                 for n in neighbours {
                     println!("{}", n);
                 }
-                Ok(())
             }
-            _ => Err(
-                ErrorKind::ParseError("Unrecognized response".into()).into()
-            ),
-        }
+            Ok(_) => {
+                return Err(ErrorKind::ParseError(
+                    "Unrecognized response".into(),
+                ).into())
+            }
+            _ => (),
+        };
+
+        Ok(response.payload.map(|_| ()))
     } else {
         Err(ErrorKind::ParseError("No commmand given".into()).into())
     }

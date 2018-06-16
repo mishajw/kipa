@@ -26,7 +26,7 @@ impl PayloadHandler for BlackHolePayloadHandler {
         _sender: Option<&Node>,
         _payload_client: Arc<PayloadClient>,
         _message_id: u32,
-    ) -> Result<ResponsePayload>
+    ) -> InternalResult<ResponsePayload>
     {
         match payload {
             &RequestPayload::QueryRequest(_) => {
