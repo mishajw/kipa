@@ -14,7 +14,7 @@ class TestCyclicSearch(unittest.TestCase):
             num_connects=1).run(f"benchmarks_output/tests/"
                                 f"test_cyclic_{utils.get_formatted_time()}")
 
-        self.assertTrue(results["percentage_success"] == 1)
+        self.assertEqual(results["percentage_success"], 1)
 
 
 class TestRootedSearch(unittest.TestCase):
@@ -25,4 +25,4 @@ class TestRootedSearch(unittest.TestCase):
             num_connects=1).run(f"benchmarks_output/tests/"
                                 f"test_rooted_{utils.get_formatted_time()}")
 
-        self.assertTrue(results["percentage_success"] == 1)
+        self.assertEqual(results["percentage_success"], 1)

@@ -279,6 +279,11 @@ impl PayloadHandler for GraphPayloadHandler {
                     "reply" => true,
                     "neighbours" => neighbours
                         .iter()
+                        .map(|n| n.to_string())
+                        .collect::<Vec<String>>()
+                        .join(", "),
+                    "neighbour_keys" => neighbours
+                        .iter()
                         .map(|n| n.key.get_key_id().clone())
                         .collect::<Vec<String>>()
                         .join(", "));

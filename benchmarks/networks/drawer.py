@@ -124,7 +124,7 @@ def __get_neighbours(
             lambda l: all(map(lambda f: f in l and l[f], flags)),
             network_logs[key]))
         assert len(neighbours_logs) > 0, "Could not find logging of neighbours"
-        neighbours = neighbours_logs[-1]["neighbours"]
+        neighbours = neighbours_logs[-1]["neighbour_keys"]
 
         if neighbours == "":
             continue

@@ -40,6 +40,9 @@ def create(size: int, daemon_args: str) -> Network:
         tag=IMAGE_NAME,
         quiet=False)
 
+    log.info("Removing docker directory")
+    shutil.rmtree(docker_directory)
+
     log.info("Deleting old docker constructs")
     __delete_old(client)
 

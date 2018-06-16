@@ -166,7 +166,7 @@ class Configuration:
         main_graph_path = os.path.join(graph_directory, "graph.png")
         networks.drawer.draw_main_graph(
             network_logs, main_graph_path)
-        results_dict["graph"] = main_graph_path
+        results_dict["graph"] = "file://" + main_graph_path
 
         log.info("Drawing search networks and collecting search results")
         results_dict["search_results"] = []
@@ -187,7 +187,7 @@ class Configuration:
                 success=result,
                 message_id=message_id,
                 num_requests=num_requests,
-                graph=query_graph_path))
+                graph="file://" + query_graph_path))
 
         with open(os.path.join(output_directory, "details.yaml"), "w") as f:
             yaml.dump(results_dict, f, default_flow_style=False)
