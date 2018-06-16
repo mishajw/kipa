@@ -10,13 +10,16 @@ FEATURE_CONFIGURATIONS=( \
   "use-graph use-protobuf use-tcp use-unix-socket" \
   "use-black-hole")
 
-# Set to error on warnings
-export RUSTFLAGS="-D warnings"
-
 # Build and test with flags to pass to cargo
 build_and_test() {
-  echo "> Building and testing with flags \"$@\""
-  cargo build "$@"
+  echo "> Building with flags \"$@\""
+  # Check for no occurances of "error" or "warning"
+  if cargo check "$@" 2>&1 | grep -P "^(error|warning)" 1>/dev/null ; then
+    cargo check "$@"
+    exit
+  fi
+
+  echo "> Testing with flags \"$@\""
   cargo test "$@"
 }
 
