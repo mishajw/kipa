@@ -40,6 +40,8 @@ error_chain! {
         IpAddressError(s: String) { display("IP address error: {}", s) }
         /// Error due to unimplemented functionality
         UnimplementedError(s: String) { display("Unimplemented error: {}", s) }
+        /// Error due to GPGME
+        GpgMeError(s: String) { display("GPGME error: {}", s) }
     }
 }
 
@@ -54,7 +56,19 @@ pub enum InternalError {
     /// Public error wrapping `ApiError`
     PublicError(ApiError),
     /// Private error wrapping `Error` (from `error_chain`)
-    PrivateError(ErrorKind),
+    PrivateError(Error),
+}
+
+impl InternalError {
+    /// Helper function to create a public error
+    pub fn public(s: &str) -> InternalError {
+        InternalError::PublicError(ApiError::new(s.into()))
+    }
+
+    /// Helper function to create a private error
+    pub fn private(err: ErrorKind) -> InternalError {
+        InternalError::PrivateError(err.into())
+    }
 }
 
 impl fmt::Display for InternalError {
@@ -98,7 +112,6 @@ pub fn api_to_internal_result<T>(result: ApiResult<T>) -> InternalResult<T> {
 
 /// Turn an internal result into a public-facing `ApiResult`
 pub fn to_api_result<T>(result: InternalResult<T>) -> ApiResult<T> {
-    // TODO: Implement
     result.map_err(|err| match err {
         InternalError::PublicError(err) => err,
         // TODO: How to log the lost error?

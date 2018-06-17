@@ -24,10 +24,11 @@ impl Address {
     }
 
     /// Create a new address from a string.
-    pub fn from_string(s: &str) -> Result<Address> {
-        let socket_addr: SocketAddr =
-            s.parse().chain_err(|| "Error on parsing IP address")?;
-        Self::from_socket_addr(&socket_addr)
+    pub fn from_string(s: &str) -> InternalResult<Address> {
+        let socket_addr: SocketAddr = s
+            .parse()
+            .map_err(|_| InternalError::public("Error on parsing IP address"))?;
+        to_internal_result(Self::from_socket_addr(&socket_addr))
     }
 
     /// Get the local address on a specified interface
@@ -35,7 +36,7 @@ impl Address {
         port: u16,
         interface_name: Option<&str>,
         log: Logger,
-    ) -> Result<Address>
+    ) -> InternalResult<Address>
     {
         for interface in datalink::interfaces() {
             // Skip interfaces that are loopback or have no IPs
@@ -53,11 +54,13 @@ impl Address {
             }
 
             if interface.ips.is_empty() {
-                return Err(ErrorKind::IpAddressError(format!(
-                    "Could not find any IP address on interface {}, found: \
-                     {:?}",
-                    interface.name, interface.ips
-                )).into());
+                return Err(InternalError::private(ErrorKind::IpAddressError(
+                    format!(
+                        "Could not find any IP address on interface {}, \
+                         found: {:?}",
+                        interface.name, interface.ips
+                    ),
+                )));
             }
 
             if interface.ips.len() > 1 {
@@ -78,9 +81,9 @@ impl Address {
             }
         }
 
-        Err(ErrorKind::IpAddressError(
+        Err(InternalError::private(ErrorKind::IpAddressError(
             "Could not find matching interface name".into(),
-        ).into())
+        )))
     }
 
     /// Create an `Address` from a `SocketAddr`

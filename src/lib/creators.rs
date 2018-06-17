@@ -50,9 +50,9 @@ pub trait Creator {
         _parameters: Self::Parameters,
         _args: &clap::ArgMatches,
         _log: Logger,
-    ) -> Result<Box<Self>>
+    ) -> InternalResult<Box<Self>>
     {
-        Err(ErrorKind::ConfigError("Unselected feature".into()).into())
+        Err(InternalError::public("Unselected feature"))
     }
 }
 
@@ -63,7 +63,7 @@ impl Creator for DataTransformer {
         _parameters: Self::Parameters,
         _args: &clap::ArgMatches,
         _log: Logger,
-    ) -> Result<Box<Self>>
+    ) -> InternalResult<Box<Self>>
     {
         use data_transformer::protobuf::ProtobufDataTransformer;
         Ok(Box::new(ProtobufDataTransformer {}))
@@ -77,7 +77,7 @@ impl Creator for Client {
         data_transformer: Self::Parameters,
         _args: &clap::ArgMatches,
         log: Logger,
-    ) -> Result<Box<Self>>
+    ) -> InternalResult<Box<Self>>
     {
         use server::tcp::TcpGlobalClient;
         Ok(Box::new(TcpGlobalClient::new(data_transformer, log)))
@@ -91,7 +91,7 @@ impl Creator for Server {
         parameters: Self::Parameters,
         _args: &clap::ArgMatches,
         log: Logger,
-    ) -> Result<Box<Self>>
+    ) -> InternalResult<Box<Self>>
     {
         use server::tcp::TcpGlobalServer;
         let (message_handler, data_transformer, local_node) = parameters;
@@ -125,17 +125,18 @@ impl Creator for LocalServer {
         parameters: Self::Parameters,
         args: &clap::ArgMatches,
         log: Logger,
-    ) -> Result<Box<Self>>
+    ) -> InternalResult<Box<Self>>
     {
         use server::unix_socket::UnixSocketLocalServer;
         let (message_handler, data_transformer) = parameters;
         let socket_path = args.value_of("socket_path").unwrap();
-        Ok(Box::new(UnixSocketLocalServer::new(
+        let server = to_internal_result(UnixSocketLocalServer::new(
             message_handler,
             data_transformer,
             String::from(socket_path),
             log,
-        )?))
+        ))?;
+        Ok(Box::new(server))
     }
 }
 
@@ -147,7 +148,7 @@ impl Creator for LocalClient {
         data_transformer: Self::Parameters,
         args: &clap::ArgMatches,
         log: Logger,
-    ) -> Result<Box<Self>>
+    ) -> InternalResult<Box<Self>>
     {
         use server::unix_socket::UnixSocketLocalClient;
         let socket_path = args.value_of("socket_path").unwrap();
@@ -165,7 +166,7 @@ impl Creator for MessageHandler {
         parameters: Self::Parameters,
         _args: &clap::ArgMatches,
         _log: Logger,
-    ) -> Result<Box<Self>>
+    ) -> InternalResult<Box<Self>>
     {
         let (payload_handler, local_node, client) = parameters;
         Ok(Box::new(MessageHandler::new(
@@ -196,13 +197,15 @@ impl Creator for KeySpaceManager {
         _parameters: Self::Parameters,
         args: &clap::ArgMatches,
         _log: Logger,
-    ) -> Result<Box<Self>>
+    ) -> InternalResult<Box<Self>>
     {
         let key_space_size = args
             .value_of("key_space_size")
             .unwrap()
             .parse::<usize>()
-            .chain_err(|| "Error on parsing key space size")?;
+            .map_err(|_| {
+                InternalError::public("Error on parsing key space size")
+            })?;
         Ok(Box::new(KeySpaceManager::new(key_space_size)))
     }
 }
@@ -240,7 +243,7 @@ impl Creator for NeighboursStore {
         parameters: Self::Parameters,
         args: &clap::ArgMatches,
         log: Logger,
-    ) -> Result<Box<Self>>
+    ) -> InternalResult<Box<Self>>
     {
         let (local_key, key_space_manager) = parameters;
 
@@ -248,19 +251,25 @@ impl Creator for NeighboursStore {
             .value_of("neighbours_size")
             .unwrap()
             .parse::<usize>()
-            .chain_err(|| "Error on parsing neighbour size")?;
+            .map_err(|_| {
+                InternalError::public("Error on parsing neighbour size")
+            })?;
 
         let distance_weighting = args
             .value_of("distance_weighting")
             .unwrap()
             .parse::<f32>()
-            .chain_err(|| "Error on parsing distance weighting")?;
+            .map_err(|_| {
+                InternalError::public("Error on parsing distance weighting")
+            })?;
 
         let angle_weighting = args
             .value_of("angle_weighting")
             .unwrap()
             .parse::<f32>()
-            .chain_err(|| "Error on parsing angle weighting")?;
+            .map_err(|_| {
+                InternalError::public("Error on parsing angle weighting")
+            })?;
 
         Ok(Box::new(NeighboursStore::new(
             &local_key,
@@ -316,7 +325,7 @@ impl Creator for PayloadHandler {
         local_node: Self::Parameters,
         args: &clap::ArgMatches,
         log: Logger,
-    ) -> Result<Box<Self>>
+    ) -> InternalResult<Box<Self>>
     {
         use payload_handler::graph::GraphPayloadHandler;
 
@@ -324,25 +333,33 @@ impl Creator for PayloadHandler {
             .value_of("search_breadth")
             .unwrap()
             .parse::<usize>()
-            .chain_err(|| "Error on parsing search breadth")?;
+            .map_err(|_| {
+                InternalError::public("Error on parsing search breadth")
+            })?;
 
         let connect_search_breadth = args
             .value_of("connect_search_breadth")
             .unwrap()
             .parse::<usize>()
-            .chain_err(|| "Error on parsing connect search breadth")?;
+            .map_err(|_| {
+                InternalError::public("Error on parsing connect search breadth")
+            })?;
 
         let max_num_search_threads = args
             .value_of("max_num_search_threads")
             .unwrap()
             .parse::<usize>()
-            .chain_err(|| "Error on parsing connect search breadth")?;
+            .map_err(|_| {
+                InternalError::public("Error on parsing connect search breadth")
+            })?;
 
         let search_timeout_sec = args
             .value_of("search_timeout_sec")
             .unwrap()
             .parse::<usize>()
-            .chain_err(|| "Error on parsing search timeout")?;
+            .map_err(|_| {
+                InternalError::public("Error on parsing search timeout")
+            })?;
 
         let key_space_manager: Arc<KeySpaceManager> = KeySpaceManager::create(
             local_node.clone(),
@@ -375,7 +392,7 @@ impl Creator for PayloadHandler {
         _local_node: Self::Parameters,
         _args: &clap::ArgMatches,
         log: Logger,
-    ) -> Result<Box<Self>>
+    ) -> InternalResult<Box<Self>>
     {
         use payload_handler::black_hole::BlackHolePayloadHandler;
         Ok(Box::new(BlackHolePayloadHandler::new(log)))

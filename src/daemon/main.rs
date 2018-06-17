@@ -57,12 +57,20 @@ fn main() {
         .args(&creator_args)
         .get_matches();
 
-    if let Err(err) = run_servers(&args, &log) {
-        println!("{}", err.display_chain().to_string());
+    match run_servers(&args, &log) {
+        Ok(()) => println!("Daemon running"),
+        Err(InternalError::PublicError(err)) => println!("{}", err.message),
+        Err(InternalError::PrivateError(err)) => crit!(
+            log, "Error occured when setting up daemon";
+            "err_message" => err.display_chain().to_string()),
     }
 }
 
-fn run_servers(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
+fn run_servers(
+    args: &clap::ArgMatches,
+    log: &slog::Logger,
+) -> InternalResult<()>
+{
     let mut gpg_key_handler = GpgKeyHandler::new(log.new(o!("gpg" => true)))?;
 
     // Create local node
@@ -70,7 +78,7 @@ fn run_servers(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
         .value_of("port")
         .unwrap_or(&DEFAULT_PORT.to_string())
         .parse::<u16>()
-        .chain_err(|| "")?;
+        .map_err(|_| InternalError::public("Error on parsing port number"))?;
     let interface = args.value_of("interface");
     // Get local key
     let local_key = gpg_key_handler
@@ -129,12 +137,12 @@ fn run_servers(args: &clap::ArgMatches, log: &slog::Logger) -> Result<()> {
         log.new(o!("local_server" => true)),
     )?;
 
-    let global_server_thread = global_server
-        .start()
-        .chain_err(|| "Error on creating global server thread")?;
-    let local_server_thread = local_server
-        .start()
-        .chain_err(|| "Error on creating local server thread")?;
+    let global_server_thread = global_server.start().map_err(|_| {
+        InternalError::public("Error on creating global server thread")
+    })?;
+    let local_server_thread = local_server.start().map_err(|_| {
+        InternalError::public("Error on creating local server thread")
+    })?;
 
     global_server_thread
         .join()
