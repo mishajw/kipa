@@ -25,9 +25,12 @@ impl Address {
 
     /// Create a new address from a string.
     pub fn from_string(s: &str) -> InternalResult<Address> {
-        let socket_addr: SocketAddr = s
-            .parse()
-            .map_err(|_| InternalError::public("Error on parsing IP address"))?;
+        let socket_addr: SocketAddr = s.parse().map_err(|_| {
+            InternalError::public(
+                "Error on parsing IP address",
+                ApiErrorType::Parse,
+            )
+        })?;
         to_internal_result(Self::from_socket_addr(&socket_addr))
     }
 

@@ -52,7 +52,10 @@ pub trait Creator {
         _log: Logger,
     ) -> InternalResult<Box<Self>>
     {
-        Err(InternalError::public("Unselected feature"))
+        Err(InternalError::public(
+            "Unselected feature",
+            ApiErrorType::Configuration,
+        ))
     }
 }
 
@@ -204,7 +207,10 @@ impl Creator for KeySpaceManager {
             .unwrap()
             .parse::<usize>()
             .map_err(|_| {
-                InternalError::public("Error on parsing key space size")
+                InternalError::public(
+                    "Error on parsing key space size",
+                    ApiErrorType::Parse,
+                )
             })?;
         Ok(Box::new(KeySpaceManager::new(key_space_size)))
     }
@@ -252,7 +258,10 @@ impl Creator for NeighboursStore {
             .unwrap()
             .parse::<usize>()
             .map_err(|_| {
-                InternalError::public("Error on parsing neighbour size")
+                InternalError::public(
+                    "Error on parsing neighbour size",
+                    ApiErrorType::Parse,
+                )
             })?;
 
         let distance_weighting = args
@@ -260,7 +269,10 @@ impl Creator for NeighboursStore {
             .unwrap()
             .parse::<f32>()
             .map_err(|_| {
-                InternalError::public("Error on parsing distance weighting")
+                InternalError::public(
+                    "Error on parsing distance weighting",
+                    ApiErrorType::Parse,
+                )
             })?;
 
         let angle_weighting = args
@@ -268,7 +280,10 @@ impl Creator for NeighboursStore {
             .unwrap()
             .parse::<f32>()
             .map_err(|_| {
-                InternalError::public("Error on parsing angle weighting")
+                InternalError::public(
+                    "Error on parsing angle weighting",
+                    ApiErrorType::Parse,
+                )
             })?;
 
         Ok(Box::new(NeighboursStore::new(
@@ -334,7 +349,10 @@ impl Creator for PayloadHandler {
             .unwrap()
             .parse::<usize>()
             .map_err(|_| {
-                InternalError::public("Error on parsing search breadth")
+                InternalError::public(
+                    "Error on parsing search breadth",
+                    ApiErrorType::Parse,
+                )
             })?;
 
         let connect_search_breadth = args
@@ -342,7 +360,10 @@ impl Creator for PayloadHandler {
             .unwrap()
             .parse::<usize>()
             .map_err(|_| {
-                InternalError::public("Error on parsing connect search breadth")
+                InternalError::public(
+                    "Error on parsing connect search breadth",
+                    ApiErrorType::Parse,
+                )
             })?;
 
         let max_num_search_threads = args
@@ -350,7 +371,10 @@ impl Creator for PayloadHandler {
             .unwrap()
             .parse::<usize>()
             .map_err(|_| {
-                InternalError::public("Error on parsing connect search breadth")
+                InternalError::public(
+                    "Error on parsing connect search breadth",
+                    ApiErrorType::Parse,
+                )
             })?;
 
         let search_timeout_sec = args
@@ -358,7 +382,10 @@ impl Creator for PayloadHandler {
             .unwrap()
             .parse::<usize>()
             .map_err(|_| {
-                InternalError::public("Error on parsing search timeout")
+                InternalError::public(
+                    "Error on parsing search timeout",
+                    ApiErrorType::Parse,
+                )
             })?;
 
         let key_space_manager: Arc<KeySpaceManager> = KeySpaceManager::create(

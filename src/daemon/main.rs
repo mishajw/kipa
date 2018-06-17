@@ -19,7 +19,7 @@ use kipa_lib::{Address, Node};
 use error_chain::ChainedError;
 use std::sync::Arc;
 
-fn main() {
+fn main() -> ApiResult<()> {
     let log = create_logger("daemon");
     info!(log, "Starting servers");
 
@@ -58,11 +58,20 @@ fn main() {
         .get_matches();
 
     match run_servers(&args, &log) {
-        Ok(()) => println!("Daemon running"),
-        Err(InternalError::PublicError(err)) => println!("{}", err.message),
-        Err(InternalError::PrivateError(err)) => crit!(
-            log, "Error occured when setting up daemon";
-            "err_message" => err.display_chain().to_string()),
+        Ok(()) => Ok(()),
+        Err(InternalError::PublicError(err)) => {
+            println!("Error: {}", err.message);
+            Err(err)
+        }
+        Err(InternalError::PrivateError(err)) => {
+            crit!(
+                log, "Error occured when starting daemon";
+                "err_message" => err.display_chain().to_string());
+            Err(ApiError::new(
+                "Internal error (check logs)".into(),
+                ApiErrorType::Internal,
+            ))
+        }
     }
 }
 
@@ -78,7 +87,12 @@ fn run_servers(
         .value_of("port")
         .unwrap_or(&DEFAULT_PORT.to_string())
         .parse::<u16>()
-        .map_err(|_| InternalError::public("Error on parsing port number"))?;
+        .map_err(|_| {
+            InternalError::public(
+                "Error on parsing port number",
+                ApiErrorType::Parse,
+            )
+        })?;
     let interface = args.value_of("interface");
     // Get local key
     let local_key = gpg_key_handler
@@ -138,10 +152,16 @@ fn run_servers(
     )?;
 
     let global_server_thread = global_server.start().map_err(|_| {
-        InternalError::public("Error on creating global server thread")
+        InternalError::public(
+            "Error on creating global server thread",
+            ApiErrorType::Configuration,
+        )
     })?;
     let local_server_thread = local_server.start().map_err(|_| {
-        InternalError::public("Error on creating local server thread")
+        InternalError::public(
+            "Error on creating local server thread",
+            ApiErrorType::Configuration,
+        )
     })?;
 
     global_server_thread

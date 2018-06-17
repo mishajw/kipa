@@ -84,17 +84,38 @@ impl RequestPayload {
     }
 }
 
+/// Types of API errors, used as error codes when reporting to user
+#[derive(Clone, Debug)]
+pub enum ApiErrorType {
+    /// No error occurred
+    NoError = 0,
+    /// Error in parsing user input
+    Parse = 1,
+    /// Error in configuration of daemon/CLI
+    Configuration = 2,
+    /// Error caused by an external library/tool
+    External = 3,
+    /// Misc errors that are not exposed to user
+    Internal = 4,
+}
+
 /// Error returned when a request has failed
-#[derive(Clone)]
+#[derive(Clone, Debug)] // Derive `Debug` to return from main function
 pub struct ApiError {
     /// Description of the error
     pub message: String,
-    // TODO: Add error codes
+    /// Type of the error
+    pub error_type: ApiErrorType,
 }
 
 impl ApiError {
     /// Create with message
-    pub fn new(message: String) -> Self { ApiError { message } }
+    pub fn new(message: String, error_type: ApiErrorType) -> Self {
+        ApiError {
+            message,
+            error_type,
+        }
+    }
 }
 
 impl fmt::Display for ApiError {

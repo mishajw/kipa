@@ -10,8 +10,8 @@
 
 use address::Address;
 use api::{
-    ApiError, ApiResult, MessageSender, RequestMessage, RequestPayload,
-    ResponseMessage, ResponsePayload,
+    ApiError, ApiErrorType, ApiResult, MessageSender, RequestMessage,
+    RequestPayload, ResponseMessage, ResponsePayload,
 };
 use data_transformer::{proto_api, DataTransformer};
 use error::*;
@@ -292,8 +292,38 @@ fn proto_to_message_sender(
     }
 }
 
+impl Into<ApiErrorType> for proto_api::ApiErrorType {
+    fn into(self) -> ApiErrorType {
+        match self {
+            proto_api::ApiErrorType::NoError => ApiErrorType::NoError,
+            proto_api::ApiErrorType::Parse => ApiErrorType::Parse,
+            proto_api::ApiErrorType::Configuration => {
+                ApiErrorType::Configuration
+            }
+            proto_api::ApiErrorType::Internal => ApiErrorType::Internal,
+            proto_api::ApiErrorType::External => ApiErrorType::External,
+        }
+    }
+}
+
+impl Into<proto_api::ApiErrorType> for ApiErrorType {
+    fn into(self) -> proto_api::ApiErrorType {
+        match self {
+            ApiErrorType::NoError => proto_api::ApiErrorType::NoError,
+            ApiErrorType::Parse => proto_api::ApiErrorType::Parse,
+            ApiErrorType::Configuration => {
+                proto_api::ApiErrorType::Configuration
+            }
+            ApiErrorType::Internal => proto_api::ApiErrorType::Internal,
+            ApiErrorType::External => proto_api::ApiErrorType::External,
+        }
+    }
+}
+
 impl Into<ApiError> for proto_api::ApiError {
-    fn into(self) -> ApiError { ApiError::new(self.get_msg().to_string()) }
+    fn into(self) -> ApiError {
+        ApiError::new(self.get_msg().to_string(), self.get_error_type().into())
+    }
 }
 
 impl Into<proto_api::ApiError> for ApiError {

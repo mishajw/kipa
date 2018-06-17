@@ -15,8 +15,17 @@ message Node {
   Address address = 2;
 }
 
+enum ApiErrorType {
+    NoError = 0;
+    Parse = 1;
+    Configuration = 2;
+    External = 3;
+    Internal = 4;
+}
+
 message ApiError {
   string msg = 1;
+  ApiErrorType error_type = 2;
 }
 
 message MessageSender {

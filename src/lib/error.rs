@@ -19,7 +19,7 @@
 //!    either a public error that has been received from the other node, or an
 //!    error that occurred when receiving this response.
 
-use api::{ApiError, ApiResult};
+pub use api::{ApiError, ApiErrorType, ApiResult};
 
 use std::fmt;
 
@@ -61,8 +61,8 @@ pub enum InternalError {
 
 impl InternalError {
     /// Helper function to create a public error
-    pub fn public(s: &str) -> InternalError {
-        InternalError::PublicError(ApiError::new(s.into()))
+    pub fn public(s: &str, error_type: ApiErrorType) -> InternalError {
+        InternalError::PublicError(ApiError::new(s.into(), error_type))
     }
 
     /// Helper function to create a private error
@@ -116,7 +116,7 @@ pub fn to_api_result<T>(result: InternalResult<T>) -> ApiResult<T> {
         InternalError::PublicError(err) => err,
         // TODO: How to log the lost error?
         InternalError::PrivateError(_) => {
-            ApiError::new("Internal error".into())
+            ApiError::new("Internal error".into(), ApiErrorType::Internal)
         }
     })
 }

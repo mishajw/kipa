@@ -19,7 +19,10 @@ use error_chain::ChainedError;
 use rand::{thread_rng, Rng};
 use std::sync::Arc;
 
-fn main() {
+// TODO: Change from returning `ApiResult<()>` to an error code linked to
+// `ApiErrorType` - should be possible with `std::process::Termination`, but
+// this is only available in nightly. Keep an eye on issue #43301
+fn main() -> ApiResult<()> {
     let log = create_logger("cli");
     info!(log, "Starting CLI");
 
@@ -69,11 +72,20 @@ fn main() {
         .get_matches();
 
     match message_daemon(&args, &log) {
-        Ok(()) => (),
-        Err(InternalError::PublicError(err)) => println!("{}", err.message),
-        Err(InternalError::PrivateError(err)) => crit!(
-            log, "Error occured when performing command";
-            "err_message" => err.display_chain().to_string()),
+        Ok(()) => Ok(()),
+        Err(InternalError::PublicError(err)) => {
+            println!("Error: {}", err.message);
+            Err(err)
+        }
+        Err(InternalError::PrivateError(err)) => {
+            crit!(
+                log, "Error occured when performing command";
+                "err_message" => err.display_chain().to_string());
+            Err(ApiError::new(
+                "Internal error (check logs)".into(),
+                ApiErrorType::Internal,
+            ))
+        }
     }
 }
 
@@ -162,6 +174,9 @@ fn message_daemon(
             ))),
         }
     } else {
-        Err(InternalError::public("No commmand given"))
+        Err(InternalError::public(
+            "No commmand given",
+            ApiErrorType::Configuration,
+        ))
     }
 }

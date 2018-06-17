@@ -32,6 +32,7 @@ impl GpgKeyHandler {
         let key = self.context.find_key(key_id.clone()).map_err(|_| {
             InternalError::PublicError(ApiError::new(
                 "Error on finding key".into(),
+                ApiErrorType::External,
             ))
         })?;
         assert!(key.id().unwrap().ends_with(key_id.as_str()));
