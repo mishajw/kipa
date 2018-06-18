@@ -84,9 +84,10 @@ impl Address {
             }
         }
 
-        Err(InternalError::private(ErrorKind::IpAddressError(
-            "Could not find matching interface name".into(),
-        )))
+        Err(InternalError::public(
+            "Could not find matching interface name",
+            ApiErrorType::External,
+        ))
     }
 
     /// Create an `Address` from a `SocketAddr`
