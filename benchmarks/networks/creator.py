@@ -24,7 +24,11 @@ IPV4_PREFIX = "192.168.123"
 IPV6_PREFIX = "fd92:bd99:d235:d1c5::"
 
 
-def create(size: int, daemon_args: str, ipv6: bool = False) -> Network:
+def create(
+        size: int,
+        daemon_args: str,
+        ipv6: bool = False,
+        debug: bool = True) -> Network:
     """Create a network of the specified size"""
 
     log.info(
@@ -36,7 +40,7 @@ def create(size: int, daemon_args: str, ipv6: bool = False) -> Network:
     client = docker.from_env()
 
     log.info("Creating docker directory")
-    docker_directory = __create_docker_directory()
+    docker_directory = __create_docker_directory(debug)
 
     log.info("Building KIPA image (may take a while)")
     client.images.build(
@@ -73,23 +77,34 @@ def create(size: int, daemon_args: str, ipv6: bool = False) -> Network:
     return Network(containers)
 
 
-def __create_docker_directory() -> str:
+def __create_docker_directory(debug: bool) -> str:
     docker_directory = tempfile.mkdtemp()
 
     log.debug(f"Made docker directory at {docker_directory}")
 
-    build_process = subprocess.Popen(["cargo", "build", "--release"])
+    build_command = ["cargo", "build"]
+    if not debug:
+        build_command += ["--release"]
+
+    build_process = subprocess.Popen(build_command)
     build_process.wait()
     assert build_process.returncode == 0, "KIPA build command failed"
 
-    assert os.path.isfile("target/release/kipa_daemon")
+    if debug:
+        binary_directory = "target/debug"
+    else:
+        binary_directory = "target/release"
+    daemon_binary_path = os.path.join(binary_directory, "kipa_daemon")
+    cli_binary_path = os.path.join(binary_directory, "kipa_cli")
+
+    assert os.path.isfile(daemon_binary_path)
     shutil.copyfile(
-        "target/release/kipa_daemon",
+        daemon_binary_path,
         os.path.join(docker_directory, "kipa_daemon"))
 
-    assert os.path.isfile("target/release/kipa_cli")
+    assert os.path.isfile(cli_binary_path)
     shutil.copyfile(
-        "target/release/kipa_cli",
+        cli_binary_path,
         os.path.join(docker_directory, "kipa_cli"))
 
     with open(os.path.join(docker_directory, "Dockerfile"), "w") as f:
@@ -106,7 +121,7 @@ def __create_docker_directory() -> str:
             RUN \\
                 chmod +x kipa_daemon && \\
                 chmod +x kipa_cli
-            CMD ./kipa_daemon \\
+            CMD {"RUST_BACKTRACE=1" if debug else ""} ./kipa_daemon \\
                 --key-id $KIPA_KEY_ID \\
                 $KIPA_ARGS
         """)

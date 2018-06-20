@@ -56,7 +56,8 @@ class Configuration:
             num_search_tests: int = None,
             daemon_args: Dict[str, str] = None,
             connection_quality: ConnectionQuality = None,
-            ipv6: bool = False):
+            ipv6: bool = False,
+            debug: bool = True):
         self.num_nodes = num_nodes
         self.connect_type = connect_type
         self.num_connects = num_connects
@@ -64,6 +65,7 @@ class Configuration:
         self.daemon_args = daemon_args if daemon_args is not None else {}
         self.connection_quality = connection_quality
         self.ipv6 = ipv6
+        self.debug = debug
 
     @classmethod
     def from_yaml(cls, yaml_path: str) -> "Configuration":
@@ -80,7 +82,9 @@ class Configuration:
             ConnectionQuality.from_dict(parameters["connection_quality"])
             if "connection_quality" in parameters else None,
             parameters["ipv6"]
-            if "ipv6" in parameters else False)
+            if "ipv6" in parameters else False,
+            parameters["debug"]
+            if "debug" in parameters else True)
 
     def run(self, output_directory: str) -> dict:
         """
@@ -102,7 +106,7 @@ class Configuration:
 
         log.info(f"Creating network of size {self.num_nodes}")
         network = networks.creator.create(
-            self.num_nodes, self.__get_daemon_args_str(), self.ipv6)
+            self.num_nodes, self.__get_daemon_args_str(), self.ipv6, self.debug)
         results_dict["keys"] = network.get_all_keys()
 
         log.info("Setting connection quality")
