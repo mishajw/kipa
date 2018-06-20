@@ -68,6 +68,7 @@ impl LocalServer for UnixSocketLocalServer {
             "path" => &self.socket_path
         );
 
+        // See `kipa_lib::server` for relevent TODO
         let arc_self = Arc::new(self.clone());
         let join_handle = thread::spawn(move || {
             listener.incoming().for_each(move |socket| {

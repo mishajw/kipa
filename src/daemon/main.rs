@@ -20,7 +20,9 @@ use std::sync::Arc;
 
 fn main() -> ApiResult<()> {
     let log = create_logger("daemon");
-    info!(log, "Starting servers");
+    info!(
+        log, "Starting daemon";
+        "args" => ::std::env::args().skip(1).collect::<Vec<_>>().join(" "));
 
     let mut creator_args = vec![];
     creator_args.append(&mut LocalAddressParams::get_clap_args());
