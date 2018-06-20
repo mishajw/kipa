@@ -74,13 +74,14 @@ impl KeySpaceManager {
         let total: i64 = a_ks.coords
             .iter()
             .zip(&b_ks.coords)
-            // Map to i64 so we have enough space to perform operations without
-            // overflow
+            // Map to `i64` so we have enough space to subtrace `i32`s
             .map(|(a, b)| (i64::from(*a), i64::from(*b)))
             .map(|(a, b)| (a - b).abs())
-            .fold(0 as i64, |a, b| a + (b as i64));
+            .sum();
 
-        (total as f32).powf(1f32 / a_ks.coords.len() as f32)
+        let result = (total as f32).powf(1f32 / a_ks.coords.len() as f32);
+        assert!(result >= 0.0);
+        result
     }
 
     /// Get the angle between two points in key space `a` and `b`, relative to
@@ -93,12 +94,16 @@ impl KeySpaceManager {
     ) -> f32
     {
         let dot = |a2: &KeySpace, b2: &KeySpace| -> f32 {
-            let result: i64 = a2
+            let result: i128 = a2
                 .coords
                 .iter()
                 .zip(&b2.coords)
                 .zip(&relative_to.coords)
-                .map(|((i, j), l)| (i64::from(i - l), i64::from(j - l)))
+                // Map to `i128` so we have enough space to subtract `i32`s,
+                // mutliply together, and sum results
+                .map(|((i, j), l)|
+                     ((i128::from(*i), i128::from(*j)), i128::from(*l)))
+                .map(|((i, j), l)| (i - l, j - l))
                 .map(|(i, j)| i * j)
                 .sum();
             result as f32
@@ -298,5 +303,38 @@ mod test {
         assert_that!(manager.angle(&ks[1], &ks[0], &ks[2]))
             .is_close_to(::std::f32::consts::PI, 1e-4);
         assert_that!(manager.angle(&ks[1], &ks[2], &ks[3])).is_equal_to(0.0);
+    }
+
+    #[test]
+    fn test_distance_overflow() {
+        use std::i32;
+        use std::iter::repeat;
+        let ks_size = 100;
+        let manager = KeySpaceManager::new(ks_size);
+        let ks1 = KeySpace {
+            coords: repeat(i32::MAX).take(ks_size).collect(),
+        };
+        let ks2 = KeySpace {
+            coords: repeat(i32::MIN).take(ks_size).collect(),
+        };
+        manager.distance(&ks1, &ks2);
+    }
+
+    #[test]
+    fn test_dot_overflow() {
+        use std::i32;
+        use std::iter::repeat;
+        let ks_size = 2;
+        let manager = KeySpaceManager::new(ks_size);
+        let ks_origin = KeySpace {
+            coords: repeat(0).take(ks_size).collect(),
+        };
+        let ks1 = KeySpace {
+            coords: repeat(i32::MAX).take(ks_size).collect(),
+        };
+        let ks2 = KeySpace {
+            coords: repeat(i32::MIN).take(ks_size).collect(),
+        };
+        manager.angle(&ks_origin, &ks1, &ks2);
     }
 }
