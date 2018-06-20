@@ -17,7 +17,10 @@ use node::Node;
 
 use std::fmt;
 
-/// Generic message type that holds a payload and a sender.
+/// Message passed between nodes, with a generic payload
+///
+/// Holds metadata about the payload, including the sender and the message
+/// identifier.
 pub struct Message<T> {
     /// The payload of the message
     pub payload: T,
@@ -47,45 +50,51 @@ impl<T> Message<T> {
     }
 }
 
-/// Messages for requests with request payloads
+/// Message requesting a reponse
 pub type RequestMessage = Message<RequestPayload>;
 
-/// Messages for responses with response payloads
+/// Message response for a request
+///
+/// The payload can be an `ApiError`.
 pub type ResponseMessage = Message<ApiResult<ResponsePayload>>;
 
-/// A request for the request handler.
+/// Different types of requests and their payloads
 pub enum RequestPayload {
-    /// Request a search for some key.
+    /// Search for a key in the network
     ///
     /// This prompts the node to perform a search in the KIPA network it is
     /// connected to, looking for the [`Node`] that owns the [`Key`] provided.
     SearchRequest(Key),
-    /// Request a query for some key.
+    /// Query for the closest known nodes to some key (in key space)
     ///
     /// This returns the [`Node`]s that the local node is connected to, that
     /// are closest to the [`Key`] given.
     QueryRequest(Key),
-    /// Connect to a `Node`, and search for potential neighbours in the node's
-    /// network.
+    /// Connect to a network through a node that is already connected
     ConnectRequest(Node),
-    /// List all of the neighbour `Node`s.
+    /// List all neighbour nodes
     ListNeighboursRequest(),
 }
 
 /// The response for a given request
 pub enum ResponsePayload {
-    /// Response for a [`Request::SearchRequest`].
+    /// Response for a
+    /// [`SearchRequest`](./enum.RequestPayload.html#variant.SearchRequest)
     SearchResponse(Option<Node>),
-    /// Response for a [`Request::QueryRequest`].
+    /// Response for a
+    /// [`QueryResponse`](./enum.RequestPayload.html#variant.QueryResponse)
     QueryResponse(Vec<Node>),
-    /// Response for a [`Request::ConnectRequest`]
+    /// Response for a
+    /// [`ConnectRequest`](./enum.RequestPayload.html#variant.ConnectRequest)
     ConnectResponse(),
-    /// Response for a [`Request::ListNeighboursRequest`].
+    /// Response for a
+    /// [`ListNeighboursRequest`](
+    /// ./enum.RequestPayload.html#variant.ListNeighboursRequest)
     ListNeighboursResponse(Vec<Node>),
 }
 
 impl RequestPayload {
-    /// Check if the request is visible in a API visibility.
+    /// Check if the request is visible in a API visibility
     pub fn is_visible(&self, visibility: &ApiVisibility) -> bool {
         match *self {
             RequestPayload::SearchRequest(_) => {
@@ -104,7 +113,7 @@ impl RequestPayload {
     }
 }
 
-/// Types of API errors, used as error codes when reporting to user
+/// Possible API errors
 #[derive(Clone, Debug)]
 pub enum ApiErrorType {
     /// No error occurred
@@ -129,7 +138,7 @@ pub struct ApiError {
 }
 
 impl ApiError {
-    /// Create with message
+    #[allow(missing_docs)]
     pub fn new(message: String, error_type: ApiErrorType) -> Self {
         ApiError {
             message,
@@ -157,12 +166,12 @@ pub enum ApiVisibility {
 }
 impl Eq for ApiVisibility {}
 
-/// Store the sender of a request
+/// Identifies the sender of a request
 #[derive(Clone)]
 pub enum MessageSender {
-    /// The request was sent from an external node
+    /// Request was sent from an external node
     Node(Node),
-    /// The request was sent from the command line argument tool
+    /// Request was sent from the command line argument tool
     Cli(),
 }
 

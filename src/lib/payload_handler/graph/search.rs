@@ -91,6 +91,9 @@ impl GraphSearch {
     /// the correct node - we only exit when the `found_node_callback` or the
     /// `explored_node_callback` functions return
     /// `SearchCallbackReturn::{Return(...),Exit}`
+    ///
+    /// Algorithm outline is described [here](
+    /// https://github.com/mishajw/kipa/blob/master/docs/overview.md#graph-search).
     pub fn search<T: 'static>(
         &self,
         key: &Key,
@@ -103,28 +106,6 @@ impl GraphSearch {
         log: Logger,
     ) -> Result<Option<T>>
     {
-        // Algorithm outline:
-        // 1. Set up:
-        //   a. Set `to_explore` to contain initial node(s)
-        //   b. Set `found` to empty
-        //   d. Set up `explored_channel` for communicating nodes explored/found
-        //      by threads
-        // 3. Consume from `explored_channel` until empty, each explored/found
-        //    node is passed to `{explored,found}_node_callback` with option to
-        //    exit the search
-        // 4. Check conditions:
-        //   a. If `num_threads == 0 && to_explore.empty()`, then exit
-        //   b. If `num_threads > 0 && to_explore.empty()`, then wait for thread
-        //      to finish and then go to (2)
-        //   c. If `num_threads >= max_threads`, then wait for threads to finish
-        //      and then go to (2)
-        //   d. If `num_threads < max_threads`, then continue
-        // 5. Pop node off `to_explore`, prioritized by key space distance
-        // 7. Spawn thread for exploring popped node, which does:
-        //   a. Ask node for neighbours
-        //   b. Send node explored and found nodes down `explored_channel`
-        // 8. Go to (2)
-
         info!(log, "Starting graph search"; "key" => %key);
 
         let key_space = self.key_space_manager.create_from_key(key);
