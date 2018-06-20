@@ -1,7 +1,7 @@
 use error::*;
 
 use std::fmt;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 
 use pnet::datalink;
 use slog::Logger;
@@ -43,6 +43,7 @@ impl Address {
         let LocalAddressParams {
             port,
             interface_name,
+            force_ipv6,
         } = local_params;
         for interface in datalink::interfaces() {
             // Skip interfaces that are loopback or have no IPs
@@ -59,32 +60,47 @@ impl Address {
                 continue;
             }
 
-            if interface.ips.is_empty() {
+            // Get the list of IPs to be all if we're not forcing IPv6,
+            // otherwise filter for IPv6
+            let ips = if !force_ipv6 {
+                interface.ips
+            } else {
+                interface
+                    .ips
+                    .iter()
+                    .filter(|ip| ip.is_ipv6())
+                    .map(|ip| *ip)
+                    .collect()
+            };
+
+            if ips.is_empty() {
                 return Err(InternalError::private(ErrorKind::IpAddressError(
                     format!(
                         "Could not find any IP address on interface {}, \
                          found: {:?}",
-                        interface.name, interface.ips
+                        interface.name, ips
                     ),
                 )));
             }
 
-            if interface.ips.len() > 1 {
+            if ips.len() > 1 {
                 warn!(
                     log, "Found multiple IPs on interface, selecting first";
                     "interface_name" => interface.name,
-                    "selected_ip" => %interface.ips[0])
+                    "selected_ip" => %ips[0],
+                    "other_ips" => ips.iter().skip(1).map(|ip| ip.to_string())
+                        .collect::<Vec<_>>().join(", "))
             }
 
-            match interface.ips[0].ip() {
-                IpAddr::V4(addr) => {
-                    return Ok(Address {
-                        ip_data: addr.octets().to_vec(),
-                        port,
-                    })
-                }
-                _ => unimplemented!(),
-            }
+            let ip_data = match ips[0].ip() {
+                IpAddr::V4(addr) => addr.octets().to_vec(),
+                IpAddr::V6(addr) => addr.octets().to_vec(),
+            };
+
+            return Ok(Address {
+                ip_data,
+                port: port,
+            });
         }
 
         Err(InternalError::public(
@@ -95,21 +111,20 @@ impl Address {
 
     /// Create an `Address` from a `SocketAddr`
     pub fn from_socket_addr(socket_addr: &SocketAddr) -> Result<Self> {
-        match socket_addr {
-            SocketAddr::V4(addr) => Ok(Address {
-                ip_data: addr.ip().octets().to_vec(),
-                port: addr.port(),
-            }),
-            SocketAddr::V6(_) => Err(ErrorKind::UnimplementedError(
-                "IPv6 support is not implmented yet".into(),
-            ).into()),
-        }
+        let (octets, port) = match socket_addr {
+            SocketAddr::V4(addr) => (addr.ip().octets().to_vec(), addr.port()),
+            SocketAddr::V6(addr) => (addr.ip().octets().to_vec(), addr.port()),
+        };
+        Ok(Address {
+            ip_data: octets,
+            port: port,
+        })
     }
 
     /// Get the `SocketAddr` for the address.
-    pub fn to_socket_addr(&self) -> SocketAddr {
+    pub fn to_socket_addr(&self) -> Result<SocketAddr> {
         if self.ip_data.len() == 4 {
-            SocketAddr::new(
+            Ok(SocketAddr::new(
                 IpAddr::V4(Ipv4Addr::new(
                     self.ip_data[0],
                     self.ip_data[1],
@@ -117,28 +132,42 @@ impl Address {
                     self.ip_data[3],
                 )),
                 self.port,
-            )
+            ))
+        } else if self.ip_data.len() == 16 {
+            fn to_u16(x: u8, y: u8) -> u16 {
+                use byteorder::{NetworkEndian, ReadBytesExt};
+                use std::io::Cursor;
+                let mut cursor = Cursor::new(vec![x, y]);
+                cursor
+                    .read_u16::<NetworkEndian>()
+                    .expect("Error on casting two u8's to a u16")
+            }
+
+            Ok(SocketAddr::new(
+                IpAddr::V6(Ipv6Addr::new(
+                    to_u16(self.ip_data[0], self.ip_data[1]),
+                    to_u16(self.ip_data[2], self.ip_data[3]),
+                    to_u16(self.ip_data[4], self.ip_data[5]),
+                    to_u16(self.ip_data[6], self.ip_data[7]),
+                    to_u16(self.ip_data[8], self.ip_data[9]),
+                    to_u16(self.ip_data[10], self.ip_data[11]),
+                    to_u16(self.ip_data[12], self.ip_data[13]),
+                    to_u16(self.ip_data[14], self.ip_data[15]),
+                )),
+                self.port,
+            ))
         } else {
-            unimplemented!();
+            Err(ErrorKind::IpAddressError(format!(
+                "Invalid number of IP octets: {}",
+                self.ip_data.len()
+            )).into())
         }
     }
 }
 
 impl fmt::Display for Address {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if self.ip_data.len() == 4 {
-            write!(
-                f,
-                "{}.{}.{}.{}:{}",
-                self.ip_data[0],
-                self.ip_data[1],
-                self.ip_data[2],
-                self.ip_data[3],
-                self.port
-            )
-        } else {
-            unimplemented!();
-        }
+        write!(f, "{}", self.to_socket_addr().unwrap(),)
     }
 }
 
@@ -146,14 +175,21 @@ impl fmt::Display for Address {
 pub struct LocalAddressParams {
     port: u16,
     interface_name: Option<String>,
+    force_ipv6: bool,
 }
 
 impl LocalAddressParams {
     #[allow(missing_docs)]
-    pub fn new(port: u16, interface_name: Option<String>) -> Self {
+    pub fn new(
+        port: u16,
+        interface_name: Option<String>,
+        force_ipv6: bool,
+    ) -> Self
+    {
         LocalAddressParams {
             port,
             interface_name,
+            force_ipv6,
         }
     }
 }

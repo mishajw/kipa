@@ -6,7 +6,7 @@ message Key {
 }
 
 message Address {
-  uint32 ipv4 = 1;
+  bytes ip_data = 1;
   uint32 port = 2;
 }
 

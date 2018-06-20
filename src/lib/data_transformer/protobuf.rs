@@ -18,10 +18,8 @@ use error::*;
 use key::Key;
 use node::Node;
 
-use byteorder::{NetworkEndian, ReadBytesExt, WriteBytesExt};
 use protobuf::*;
 use std::convert::{From, Into};
-use std::io::Cursor;
 
 /// The protobuf data transformer type
 #[derive(Default)]
@@ -212,12 +210,8 @@ impl From<proto_api::Key> for Key {
 
 impl Into<Result<proto_api::Address>> for Address {
     fn into(self) -> Result<proto_api::Address> {
-        let mut cursor = Cursor::new(self.ip_data.clone());
-        let ipv4 = cursor
-            .read_u32::<NetworkEndian>()
-            .chain_err(|| "Error casting address IP data to IPv4")?;
         let mut kipa_address = proto_api::Address::new();
-        kipa_address.set_ipv4(ipv4);
+        kipa_address.set_ip_data(self.ip_data);
         kipa_address.set_port(u32::from(self.port));
         Ok(kipa_address)
     }
@@ -225,11 +219,10 @@ impl Into<Result<proto_api::Address>> for Address {
 
 impl Into<Result<Address>> for proto_api::Address {
     fn into(self) -> Result<Address> {
-        let mut ip_data = vec![];
-        ip_data
-            .write_u32::<NetworkEndian>(self.get_ipv4())
-            .chain_err(|| "Error reading IP data to bytes")?;
-        Ok(Address::new(ip_data, self.get_port() as u16))
+        Ok(Address::new(
+            self.get_ip_data().to_vec(),
+            self.get_port() as u16,
+        ))
     }
 }
 

@@ -55,13 +55,15 @@ class Configuration:
             num_connects: int,
             num_search_tests: int = None,
             daemon_args: Dict[str, str] = None,
-            connection_quality: ConnectionQuality = None):
+            connection_quality: ConnectionQuality = None,
+            ipv6: bool = False):
         self.num_nodes = num_nodes
         self.connect_type = connect_type
         self.num_connects = num_connects
         self.num_search_tests = num_search_tests
         self.daemon_args = daemon_args if daemon_args is not None else {}
         self.connection_quality = connection_quality
+        self.ipv6 = ipv6
 
     @classmethod
     def from_yaml(cls, yaml_path: str) -> "Configuration":
@@ -76,7 +78,9 @@ class Configuration:
             if "num_search_tests" in parameters else None,
             parameters["daemon_args"] if "daemon_args" in parameters else None,
             ConnectionQuality.from_dict(parameters["connection_quality"])
-            if "connection_quality" in parameters else None)
+            if "connection_quality" in parameters else None,
+            parameters["ipv6"]
+            if "ipv6" in parameters else False)
 
     def run(self, output_directory: str) -> dict:
         """
@@ -98,7 +102,7 @@ class Configuration:
 
         log.info(f"Creating network of size {self.num_nodes}")
         network = networks.creator.create(
-            self.num_nodes, self.__get_daemon_args_str())
+            self.num_nodes, self.__get_daemon_args_str(), self.ipv6)
         results_dict["keys"] = network.get_all_keys()
 
         log.info("Setting connection quality")
@@ -195,6 +199,11 @@ class Configuration:
         return results_dict
 
     def __get_daemon_args_str(self) -> str:
-        return " ".join(
+        args_str = " ".join(
             [f"--{arg.replace('_', '-')} {self.daemon_args[arg]}"
              for arg in self.daemon_args])
+
+        if self.ipv6:
+            args_str += " --force-ipv6=true"
+
+        return args_str

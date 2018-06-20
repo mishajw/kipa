@@ -102,6 +102,11 @@ impl Creator for LocalAddressParams {
                 .help("Interface to operate on")
                 .default_value("none")
                 .takes_value(true),
+            clap::Arg::with_name("force_ipv6")
+                .long("force-ipv6")
+                .help("Only pick IPv6 addresses to listen on")
+                .default_value("false")
+                .takes_value(true),
         ]
     }
 
@@ -118,7 +123,12 @@ impl Creator for LocalAddressParams {
         } else {
             Some(interface_name)
         };
-        Ok(Box::new(LocalAddressParams::new(port, interface_name)))
+        parse_with_err!(force_ipv6, bool, args);
+        Ok(Box::new(LocalAddressParams::new(
+            port,
+            interface_name,
+            force_ipv6,
+        )))
     }
 }
 

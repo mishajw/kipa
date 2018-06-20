@@ -21,10 +21,14 @@ DOCKER_PREFIX = "kipa_benchmark"
 IMAGE_NAME = DOCKER_PREFIX
 NETWORK_NAME = f"{DOCKER_PREFIX}_network"
 IPV4_PREFIX = "192.168.123"
+IPV6_PREFIX = "fd92:bd99:d235:d1c5::"
 
 
-def create(size: int, daemon_args: str) -> Network:
+def create(size: int, daemon_args: str, ipv6: bool = False) -> Network:
     """Create a network of the specified size"""
+
+    log.info(
+        f"Creating network of size {size}, with arguments \"{daemon_args}\"")
 
     key_ids = create_keys(size)
 
@@ -46,17 +50,26 @@ def create(size: int, daemon_args: str) -> Network:
     log.info("Deleting old docker constructs")
     __delete_old(client)
 
+    if not ipv6:
+        log.debug("Using IPv4")
+        ipam_pool = docker.types.IPAMPool(
+            subnet=f"{IPV4_PREFIX}.0/24", gateway=f"{IPV4_PREFIX}.123")
+    else:
+        log.debug("Using IPv6")
+        ipam_pool = docker.types.IPAMPool(
+            subnet=f"{IPV6_PREFIX}/64", gateway=f"{IPV6_PREFIX}123")
+
     log.info("Building a network for containers")
     network = client.networks.create(
         NETWORK_NAME,
         driver="bridge",
         ipam=docker.types.IPAMConfig(
-            pool_configs=[docker.types.IPAMPool(
-                subnet=f"{IPV4_PREFIX}.0/24",
-                gateway=f"{IPV4_PREFIX}.123")]))
+            pool_configs=[ipam_pool]),
+        enable_ipv6=ipv6)
 
     log.info(f"Creating {len(key_ids)} containers")
-    containers = list(__create_nodes(client, key_ids, daemon_args, network))
+    containers = list(__create_nodes(
+        client, key_ids, daemon_args, ipv6, network))
     return Network(containers)
 
 
@@ -105,6 +118,7 @@ def __create_nodes(
         client,
         key_ids: List[str],
         daemon_args: str,
+        ipv6: bool,
         network: docker.models.networks.Network) -> Iterator[Node]:
     assert len(key_ids) < 256, "No support for more than 256 nodes"
 
@@ -129,11 +143,15 @@ def __create_nodes(
                     read_only=False)],
             environment={"KIPA_KEY_ID": key_id, "KIPA_ARGS": daemon_args})
 
-        ip_address = api_client.inspect_container(container.name)\
-            ["NetworkSettings"]["Networks"][network.name]["IPAddress"]
+        network_details = api_client.inspect_container(container.name) \
+            ["NetworkSettings"]["Networks"][network.name]
+        if not ipv6:
+            ip_address = f"{network_details['IPAddress']}:10842"
+        else:
+            ip_address = f"[{network_details['GlobalIPv6Address']}]:10842"
         log.debug(f"Created container with IP address {ip_address}")
 
-        yield Node(key_id, f"{ip_address}:10842", container)
+        yield Node(key_id, ip_address, container)
 
 
 def __delete_old(client) -> None:

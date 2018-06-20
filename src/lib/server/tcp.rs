@@ -9,7 +9,7 @@ use node::Node;
 use server::{Client, Server};
 use socket_server::{SocketClient, SocketHandler, SocketServer};
 
-use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener, TcpStream};
+use std::net::{IpAddr, Ipv6Addr, SocketAddr, TcpListener, TcpStream};
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
@@ -49,13 +49,13 @@ impl TcpGlobalServer {
 impl Server for TcpGlobalServer {
     fn start(&self) -> Result<thread::JoinHandle<()>> {
         let listener = TcpListener::bind(SocketAddr::new(
-            IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
+            IpAddr::V6(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0)),
             self.local_node.address.port,
         )).chain_err(|| "Error on bind to TCP socket")?;
-        trace!(
+        info!(
             self.log,
-            "Setting up server on port {}",
-            self.local_node.address.port
+            "Started listening for TCP connections";
+            "address" => %self.local_node.address
         );
 
         let arc_self = Arc::new(self.clone());
@@ -178,7 +178,7 @@ impl SocketClient for TcpGlobalClient {
         timeout: Duration,
     ) -> Result<TcpStream>
     {
-        TcpStream::connect_timeout(&node.address.to_socket_addr(), timeout)
+        TcpStream::connect_timeout(&node.address.to_socket_addr()?, timeout)
             .chain_err(|| {
                 format!("Error on trying to connect to node {}", node)
             })
