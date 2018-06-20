@@ -73,14 +73,19 @@ fn main() -> ApiResult<()> {
 
     match message_daemon(&args, &log) {
         Ok(()) => Ok(()),
-        Err(InternalError::PublicError(err)) => {
+        Err(InternalError::PublicError(err, priv_err_opt)) => {
+            if let Some(priv_err) = priv_err_opt {
+                crit!(
+                    log, "Error occured when performing command";
+                    "err_message" => %priv_err.display_chain());
+            }
             println!("Error: {}", err.message);
             Err(err)
         }
         Err(InternalError::PrivateError(err)) => {
             crit!(
                 log, "Error occured when performing command";
-                "err_message" => err.display_chain().to_string());
+                "err_message" => %err.display_chain());
             Err(ApiError::new(
                 "Internal error (check logs)".into(),
                 ApiErrorType::Internal,

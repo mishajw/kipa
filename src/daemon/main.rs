@@ -13,8 +13,7 @@ use kipa_lib::gpg_key::GpgKeyHandler;
 use kipa_lib::message_handler::MessageHandler;
 use kipa_lib::payload_handler::PayloadHandler;
 use kipa_lib::server::{Client, LocalServer, Server};
-use kipa_lib::socket_server::DEFAULT_PORT;
-use kipa_lib::{Address, Node};
+use kipa_lib::{Address, LocalAddressParams, Node};
 
 use error_chain::ChainedError;
 use std::sync::Arc;
@@ -24,6 +23,7 @@ fn main() -> ApiResult<()> {
     info!(log, "Starting servers");
 
     let mut creator_args = vec![];
+    creator_args.append(&mut LocalAddressParams::get_clap_args());
     creator_args.append(&mut DataTransformer::get_clap_args());
     creator_args.append(&mut PayloadHandler::get_clap_args());
     creator_args.append(&mut MessageHandler::get_clap_args());
@@ -33,13 +33,6 @@ fn main() -> ApiResult<()> {
 
     let args = clap::App::new("kipa_daemon")
         .arg(
-            clap::Arg::with_name("port")
-                .long("port")
-                .short("p")
-                .help("Port exposed for communicating with other nodes")
-                .takes_value(true),
-        )
-        .arg(
             clap::Arg::with_name("key_id")
                 .long("key-id")
                 .short("k")
@@ -47,19 +40,17 @@ fn main() -> ApiResult<()> {
                 .takes_value(true)
                 .required(true),
         )
-        .arg(
-            clap::Arg::with_name("interface")
-                .long("interface")
-                .short("i")
-                .help("Interface to operate on")
-                .takes_value(true),
-        )
         .args(&creator_args)
         .get_matches();
 
     match run_servers(&args, &log) {
         Ok(()) => Ok(()),
-        Err(InternalError::PublicError(err)) => {
+        Err(InternalError::PublicError(err, priv_err_opt)) => {
+            if let Some(priv_err) = priv_err_opt {
+                crit!(
+                    log, "Error occured when starting daemon";
+                    "err_message" => %priv_err.display_chain());
+            }
             println!("Error: {}", err.message);
             Err(err)
         }
@@ -83,24 +74,15 @@ fn run_servers(
     let mut gpg_key_handler = GpgKeyHandler::new(log.new(o!("gpg" => true)))?;
 
     // Create local node
-    let port = args
-        .value_of("port")
-        .unwrap_or(&DEFAULT_PORT.to_string())
-        .parse::<u16>()
-        .map_err(|_| {
-            InternalError::public(
-                "Error on parsing port number",
-                ApiErrorType::Parse,
-            )
-        })?;
-    let interface = args.value_of("interface");
-    // Get local key
     let local_key = gpg_key_handler
         .get_key(String::from(args.value_of("key_id").unwrap()))?;
     let local_node = Node::new(
         Address::get_local(
-            port,
-            interface,
+            *LocalAddressParams::create(
+                (),
+                args,
+                log.new(o!("local_address_params" => true)),
+            )?,
             log.new(o!("address_creation" => true)),
         )?,
         local_key,

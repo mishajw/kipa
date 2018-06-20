@@ -21,6 +21,8 @@
 
 pub use api::{ApiError, ApiErrorType, ApiResult};
 
+use error_chain;
+use error_chain::ChainedError;
 use std::fmt;
 
 /// Errors generated using `error_chain` module
@@ -54,7 +56,7 @@ error_chain! {
 /// `to_api_error()`.
 pub enum InternalError {
     /// Public error wrapping `ApiError`
-    PublicError(ApiError),
+    PublicError(ApiError, Option<Error>),
     /// Private error wrapping `Error` (from `error_chain`)
     PrivateError(Error),
 }
@@ -62,11 +64,30 @@ pub enum InternalError {
 impl InternalError {
     /// Helper function to create a public error
     pub fn public(s: &str, error_type: ApiErrorType) -> InternalError {
-        InternalError::PublicError(ApiError::new(s.into(), error_type))
+        InternalError::PublicError(ApiError::new(s.into(), error_type), None)
+    }
+
+    /// Helper function to create a public error that was caused by a private
+    /// error
+    pub fn public_with_error<E>(
+        s: &str,
+        error_type: ApiErrorType,
+        error: E,
+    ) -> InternalError
+    where
+        E: ::std::error::Error + Send + 'static,
+    {
+        // Copied and editted from `error_chain`'s `chain_err` function
+        let state = error_chain::State::new::<Error>(Box::new(error));
+        let new_error = error_chain::ChainedError::new(s.into(), state);
+        InternalError::PublicError(
+            ApiError::new(s.into(), error_type),
+            Some(new_error),
+        )
     }
 
     /// Helper function to create a private error
-    pub fn private(err: ErrorKind) -> InternalError {
+    pub fn private<E: Into<Error>>(err: E) -> InternalError {
         InternalError::PrivateError(err.into())
     }
 }
@@ -74,11 +95,14 @@ impl InternalError {
 impl fmt::Display for InternalError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            InternalError::PublicError(err) => {
-                write!(f, "Public error: {}", err)
+            InternalError::PublicError(pub_err, Some(priv_err)) => {
+                write!(f, "Public error: {}, caused by {}", pub_err, priv_err)
+            }
+            InternalError::PublicError(pub_err, None) => {
+                write!(f, "Public error: {}", pub_err)
             }
             InternalError::PrivateError(err) => {
-                write!(f, "Private error: {}", err)
+                write!(f, "Private error: {}", err.display_chain())
             }
         }
     }
@@ -107,13 +131,13 @@ pub fn to_internal_result<T>(result: Result<T>) -> InternalResult<T> {
 
 /// Convert an API result into an internal result
 pub fn api_to_internal_result<T>(result: ApiResult<T>) -> InternalResult<T> {
-    result.map_err(|err| InternalError::PublicError(err.into()))
+    result.map_err(|err| InternalError::PublicError(err, None))
 }
 
 /// Turn an internal result into a public-facing `ApiResult`
 pub fn to_api_result<T>(result: InternalResult<T>) -> ApiResult<T> {
     result.map_err(|err| match err {
-        InternalError::PublicError(err) => err,
+        InternalError::PublicError(err, _) => err,
         // TODO: How to log the lost error?
         InternalError::PrivateError(_) => {
             ApiError::new("Internal error".into(), ApiErrorType::Internal)

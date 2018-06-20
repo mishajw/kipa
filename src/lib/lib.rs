@@ -38,6 +38,7 @@ pub mod socket_server;
 
 mod address;
 pub use address::Address;
+pub use address::LocalAddressParams;
 
 mod key;
 pub use key::Key;

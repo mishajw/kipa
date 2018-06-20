@@ -116,12 +116,12 @@ impl PayloadClient {
             // original enum type. Find a solution to this, and make sure that
             // *all* mentions of `{Public,Private}Error` are to the correct enum
             // type.
-            return Err(InternalError::PrivateError(
-                ErrorKind::ResponseError(format!(
+            return Err(InternalError::private(ErrorKind::ResponseError(
+                format!(
                     "Response had incorrect ID, expected {}, received {}",
                     self.message_id, response_message.id
-                )).into(),
-            ));
+                ),
+            )));
         }
 
         api_to_internal_result(response_message.payload)

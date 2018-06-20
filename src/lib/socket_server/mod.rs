@@ -22,7 +22,7 @@ use std::time::{Duration, Instant};
 use slog::Logger;
 
 /// The default port for server communication.
-pub const DEFAULT_PORT: u16 = 10842;
+pub const DEFAULT_PORT: &str = "10842";
 
 /// Type for structs that interface with sockets
 pub trait SocketHandler {

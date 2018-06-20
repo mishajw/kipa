@@ -16,10 +16,11 @@ impl GpgKeyHandler {
     /// Create a new handler. Creates a new GPGME context.
     pub fn new(log: Logger) -> InternalResult<Self> {
         let context = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)
-            .map_err(|_| {
-                InternalError::public(
+            .map_err(|err| {
+                InternalError::public_with_error(
                     "Error on creating GPGME context",
                     ApiErrorType::Configuration,
+                    err,
                 )
             })?;
         debug!(log, "Created GPG key handler");
@@ -41,11 +42,8 @@ impl GpgKeyHandler {
         let mut buffer = Vec::new();
         self.context
             .export_keys(&[key], gpgme::ExportMode::empty(), &mut buffer)
-            .map_err(|_| {
-                InternalError::private(ErrorKind::GpgMeError(
-                    "Error on exporting key".into(),
-                ))
-            })?;
+            .chain_err(|| "Error on exporting key")
+            .map_err(|err| InternalError::private(err))?;
 
         Ok(Key::new(key_id, buffer))
     }

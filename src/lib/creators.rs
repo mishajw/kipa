@@ -2,6 +2,7 @@
 //!
 //! These depend on features and conditional compilation.
 
+use address::LocalAddressParams;
 use data_transformer::DataTransformer;
 use error::*;
 use message_handler::MessageHandler;
@@ -20,6 +21,30 @@ use slog_term;
 use std::fs;
 #[allow(unused)]
 use std::sync::{Arc, Mutex};
+
+/// Macro to parse a `clap` argument with appropriate errors
+macro_rules! parse_with_err {
+    ($value_name:ident, $value_type:ty, $args:ident) => {
+        let $value_name = $args
+            .value_of(stringify!($value_name))
+            .expect(&format!(
+                "Error on getting {} argument",
+                stringify!($value_name)
+            ))
+            .parse::<$value_type>()
+            .map_err(|err| {
+                InternalError::public_with_error(
+                    &format!(
+                        "Error on parsing {} as {}",
+                        stringify!($value_name),
+                        stringify!($value_type)
+                    ),
+                    ApiErrorType::Parse,
+                    err,
+                )
+            })?;
+    };
+}
 
 /// Create the root logger for the project
 pub fn create_logger(name: &'static str) -> Logger {
@@ -56,6 +81,44 @@ pub trait Creator {
             "Unselected feature",
             ApiErrorType::Configuration,
         ))
+    }
+}
+
+impl Creator for LocalAddressParams {
+    type Parameters = ();
+
+    fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
+        use socket_server::DEFAULT_PORT;
+        vec![
+            clap::Arg::with_name("port")
+                .long("port")
+                .short("p")
+                .help("Port exposed for communicating with other nodes")
+                .default_value(DEFAULT_PORT)
+                .takes_value(true),
+            clap::Arg::with_name("interface_name")
+                .long("interface-name")
+                .short("i")
+                .help("Interface to operate on")
+                .default_value("none")
+                .takes_value(true),
+        ]
+    }
+
+    fn create(
+        _parameters: Self::Parameters,
+        args: &clap::ArgMatches,
+        _log: Logger,
+    ) -> InternalResult<Box<Self>>
+    {
+        parse_with_err!(port, u16, args);
+        parse_with_err!(interface_name, String, args);
+        let interface_name = if interface_name == "none" {
+            None
+        } else {
+            Some(interface_name)
+        };
+        Ok(Box::new(LocalAddressParams::new(port, interface_name)))
     }
 }
 
@@ -202,16 +265,7 @@ impl Creator for KeySpaceManager {
         _log: Logger,
     ) -> InternalResult<Box<Self>>
     {
-        let key_space_size = args
-            .value_of("key_space_size")
-            .unwrap()
-            .parse::<usize>()
-            .map_err(|_| {
-                InternalError::public(
-                    "Error on parsing key space size",
-                    ApiErrorType::Parse,
-                )
-            })?;
+        parse_with_err!(key_space_size, usize, args);
         Ok(Box::new(KeySpaceManager::new(key_space_size)))
     }
 }
@@ -252,39 +306,9 @@ impl Creator for NeighboursStore {
     ) -> InternalResult<Box<Self>>
     {
         let (local_key, key_space_manager) = parameters;
-
-        let neighbours_size = args
-            .value_of("neighbours_size")
-            .unwrap()
-            .parse::<usize>()
-            .map_err(|_| {
-                InternalError::public(
-                    "Error on parsing neighbour size",
-                    ApiErrorType::Parse,
-                )
-            })?;
-
-        let distance_weighting = args
-            .value_of("distance_weighting")
-            .unwrap()
-            .parse::<f32>()
-            .map_err(|_| {
-                InternalError::public(
-                    "Error on parsing distance weighting",
-                    ApiErrorType::Parse,
-                )
-            })?;
-
-        let angle_weighting = args
-            .value_of("angle_weighting")
-            .unwrap()
-            .parse::<f32>()
-            .map_err(|_| {
-                InternalError::public(
-                    "Error on parsing angle weighting",
-                    ApiErrorType::Parse,
-                )
-            })?;
+        parse_with_err!(neighbours_size, usize, args);
+        parse_with_err!(distance_weighting, f32, args);
+        parse_with_err!(angle_weighting, f32, args);
 
         Ok(Box::new(NeighboursStore::new(
             &local_key,
@@ -344,49 +368,10 @@ impl Creator for PayloadHandler {
     {
         use payload_handler::graph::GraphPayloadHandler;
 
-        let search_breadth = args
-            .value_of("search_breadth")
-            .unwrap()
-            .parse::<usize>()
-            .map_err(|_| {
-                InternalError::public(
-                    "Error on parsing search breadth",
-                    ApiErrorType::Parse,
-                )
-            })?;
-
-        let connect_search_breadth = args
-            .value_of("connect_search_breadth")
-            .unwrap()
-            .parse::<usize>()
-            .map_err(|_| {
-                InternalError::public(
-                    "Error on parsing connect search breadth",
-                    ApiErrorType::Parse,
-                )
-            })?;
-
-        let max_num_search_threads = args
-            .value_of("max_num_search_threads")
-            .unwrap()
-            .parse::<usize>()
-            .map_err(|_| {
-                InternalError::public(
-                    "Error on parsing connect search breadth",
-                    ApiErrorType::Parse,
-                )
-            })?;
-
-        let search_timeout_sec = args
-            .value_of("search_timeout_sec")
-            .unwrap()
-            .parse::<usize>()
-            .map_err(|_| {
-                InternalError::public(
-                    "Error on parsing search timeout",
-                    ApiErrorType::Parse,
-                )
-            })?;
+        parse_with_err!(search_breadth, usize, args);
+        parse_with_err!(connect_search_breadth, usize, args);
+        parse_with_err!(max_num_search_threads, usize, args);
+        parse_with_err!(search_timeout_sec, usize, args);
 
         let key_space_manager: Arc<KeySpaceManager> = KeySpaceManager::create(
             local_node.clone(),

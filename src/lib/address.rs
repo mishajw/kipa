@@ -36,11 +36,14 @@ impl Address {
 
     /// Get the local address on a specified interface
     pub fn get_local(
-        port: u16,
-        interface_name: Option<&str>,
+        local_params: LocalAddressParams,
         log: Logger,
     ) -> InternalResult<Address>
     {
+        let LocalAddressParams {
+            port,
+            interface_name,
+        } = local_params;
         for interface in datalink::interfaces() {
             // Skip interfaces that are loopback or have no IPs
             if interface_name.is_none() && (interface.name == "lo")
@@ -51,7 +54,7 @@ impl Address {
 
             // Skip if we've specified a name, and this interface doesn't match
             if interface_name.is_some()
-                && interface.name != interface_name.unwrap()
+                && interface.name != interface_name.clone().unwrap()
             {
                 continue;
             }
@@ -135,6 +138,22 @@ impl fmt::Display for Address {
             )
         } else {
             unimplemented!();
+        }
+    }
+}
+
+/// Parameters for creating the local address of a client
+pub struct LocalAddressParams {
+    port: u16,
+    interface_name: Option<String>,
+}
+
+impl LocalAddressParams {
+    #[allow(missing_docs)]
+    pub fn new(port: u16, interface_name: Option<String>) -> Self {
+        LocalAddressParams {
+            port,
+            interface_name,
         }
     }
 }
