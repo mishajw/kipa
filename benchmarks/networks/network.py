@@ -1,9 +1,11 @@
 import random
 from typing import List, Dict
 import json
-
-
+import logging
+import docker
 from docker.models.containers import Container
+
+log = logging.getLogger(__name__)
 
 
 class Node:
@@ -30,8 +32,15 @@ class Network:
         return self.__key_dict[key_id].address
 
     def exec_command(self, key_id: str, command: List[str]) -> str:
-        (exit_code, output) = \
-            self.__key_dict[key_id].container.exec_run(command)
+        try:
+            (exit_code, output) = \
+                self.__key_dict[key_id].container.exec_run(command)
+        except docker.errors.APIError as e:
+            container_logs = self.__key_dict[key_id].container.logs().decode()
+            log.error(
+                f"Error on {key_id} when performing command {command}, "
+                f"logs: {container_logs}")
+            raise e
         output = output.decode()
         assert exit_code == 0, \
             f"Bad return code when executing command: {command}. " \
