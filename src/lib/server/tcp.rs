@@ -1,4 +1,4 @@
-//! Implementation of servers using TCP sockets.
+//! Implementation of servers using TCP sockets
 
 use address::Address;
 use api::{ApiVisibility, RequestMessage, ResponseMessage};
@@ -16,7 +16,7 @@ use std::time::Duration;
 
 use slog::Logger;
 
-/// Server that listens for global requests on a specified TCP socket.
+/// Server that listens for global requests on a specified TCP socket
 #[derive(Clone)]
 pub struct TcpGlobalServer {
     message_handler: Arc<MessageHandler>,
@@ -26,10 +26,7 @@ pub struct TcpGlobalServer {
 }
 
 impl TcpGlobalServer {
-    /// Create a new TCP server.
-    /// - `request_hanlder` is what to send requests to.
-    /// - `data_transformer` used to decode requests.
-    /// - `port` the port used to listen on.
+    #[allow(missing_docs)]
     pub fn new(
         message_handler: Arc<MessageHandler>,
         data_transformer: Arc<DataTransformer>,
@@ -122,7 +119,7 @@ impl SocketServer for TcpGlobalServer {
     }
 }
 
-/// Implementation of sending global requests to TCP servers.
+/// Implementation of sending global requests to TCP servers
 pub struct TcpGlobalClient {
     data_transformer: Arc<DataTransformer>,
     log: Logger,
@@ -130,7 +127,7 @@ pub struct TcpGlobalClient {
 
 impl TcpGlobalClient {
     /// Create a new sender, which uses a `DataTransformer` to serialize packets
-    /// before going on the line.
+    /// before going on the line
     pub fn new(data_transformer: Arc<DataTransformer>, log: Logger) -> Self {
         TcpGlobalClient {
             data_transformer,

@@ -1,4 +1,4 @@
-//! Performs a graph search on a network of KIPA nodes.
+//! Performs a graph search on a network of KIPA nodes
 
 use error::*;
 use key::Key;
@@ -70,13 +70,13 @@ impl PartialOrd for SearchNode {
 
 impl GraphSearch {
     /// Create a new graph search with a function for retrieving the neighbours
-    /// of the node.
+    /// of the node
     pub fn new(key_space_manager: Arc<KeySpaceManager>) -> Self {
         GraphSearch { key_space_manager }
     }
 
     /// Search for a key through looking up the neighbours of nodes in the KIPA
-    /// network.
+    /// network
     ///
     /// Simple heuristic-based greedy-first search (GFS), where the heuristic is
     /// the distance in key space, provided by `GraphSearch::key_space_manager`.
@@ -132,7 +132,7 @@ impl GraphSearch {
         // slack in threads responding
         let timeout = Duration::from_secs((timeout_sec * 2) as u64);
 
-        // Create structures for the search.
+        // Create structures for the search
         let mut to_explore = BinaryHeap::new();
         let mut found: HashSet<Key> = HashSet::new();
 
@@ -191,7 +191,7 @@ impl GraphSearch {
 
                 // Strip errors from result - if there's an error, set to an
                 // empty list. Logging of the error has already been done, so
-                // we can ignore it here.
+                // we can ignore it here
                 let flattened_found_nodes: Vec<Node> =
                     found_nodes.unwrap_or(vec![]);
                 // Check all found nodes
@@ -316,10 +316,10 @@ impl GraphSearch {
     ) -> Result<Option<T>>
     {
         // Continue the graph search looking for a key, until the `n`
-        // closest nodes have also been explored.
+        // closest nodes have also been explored
 
         // List of tuples of the `n` closest nodes, where first is the node,
-        // and second is a boolean telling whether it has been explored.
+        // and second is a boolean telling whether it has been explored
         let n_closest: Arc<Mutex<Vec<(Node, bool)>>> =
             Arc::new(Mutex::new(Vec::with_capacity(breadth)));
 

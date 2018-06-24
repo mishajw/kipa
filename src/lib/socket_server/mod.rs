@@ -1,4 +1,4 @@
-//! Contain server-based code for communicating between two nodes.
+//! Contain socket-based operations for communicating between two nodes
 //!
 //! Servers in this file use generic socket types to read and write data from
 //! sockets, and use `DataHandler` types to convert these into `Request`s and
@@ -21,7 +21,7 @@ use std::time::{Duration, Instant};
 
 use slog::Logger;
 
-/// The default port for server communication.
+/// The default port for server communication
 pub const DEFAULT_PORT: &str = "10842";
 
 /// Type for structs that interface with sockets
@@ -42,7 +42,7 @@ pub trait SocketHandler {
         socket: &Self::SocketType,
     ) -> Option<Address>;
 
-    /// Send data down a socket. Handles writing the length of the data.
+    /// Send data down a socket. Handles writing the length of the data
     fn send_data(
         &self,
         data: &[u8],
@@ -68,7 +68,7 @@ pub trait SocketHandler {
         Ok(())
     }
 
-    /// Receive data from a socket. Handles reading the length of the data.
+    /// Receive data from a socket. Handles reading the length of the data
     fn receive_data(
         &self,
         socket: &mut Self::SocketType,
@@ -99,12 +99,12 @@ pub trait SocketHandler {
 }
 
 /// Create a server that can listen for requests and pass onto a
-/// `PayloadHandler`.
+/// `PayloadHandler`
 pub trait SocketServer: SocketHandler + Send + Sync {
     /// Get the logger for this instance
     fn get_log(&self) -> &Logger;
 
-    /// Handle a socket that the server has receieved wrapped in a result.
+    /// Handle a socket that the server has receieved wrapped in a result
     fn handle_socket_result(
         &self,
         socket_result: Result<Self::SocketType>,
@@ -123,7 +123,7 @@ pub trait SocketServer: SocketHandler + Send + Sync {
         }
     }
 
-    /// Handle a socket that the server has received.
+    /// Handle a socket that the server has received
     fn handle_socket(
         &self,
         socket: Self::SocketType,
@@ -151,23 +151,23 @@ pub trait SocketServer: SocketHandler + Send + Sync {
         Ok(())
     }
 
-    /// Check that the request is OK to process.
+    /// Check that the request is OK to process
     fn check_request(&self, request: &RequestMessage) -> Result<()>;
 }
 
-/// Functionality for sending requests to other KIPA servers on a socket.
+/// Functionality for sending requests to other KIPA servers on a socket
 pub trait SocketClient: SocketHandler {
     /// Get the logger for this instance
     fn get_log(&self) -> &Logger;
 
-    /// Create a socket to connect to the `node`.
+    /// Create a socket to connect to the `node`
     fn create_socket(
         &self,
         node: &Node,
         timeout: Duration,
     ) -> Result<Self::SocketType>;
 
-    /// Send a request to another `Node` and get the `Response`.
+    /// Send a request to another `Node` and get the `Response`
     fn send(
         &self,
         node: &Node,

@@ -1,4 +1,4 @@
-//! Manages GPG keys using GPGME.
+//! Handles GPG operations using the GPGME library
 
 use error::*;
 use key::Key;
@@ -6,14 +6,14 @@ use key::Key;
 use gpgme;
 use slog::Logger;
 
-/// Provide wrapped GPGME functionality.
+/// Provide wrapped GPGME functionality
 pub struct GpgKeyHandler {
     context: gpgme::Context,
     log: Logger,
 }
 
 impl GpgKeyHandler {
-    /// Create a new handler. Creates a new GPGME context.
+    /// Create a new handler. Creates a new GPGME context
     pub fn new(log: Logger) -> InternalResult<Self> {
         let context = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)
             .map_err(|err| {
@@ -28,7 +28,7 @@ impl GpgKeyHandler {
     }
 
     /// Get the key for a key ID string. The string must be eight characters
-    /// long.
+    /// long
     pub fn get_key(&mut self, key_id: String) -> InternalResult<Key> {
         trace!(self.log, "Requested key ID"; "key_id" => &key_id);
 

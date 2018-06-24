@@ -1,4 +1,4 @@
-//! Implementation of `DataTransformer` using protobufs to serialize messages.
+//! Implementation of `DataTransformer` using protobufs to serialize messages
 //!
 //! Activated through the `use-protobuf` feature.
 //!

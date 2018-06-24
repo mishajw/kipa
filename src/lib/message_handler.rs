@@ -1,4 +1,4 @@
-//! Handle messages received from a server.
+//! Handle messages sent to a daemon
 
 use api::{
     MessageSender, RequestMessage, RequestPayload, ResponseMessage,
@@ -13,7 +13,7 @@ use versioning;
 use std::sync::Arc;
 use std::time::Duration;
 
-/// The message handling struct.
+/// The message handling struct
 pub struct MessageHandler {
     payload_handler: Arc<PayloadHandler>,
     local_node: Node,
@@ -22,7 +22,7 @@ pub struct MessageHandler {
 
 impl MessageHandler {
     /// Create a new `MessageHandler` with a `PayloadHandler` to pass payloads
-    /// to.
+    /// to
     pub fn new(
         payload_handler: Arc<PayloadHandler>,
         local_node: Node,
@@ -36,7 +36,7 @@ impl MessageHandler {
         }
     }
 
-    /// Receive and handle a request message, returning a response message.
+    /// Receive and handle a request message, returning a response message
     pub fn receive(&self, message: &RequestMessage) -> Result<ResponseMessage> {
         let sender = match message.sender {
             MessageSender::Node(ref n) => Some(n),
@@ -76,7 +76,7 @@ impl MessageHandler {
 }
 
 /// Client that will take a payload, wrap it in a message, and send to another
-/// node.
+/// node
 pub struct PayloadClient {
     message_id: u32,
     local_node: Node,
@@ -85,7 +85,7 @@ pub struct PayloadClient {
 
 impl PayloadClient {
     /// Create a new `PayloadClient` with information needed to create a message
-    /// and send it to another node.
+    /// and send it to another node
     pub fn new(
         message_id: u32,
         local_node: Node,
@@ -99,7 +99,7 @@ impl PayloadClient {
         }
     }
 
-    /// Send a payload to a node.
+    /// Send a payload to a node
     pub fn send(
         &self,
         node: &Node,

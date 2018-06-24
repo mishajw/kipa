@@ -1,11 +1,10 @@
-//! Library to create and interface with KIPA daemons and other KIPA nodes.
+//! Library containing code for the daemon and command line interface for KIPA
 //!
-//! Structure for communicating between nodes is a `PayloadHandler` that uses
-//! `server::PublicServer` and `server::PrivateServer` to receive and send
-//! messages between nodes.
+//! For an introduction to KIPA, please see the [README.md]. For an overview on
+//! the design of KIPA, please see the [design document].
 //!
-//! Communcation between these components is passed through a
-//! `data_transformer::DataTransformer` to serialise requests and responses.
+//! [README.md]: https://github.com/mishajw/kipa
+//! [design document]: https://github.com/mishajw/kipa/blob/master/docs/design.md
 
 #![warn(missing_docs)]
 

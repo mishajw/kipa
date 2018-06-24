@@ -1,5 +1,16 @@
-//! Defines the API used to communicate from a node to a node, and from a CLI to
-//! a node
+//! Defines the API used to communicate from daemon-to-daemon, and from
+//! CLI-to-daemon
+//!
+//! API endpoints are defined and documented by the [`RequestPayload`] and
+//! [`ResponsePayload`] variants.
+//!
+//! Both daemon-to-daemon and CLI-to-daemon communication use the same
+//! constructs. Each request is tied with a [visibility] scope, allowing some
+//! types of requests to only be visible from the CLI or from another node.
+//!
+//! [visibility]: ./enum.ApiVisibility.html
+//! [`RequestPayload`]: ./enum.RequestPayload.html
+//! [`ResponsePayload`]: ./enum.ResponsePayload.html
 
 use key::Key;
 use node::Node;
@@ -8,18 +19,18 @@ use std::fmt;
 
 /// Generic message type that holds a payload and a sender.
 pub struct Message<T> {
-    /// The payload of the message.
+    /// The payload of the message
     pub payload: T,
-    /// The sender of the message.
+    /// The sender of the message
     pub sender: MessageSender,
-    /// The identifier of the message.
+    /// The identifier of the message
     pub id: u32,
     /// The version of the sender of the message
     pub version: String,
 }
 
 impl<T> Message<T> {
-    /// Construct a new message with a payload and sender.
+    /// Construct a new message with a payload and sender
     pub fn new(
         payload: T,
         sender: MessageSender,
@@ -61,7 +72,7 @@ pub enum RequestPayload {
     ListNeighboursRequest(),
 }
 
-/// The response for a given request.
+/// The response for a given request
 pub enum ResponsePayload {
     /// Response for a [`Request::SearchRequest`].
     SearchResponse(Option<Node>),
@@ -136,12 +147,12 @@ impl fmt::Display for ApiError {
 /// Result for `ApiError`s
 pub type ApiResult<T> = Result<T, ApiError>;
 
-/// The visibility of an API call.
+/// The visibility of an API call
 #[derive(PartialEq)]
 pub enum ApiVisibility {
-    /// The API call is available for local connections from the CLI.
+    /// The API call is available for local connections from the CLI
     Local(),
-    /// The API call is available for remote connections from other KIPA nodes.
+    /// The API call is available for remote connections from other KIPA nodes
     Global(),
 }
 impl Eq for ApiVisibility {}

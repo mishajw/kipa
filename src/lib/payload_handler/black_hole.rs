@@ -1,4 +1,4 @@
-//! Implement `PayloadHandler` but never return anything. Used for testing.
+//! Implement `PayloadHandler` but never return anything. Used for testing
 
 use api::{RequestPayload, ResponsePayload};
 use error::*;
@@ -9,7 +9,7 @@ use payload_handler::PayloadHandler;
 use slog::Logger;
 use std::sync::Arc;
 
-/// The request handler that returns nothing.
+/// The request handler that returns nothing
 pub struct BlackHolePayloadHandler {
     log: Logger,
 }

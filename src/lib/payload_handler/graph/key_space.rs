@@ -1,4 +1,4 @@
-//! Projects a key into an n-dimenional space in order to perform graph search.
+//! Projects a key into an n-dimenional space in order to perform graph search
 
 use key::Key;
 
@@ -11,7 +11,7 @@ use std::ops::{BitXor, Deref};
 /// The default dimension size for key space
 pub const DEFAULT_KEY_SPACE_SIZE: &str = "2";
 
-/// A key space value with a set of coordinates.
+/// A key space value with a set of coordinates
 #[derive(Clone, PartialEq)]
 pub struct KeySpace {
     coords: Vec<i32>,
@@ -35,18 +35,18 @@ impl fmt::Display for KeySpace {
     }
 }
 
-/// Manage how to create and compare points in `KeySpace`.
+/// Manage how to create and compare points in `KeySpace`
 pub struct KeySpaceManager {
     num_key_space_dims: usize,
 }
 
 impl KeySpaceManager {
-    /// Create a new key space manager with a key space dimensionality.
+    /// Create a new key space manager with a key space dimensionality
     pub fn new(num_key_space_dims: usize) -> Self {
         KeySpaceManager { num_key_space_dims }
     }
 
-    /// Create a location in key space from a key.
+    /// Create a location in key space from a key
     pub fn create_from_key(&self, key: &Key) -> KeySpace {
         let chunk_size =
             (size_of::<i32>() * self.num_key_space_dims) / size_of::<u8>();
@@ -67,7 +67,7 @@ impl KeySpaceManager {
         KeySpace { coords }
     }
 
-    /// Gets the euclidean distance between points in key space.
+    /// Gets the euclidean distance between points in key space
     pub fn distance(&self, a_ks: &KeySpace, b_ks: &KeySpace) -> f32 {
         assert!(a_ks.coords.len() == b_ks.coords.len());
 
@@ -85,7 +85,7 @@ impl KeySpaceManager {
     }
 
     /// Get the angle between two points in key space `a` and `b`, relative to
-    /// a point in key space `relative_to`.
+    /// a point in key space `relative_to`
     pub fn angle(
         &self,
         relative_to: &KeySpace,
@@ -127,7 +127,7 @@ impl KeySpaceManager {
         cos_angle.min(1.0).max(-1.0).acos()
     }
 
-    /// Sort a vector by each element's closeness to some key in key space.
+    /// Sort a vector by each element's closeness to some key in key space
     pub fn sort_key_relative<T>(
         &self,
         v: &mut Vec<T>,
@@ -147,7 +147,7 @@ impl KeySpaceManager {
         });
     }
 
-    /// Remove elements from a vector that contain the same key.
+    /// Remove elements from a vector that contain the same key
     pub fn remove_duplicate_keys<T>(
         &self,
         v: &mut Vec<T>,

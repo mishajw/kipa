@@ -1,6 +1,7 @@
-//! Functons for creating various aspects of the kipa_lib.
+//! Generic construction mechanisms for components of this library
 //!
-//! These depend on features and conditional compilation.
+//! These depend on features and conditional compilation in order to bring in
+//! the correct implementations.
 
 use address::LocalAddressParams;
 use data_transformer::DataTransformer;

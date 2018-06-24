@@ -1,5 +1,5 @@
-//! Serialize and deserialize requests and responses for communication over
-//! the wire between KIPA nodes/interfaces.
+//! Serialize and deserialize requests and responses for API messages over the
+//! wire
 
 use address::Address;
 use api::{RequestMessage, ResponseMessage};
@@ -11,22 +11,22 @@ mod proto_api;
 pub mod protobuf;
 
 /// Implementors must be able to convert `Request`s and `Response`s to and from
-/// bytes.
+/// bytes
 pub trait DataTransformer: Send + Sync {
-    /// Convert a `Request` to bytes.
+    /// Convert a `Request` to bytes
     fn request_to_bytes(&self, request: &RequestMessage) -> Result<Vec<u8>>;
 
-    /// Convert a bytes to a `Request`.
+    /// Convert a bytes to a `Request`
     fn bytes_to_request(
         &self,
         data: &[u8],
         sender: Option<Address>,
     ) -> Result<RequestMessage>;
 
-    /// Convert a `Response` to bytes.
+    /// Convert a `Response` to bytes
     fn response_to_bytes(&self, response: &ResponseMessage) -> Result<Vec<u8>>;
 
-    /// Convert a bytes to a `Response`.
+    /// Convert a bytes to a `Response`
     fn bytes_to_response(
         &self,
         data: &[u8],

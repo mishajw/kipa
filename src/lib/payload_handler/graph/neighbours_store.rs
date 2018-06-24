@@ -1,4 +1,4 @@
-//! Stores the neighbours of a node, managing what nodes to keep as neighbours.
+//! Stores the neighbours of a node, managing what nodes to keep as neighbours
 
 use key::Key;
 use node::Node;
@@ -8,13 +8,13 @@ use slog::Logger;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-/// The default size of the neighbours store.
+/// The default size of the neighbours store
 pub const DEFAULT_MAX_NUM_NEIGHBOURS: &str = "3";
 
-/// The default weight for distance when considering neighbours.
+/// The default weight for distance when considering neighbours
 pub const DEFAULT_DISTANCE_WEIGHTING: &str = "0.5";
 
-/// The default weight for angle when considering neighbours.
+/// The default weight for angle when considering neighbours
 pub const DEFAULT_ANGLE_WEIGHTING: &str = "0.5";
 
 /// Holds the neighbour store data
@@ -30,7 +30,7 @@ pub struct NeighboursStore {
 
 impl NeighboursStore {
     /// Create a new neighbour store with a maximum number of neighbours and the
-    /// key of the local node.
+    /// key of the local node
     pub fn new(
         local_key: &Key,
         max_num_neighbours: usize,
@@ -56,7 +56,7 @@ impl NeighboursStore {
         }
     }
 
-    /// Get the `n` closest neighbours to some key.
+    /// Get the `n` closest neighbours to some key
     pub fn get_n_closest(&self, key: &Key, n: usize) -> Vec<Node> {
         let mut neighbours = self.neighbours.clone();
         self.key_space_manager.sort_key_relative(
@@ -71,7 +71,7 @@ impl NeighboursStore {
             .collect()
     }
 
-    /// Get all neightbours.
+    /// Get all neightbours
     pub fn get_all(&self) -> Vec<Node> {
         self.neighbours
             .iter()
@@ -79,7 +79,7 @@ impl NeighboursStore {
             .collect()
     }
 
-    /// Given a node, consider keeping it as a neighbour.
+    /// Given a node, consider keeping it as a neighbour
     pub fn consider_candidate(&mut self, node: &Node) {
         let key_space = self.key_space_manager.create_from_key(&node.key);
 

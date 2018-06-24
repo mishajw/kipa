@@ -1,5 +1,5 @@
 //! Handles sending and receiving requests on a unix pipe for local processes,
-//! such as the CLI.
+//! such as the CLI
 
 use address::Address;
 use api::{
@@ -21,10 +21,10 @@ use std::time::Duration;
 
 use slog::Logger;
 
-/// The default unix socket path.
+/// The default unix socket path
 pub const DEFAULT_UNIX_SOCKET_PATH: &str = "/tmp/kipa";
 
-/// Listens for local requests on a unix socket file.
+/// Listens for local requests on a unix socket file
 #[derive(Clone)]
 pub struct UnixSocketLocalServer {
     message_handler: Arc<MessageHandler>,
@@ -35,7 +35,7 @@ pub struct UnixSocketLocalServer {
 
 impl UnixSocketLocalServer {
     /// Create a new unix socket local receive server that listens on some file
-    /// `socket_path`.
+    /// `socket_path`
     pub fn new(
         message_handler: Arc<MessageHandler>,
         data_transformer: Arc<DataTransformer>,
@@ -125,7 +125,7 @@ impl SocketServer for UnixSocketLocalServer {
     }
 }
 
-/// Send requests to a local KIPA daemon through a unix socket file.
+/// Send requests to a local KIPA daemon through a unix socket file
 pub struct UnixSocketLocalClient {
     data_transformer: Arc<DataTransformer>,
     socket_path: String,
@@ -134,7 +134,7 @@ pub struct UnixSocketLocalClient {
 
 impl UnixSocketLocalClient {
     /// Create a new sender, which uses a `DataTransformer` to serialize packets
-    /// before going on the line.
+    /// before going on the line
     pub fn new(
         data_transformer: Arc<DataTransformer>,
         socket_path: &str,

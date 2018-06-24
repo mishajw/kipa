@@ -1,8 +1,8 @@
-//! Keys used for locating nodes and encryping messages.
+//! Keys used for locating nodes and encryping messages
 
 use std::fmt;
 
-/// Holds the data for some key implementation.
+/// The key data belonging to a node
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Key {
     // TODO: Change from String to [u8]
@@ -11,16 +11,16 @@ pub struct Key {
 }
 
 impl Key {
-    /// Create a new key for some data.
+    #[allow(missing_docs)]
     pub fn new(key_id: String, data: Vec<u8>) -> Self {
         assert!(key_id.len() == 8);
         Key { key_id, data }
     }
 
-    /// Get the data of some key.
+    #[allow(missing_docs)]
     pub fn get_data(&self) -> &Vec<u8> { &self.data }
 
-    /// Get the key ID of some key.
+    #[allow(missing_docs)]
     pub fn get_key_id(&self) -> &String { &self.key_id }
 }
 

@@ -1,4 +1,4 @@
-//! Implement `PayloadHandler` using graph based searches through KIPA net.
+//! Implement `PayloadHandler` using graph based searches through KIPA net
 
 mod key_space;
 mod neighbours_store;
@@ -39,7 +39,7 @@ pub const DEFAULT_MAX_NUM_SEARCH_THREADS: &str = "3";
 /// The default timeout for queries when performing a search
 pub const DEFAULT_SEARCH_TIMEOUT_SEC: &str = "2";
 
-/// Contains graph search information.
+/// Contains graph search information
 pub struct GraphPayloadHandler {
     key: Key,
     search_breadth: usize,
@@ -52,7 +52,7 @@ pub struct GraphPayloadHandler {
 }
 
 impl GraphPayloadHandler {
-    /// Create a new graph request handler.
+    /// Create a new graph request handler
     ///
     /// - `key` is the key for the local node.
     /// - `remote_server` is used for communicating with other nodes.
