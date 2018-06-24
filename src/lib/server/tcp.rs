@@ -6,8 +6,8 @@ use data_transformer::DataTransformer;
 use error::*;
 use message_handler::MessageHandler;
 use node::Node;
-use server::{Client, Server};
 use server::socket_server::{SocketClient, SocketHandler, SocketServer};
+use server::{Client, Server};
 
 use std::net::{IpAddr, Ipv6Addr, SocketAddr, TcpListener, TcpStream};
 use std::sync::Arc;

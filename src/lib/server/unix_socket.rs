@@ -9,8 +9,8 @@ use api::{
 use data_transformer::DataTransformer;
 use error::*;
 use message_handler::MessageHandler;
-use server::{LocalClient, LocalServer};
 use server::socket_server::{SocketHandler, SocketServer};
+use server::{LocalClient, LocalServer};
 use versioning;
 
 use std::fs;
