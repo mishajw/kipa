@@ -41,6 +41,7 @@ message GeneralRequest {
   ListNeighboursRequest list_neighbours_request = 4;
   MessageSender sender =  5;
   uint32 id = 6;
+  string version = 7;
 }
 
 message GeneralResponse {
@@ -51,6 +52,7 @@ message GeneralResponse {
   ApiError api_error = 5;
   MessageSender sender =  6;
   uint32 id = 7;
+  string version = 8;
 }
 
 message QueryRequest {

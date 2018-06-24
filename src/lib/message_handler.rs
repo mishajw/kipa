@@ -8,6 +8,7 @@ use error::*;
 use node::Node;
 use payload_handler::PayloadHandler;
 use server::Client;
+use versioning;
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -48,17 +49,26 @@ impl MessageHandler {
             self.client.clone(),
         ));
 
-        let response_payload_result = self.payload_handler.receive(
-            &message.payload,
-            sender,
-            payload_client,
-            message.id,
-        );
+        let version_verification_result =
+            api_to_internal_result(versioning::verify_version(
+                &versioning::get_version(),
+                &message.version,
+            ));
+        let response_payload_result =
+            version_verification_result.and_then(|()| {
+                self.payload_handler.receive(
+                    &message.payload,
+                    sender,
+                    payload_client,
+                    message.id,
+                )
+            });
 
         let response = ResponseMessage::new(
             to_api_result(response_payload_result),
             MessageSender::Node(self.local_node.clone()),
             message.id,
+            versioning::get_version(),
         );
 
         Ok(response)
@@ -101,6 +111,7 @@ impl PayloadClient {
             payload,
             MessageSender::Node(self.local_node.clone()),
             self.message_id,
+            versioning::get_version(),
         );
 
         let response_message = to_internal_result(self.client.send(

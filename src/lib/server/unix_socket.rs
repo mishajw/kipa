@@ -11,6 +11,7 @@ use error::*;
 use message_handler::MessageHandler;
 use server::{LocalClient, LocalServer};
 use socket_server::{SocketHandler, SocketServer};
+use versioning;
 
 use std::fs;
 use std::os::unix::net::{UnixListener, UnixStream};
@@ -182,6 +183,7 @@ impl LocalClient for UnixSocketLocalClient {
             request_payload,
             MessageSender::Cli(),
             message_id,
+            versioning::get_version(),
         );
         let request_bytes = self.data_transformer.request_to_bytes(&request)?;
 

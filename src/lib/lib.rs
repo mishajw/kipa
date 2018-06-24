@@ -25,6 +25,9 @@ extern crate slog_term;
 #[allow(unused)]
 #[macro_use]
 extern crate spectral;
+extern crate regex;
+#[macro_use]
+extern crate lazy_static;
 
 pub mod api;
 pub mod creators;
@@ -35,6 +38,7 @@ pub mod message_handler;
 pub mod payload_handler;
 pub mod server;
 pub mod socket_server;
+mod versioning;
 
 mod address;
 pub use address::Address;

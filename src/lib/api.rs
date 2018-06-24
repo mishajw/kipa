@@ -14,15 +14,24 @@ pub struct Message<T> {
     pub sender: MessageSender,
     /// The identifier of the message.
     pub id: u32,
+    /// The version of the sender of the message
+    pub version: String,
 }
 
 impl<T> Message<T> {
     /// Construct a new message with a payload and sender.
-    pub fn new(payload: T, sender: MessageSender, id: u32) -> Self {
+    pub fn new(
+        payload: T,
+        sender: MessageSender,
+        id: u32,
+        version: String,
+    ) -> Self
+    {
         Message {
             payload,
             sender,
             id,
+            version,
         }
     }
 }

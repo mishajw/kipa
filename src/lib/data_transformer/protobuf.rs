@@ -55,7 +55,7 @@ impl DataTransformer for ProtobufDataTransformer {
             request.sender.clone().into();
         general_request.set_sender(sender?);
         general_request.set_id(request.id);
-
+        general_request.set_version(request.version.clone());
         general_request
             .write_to_bytes()
             .chain_err(|| "Error on write request to bytes")
@@ -91,8 +91,14 @@ impl DataTransformer for ProtobufDataTransformer {
 
         let sender: Result<MessageSender> =
             proto_to_message_sender(&request.get_sender(), sender);
+        let version = request.get_version().to_string();
 
-        Ok(RequestMessage::new(payload, sender?, request.get_id()))
+        Ok(RequestMessage::new(
+            payload,
+            sender?,
+            request.get_id(),
+            version,
+        ))
     }
 
     fn response_to_bytes(&self, response: &ResponseMessage) -> Result<Vec<u8>> {
@@ -133,6 +139,7 @@ impl DataTransformer for ProtobufDataTransformer {
             response.sender.clone().into();
         general_response.set_sender(sender?);
         general_response.set_id(response.id);
+        general_response.set_version(response.version.clone());
 
         general_response
             .write_to_bytes()
@@ -188,8 +195,14 @@ impl DataTransformer for ProtobufDataTransformer {
 
         let sender: Result<MessageSender> =
             proto_to_message_sender(&response.get_sender(), sender);
+        let version = response.get_version().to_string();
 
-        Ok(ResponseMessage::new(payload, sender?, response.get_id()))
+        Ok(ResponseMessage::new(
+            payload,
+            sender?,
+            response.get_id(),
+            version,
+        ))
     }
 }
 

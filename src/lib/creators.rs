@@ -10,6 +10,7 @@ use node::Node;
 use payload_handler::PayloadHandler;
 #[allow(unused)]
 use server::{Client, LocalClient, LocalServer, Server};
+use versioning;
 
 use clap;
 use slog;
@@ -58,7 +59,7 @@ pub fn create_logger(name: &'static str) -> Logger {
     let drain = slog_async::Async::new(drain).build().fuse();
     slog::Logger::root(
         Arc::new(drain),
-        o!("name" => name, "version" => "0.1.0"),
+        o!("name" => name, "version" => versioning::get_version()),
     )
 }
 
