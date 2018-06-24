@@ -7,6 +7,9 @@ use node::Node;
 use std::thread::JoinHandle;
 use std::time::Duration;
 
+#[cfg(any(feature = "use-tcp", feature = "use-unix-socket"))]
+pub mod socket_server;
+
 #[cfg(feature = "use-tcp")]
 pub mod tcp;
 

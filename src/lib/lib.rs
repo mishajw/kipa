@@ -36,7 +36,6 @@ pub mod gpg_key;
 pub mod message_handler;
 pub mod payload_handler;
 pub mod server;
-pub mod socket_server;
 mod versioning;
 
 mod address;

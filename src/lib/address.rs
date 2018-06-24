@@ -6,6 +6,9 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 use pnet::datalink;
 use slog::Logger;
 
+/// The default port for server communication
+pub const DEFAULT_PORT: &str = "10842";
+
 /// An address of a node
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Address {

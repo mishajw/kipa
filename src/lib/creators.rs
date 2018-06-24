@@ -90,7 +90,7 @@ impl Creator for LocalAddressParams {
     type Parameters = ();
 
     fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
-        use socket_server::DEFAULT_PORT;
+        use address::DEFAULT_PORT;
         vec![
             clap::Arg::with_name("port")
                 .long("port")

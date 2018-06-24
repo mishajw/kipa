@@ -8,7 +8,8 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-No changes.
+### Refactor
+- Move `src/lib/socket_server/mod.rs` to `src/lib/server/socket_server.rs`
 
 ## 0.1.2 - 2018-06-24
 
