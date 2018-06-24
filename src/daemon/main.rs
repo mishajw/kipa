@@ -112,18 +112,19 @@ fn run_servers(
     )?.into();
 
     let message_handler: Arc<MessageHandler> = MessageHandler::create(
-        (payload_handler, local_node.clone(), global_client),
+        (
+            payload_handler,
+            data_transformer.clone(),
+            local_node.clone(),
+            global_client,
+        ),
         args,
         log.new(o!("message_handler" => true)),
     )?.into();
 
     // Set up listening for connections
     let global_server = Server::create(
-        (
-            message_handler.clone(),
-            data_transformer.clone(),
-            local_node.clone(),
-        ),
+        (message_handler.clone(), local_node.clone()),
         args,
         log.new(o!("global_server" => true)),
     )?;

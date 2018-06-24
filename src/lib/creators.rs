@@ -163,7 +163,7 @@ impl Creator for Client {
 }
 
 impl Creator for Server {
-    type Parameters = (Arc<MessageHandler>, Arc<DataTransformer>, Node);
+    type Parameters = (Arc<MessageHandler>, Node);
     #[cfg(feature = "use-tcp")]
     fn create(
         parameters: Self::Parameters,
@@ -172,10 +172,9 @@ impl Creator for Server {
     ) -> InternalResult<Box<Self>>
     {
         use server::tcp::TcpGlobalServer;
-        let (message_handler, data_transformer, local_node) = parameters;
+        let (message_handler, local_node) = parameters;
         Ok(Box::new(TcpGlobalServer::new(
             message_handler,
-            data_transformer.clone(),
             local_node,
             log,
         )))
@@ -239,16 +238,19 @@ impl Creator for LocalClient {
 }
 
 impl Creator for MessageHandler {
-    type Parameters = (Arc<PayloadHandler>, Node, Arc<Client>);
+    type Parameters =
+        (Arc<PayloadHandler>, Arc<DataTransformer>, Node, Arc<Client>);
     fn create(
         parameters: Self::Parameters,
         _args: &clap::ArgMatches,
         _log: Logger,
     ) -> InternalResult<Box<Self>>
     {
-        let (payload_handler, local_node, client) = parameters;
+        let (payload_handler, data_transformer, local_node, client) =
+            parameters;
         Ok(Box::new(MessageHandler::new(
             payload_handler,
+            data_transformer,
             local_node,
             client,
         )))

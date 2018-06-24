@@ -106,11 +106,10 @@ pub trait SocketServer: SocketHandler + Send + Sync {
         &self,
         socket_result: Result<Self::SocketType>,
         message_handler: Arc<MessageHandler>,
-        data_transformer: Arc<DataTransformer>,
     )
     {
-        let result = socket_result
-            .map(|s| self.handle_socket(s, message_handler, data_transformer));
+        let result =
+            socket_result.map(|s| self.handle_socket(s, message_handler));
 
         if let Err(ref err) = result {
             error!(
@@ -125,7 +124,6 @@ pub trait SocketServer: SocketHandler + Send + Sync {
         &self,
         socket: Self::SocketType,
         message_handler: Arc<MessageHandler>,
-        data_transformer: Arc<DataTransformer>,
     ) -> Result<()>
     {
         let log = self.get_log();
@@ -136,12 +134,10 @@ pub trait SocketServer: SocketHandler + Send + Sync {
         let request_data = self.receive_data(&mut inner_socket, None)?;
 
         trace!(log, "Processing request");
-        let request =
-            data_transformer.bytes_to_request(&request_data.to_vec(), address)?;
+        let response_data =
+            message_handler.receive_bytes(&request_data, address)?;
 
         trace!(log, "Sending response");
-        let response = message_handler.receive(&request)?;
-        let response_data = data_transformer.response_to_bytes(&response)?;
         self.send_data(&response_data, &mut inner_socket, None)?;
         trace!(log, "Sent response bytes");
 
@@ -169,6 +165,7 @@ pub trait SocketClient: SocketHandler {
         &self,
         node: &Node,
         request: RequestMessage,
+        // TODO: Can we remove `data_transformer` usage here?
         data_transformer: &DataTransformer,
         timeout: Duration,
     ) -> Result<ResponseMessage>

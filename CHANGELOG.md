@@ -10,6 +10,7 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 
 ### Refactor
 - Move `src/lib/socket_server/mod.rs` to `src/lib/server/socket_server.rs`
+- Move usage of `DataTransformer` from servers into `MessageHandler`
 
 ## 0.1.2 - 2018-06-24
 

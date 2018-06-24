@@ -20,7 +20,6 @@ use slog::Logger;
 #[derive(Clone)]
 pub struct TcpGlobalServer {
     message_handler: Arc<MessageHandler>,
-    data_transformer: Arc<DataTransformer>,
     local_node: Node,
     log: Logger,
 }
@@ -29,14 +28,12 @@ impl TcpGlobalServer {
     #[allow(missing_docs)]
     pub fn new(
         message_handler: Arc<MessageHandler>,
-        data_transformer: Arc<DataTransformer>,
         local_node: Node,
         log: Logger,
     ) -> Self
     {
         TcpGlobalServer {
             message_handler,
-            data_transformer,
             local_node,
             log,
         }
@@ -64,7 +61,6 @@ impl Server for TcpGlobalServer {
                     spawn_self.handle_socket_result(
                         socket.chain_err(|| "Failed to create socket"),
                         spawn_self.message_handler.clone(),
-                        spawn_self.data_transformer.clone(),
                     )
                 });
             });

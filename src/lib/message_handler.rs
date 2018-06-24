@@ -1,9 +1,11 @@
 //! Handle messages sent to a daemon
 
+use address::Address;
 use api::{
     MessageSender, RequestMessage, RequestPayload, ResponseMessage,
     ResponsePayload,
 };
+use data_transformer::DataTransformer;
 use error::*;
 use node::Node;
 use payload_handler::PayloadHandler;
@@ -16,6 +18,7 @@ use std::time::Duration;
 /// The message handling struct
 pub struct MessageHandler {
     payload_handler: Arc<PayloadHandler>,
+    data_transformer: Arc<DataTransformer>,
     local_node: Node,
     client: Arc<Client>,
 }
@@ -25,19 +28,42 @@ impl MessageHandler {
     /// to
     pub fn new(
         payload_handler: Arc<PayloadHandler>,
+        data_transformer: Arc<DataTransformer>,
         local_node: Node,
         client: Arc<Client>,
     ) -> Self
     {
         MessageHandler {
             payload_handler,
+            data_transformer,
             local_node,
             client,
         }
     }
 
+    /// Receive and handle the bytes of a request message, returning the bytes
+    /// of response message
+    pub fn receive_bytes(
+        &self,
+        request_data: &[u8],
+        address: Option<Address>,
+    ) -> Result<Vec<u8>>
+    {
+        let request = self
+            .data_transformer
+            .bytes_to_request(&request_data.to_vec(), address)?;
+
+        let response = self.receive_message(&request)?;
+
+        self.data_transformer.response_to_bytes(&response)
+    }
+
     /// Receive and handle a request message, returning a response message
-    pub fn receive(&self, message: &RequestMessage) -> Result<ResponseMessage> {
+    pub fn receive_message(
+        &self,
+        message: &RequestMessage,
+    ) -> Result<ResponseMessage>
+    {
         let sender = match message.sender {
             MessageSender::Node(ref n) => Some(n),
             MessageSender::Cli() => None,

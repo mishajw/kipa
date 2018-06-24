@@ -78,7 +78,6 @@ impl LocalServer for UnixSocketLocalServer {
                     spawn_self.handle_socket_result(
                         socket.chain_err(|| "Failed to create socket"),
                         spawn_self.message_handler.clone(),
-                        spawn_self.data_transformer.clone(),
                     )
                 });
             });

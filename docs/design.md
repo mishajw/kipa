@@ -42,10 +42,10 @@ All components exist in `kipa_lib`:
 This section describes the control flow from receiving a request, to replying
 with a response:
 - `Server` receives a request on a listening port (or similar
-  mechanism) and:
-  - Decodes the raw bytes using a `DataTransformer`.
-  - Passes the decoded message to a `MessageHandler`.
+  mechanism) and passes the decoded message to a `MessageHandler`.
 - `MessageHandler` is responsible for:
+  - Decodes the raw bytes using a `DataTransformer`, to get sender information
+    and encryped payload.
   - Decrypting the payload, and decoding it using a `DataTransformer`.
   - Setting the correct message identifier once the reply has been created.
   - Creating an interface for sending messages to other nodes, in order for the
