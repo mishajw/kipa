@@ -10,10 +10,8 @@ pipeline:
          apk -U add
          rust cargo gnupg gettext file make automake autoconf protobuf bash
          python3
-      # Install rust-fmt for checking if code is formatted correctly
-      - cargo install rustfmt && export PATH=$PATH:/root/.cargo/bin
-      # Check that there is no formatting to be done by `cargo fmt`
-      - '[ -z $("cargo fmt -- --write-mode diff") ]'
+      # TODO: Check code is formatted correctly. This requires a nightly rust
+      # tool chain, which is not available in alpine currently.
       # Check that we can build and test all configurations
       - ./resources/build-configurations.py
       # TODO: Run python end-to-end tests
