@@ -6,6 +6,7 @@
 use address::LocalAddressParams;
 use data_transformer::DataTransformer;
 use error::*;
+use gpg_key::GpgKeyHandler;
 use message_handler::MessageHandler;
 use node::Node;
 use payload_handler::PayloadHandler;
@@ -145,6 +146,44 @@ impl Creator for DataTransformer {
     {
         use data_transformer::protobuf::ProtobufDataTransformer;
         Ok(Box::new(ProtobufDataTransformer {}))
+    }
+}
+
+impl Creator for GpgKeyHandler {
+    type Parameters = ();
+
+    fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
+        use gpg_key::{
+            DEFAULT_OWNED_GNUPG_HOME_DIRECTORY, DEFAULT_SECRET_PATH,
+        };
+        vec![
+            clap::Arg::with_name("owned_gnupg_home_directory")
+                .long("gnupg-home-directory")
+                .help("Modifiable GnuPG directory to load/delete keys from")
+                .takes_value(true)
+                .default_value(DEFAULT_OWNED_GNUPG_HOME_DIRECTORY),
+            clap::Arg::with_name("secret_path")
+                .long("secret-path")
+                .help("File containing password for GPG keys")
+                .takes_value(true)
+                .default_value(DEFAULT_SECRET_PATH),
+        ]
+    }
+
+    fn create(
+        _parameters: Self::Parameters,
+        args: &clap::ArgMatches,
+        log: Logger,
+    ) -> InternalResult<Box<Self>>
+    {
+        let owned_gnupg_home_directory =
+            args.value_of("owned_gnupg_home_directory").unwrap();
+        let secret_path = args.value_of("secret_path").unwrap();
+        Ok(Box::new(GpgKeyHandler::new(
+            owned_gnupg_home_directory.into(),
+            secret_path,
+            log,
+        )?))
     }
 }
 

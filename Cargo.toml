@@ -32,7 +32,7 @@ use-black-hole = []
 [dependencies]
 error-chain = "0.11.0"
 protobuf = "1.5.0"
-gpgme = "0.7.2"
+gpgme = "0.8.0"
 clap = "2"
 byteorder = "1.2.2"
 pnet = "0.21.0"

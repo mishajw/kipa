@@ -120,7 +120,8 @@ def __create_docker_directory(debug: bool) -> str:
             WORKDIR /root
             RUN \\
                 chmod +x kipa_daemon && \\
-                chmod +x kipa_cli
+                chmod +x kipa_cli && \\
+                echo "p@ssword" >> secret.txt
             CMD {"RUST_BACKTRACE=1" if debug else ""} ./kipa_daemon \\
                 --key-id $KIPA_KEY_ID \\
                 $KIPA_ARGS

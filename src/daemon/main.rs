@@ -32,6 +32,7 @@ fn main() -> ApiResult<()> {
     creator_args.append(&mut Client::get_clap_args());
     creator_args.append(&mut Server::get_clap_args());
     creator_args.append(&mut LocalServer::get_clap_args());
+    creator_args.append(&mut GpgKeyHandler::get_clap_args());
 
     let args = clap::App::new("kipa_daemon")
         .arg(
@@ -73,7 +74,8 @@ fn run_servers(
     log: &slog::Logger,
 ) -> InternalResult<()>
 {
-    let mut gpg_key_handler = GpgKeyHandler::new(log.new(o!("gpg" => true)))?;
+    let mut gpg_key_handler =
+        GpgKeyHandler::create((), args, log.new(o!("gpg" => true)))?;
 
     // Create local node
     let local_key = gpg_key_handler

@@ -32,6 +32,7 @@ fn main() -> ApiResult<()> {
     creator_args.append(&mut DataTransformer::get_clap_args());
     creator_args.append(&mut LocalServer::get_clap_args());
     creator_args.append(&mut LocalClient::get_clap_args());
+    creator_args.append(&mut GpgKeyHandler::get_clap_args());
 
     let args = clap::App::new("kipa_cli")
         .subcommand(
@@ -101,7 +102,8 @@ fn message_daemon(
     log: &slog::Logger,
 ) -> InternalResult<()>
 {
-    let mut gpg_key_handler = GpgKeyHandler::new(log.new(o!("gpg" => true)))?;
+    let mut gpg_key_handler =
+        GpgKeyHandler::create((), args, log.new(o!("gpg" => true)))?;
 
     let data_transformer: Arc<DataTransformer> = DataTransformer::create(
         (),
