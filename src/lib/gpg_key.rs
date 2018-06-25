@@ -34,6 +34,12 @@ pub struct GpgKeyHandler {
     log: Logger,
 }
 
+// Must be implemented for `GpgKeyHandler` to be sent between threads - not
+// automatically done as `gpgme::Context` does not implement `Send`.
+//
+// TODO: Remove `unsafe impl`
+unsafe impl Send for GpgKeyHandler {}
+
 impl GpgKeyHandler {
     /// Create a new handler. Creates a new GPGME context
     pub fn new(

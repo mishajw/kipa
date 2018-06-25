@@ -277,19 +277,30 @@ impl Creator for LocalClient {
 }
 
 impl Creator for MessageHandler {
-    type Parameters =
-        (Arc<PayloadHandler>, Arc<DataTransformer>, Node, Arc<Client>);
+    type Parameters = (
+        Arc<PayloadHandler>,
+        Arc<DataTransformer>,
+        Arc<Mutex<GpgKeyHandler>>,
+        Node,
+        Arc<Client>,
+    );
     fn create(
         parameters: Self::Parameters,
         _args: &clap::ArgMatches,
         _log: Logger,
     ) -> InternalResult<Box<Self>>
     {
-        let (payload_handler, data_transformer, local_node, client) =
-            parameters;
+        let (
+            payload_handler,
+            data_transformer,
+            gpg_key_handler,
+            local_node,
+            client,
+        ) = parameters;
         Ok(Box::new(MessageHandler::new(
             payload_handler,
             data_transformer,
+            gpg_key_handler,
             local_node,
             client,
         )))

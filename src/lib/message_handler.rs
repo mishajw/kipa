@@ -7,18 +7,20 @@ use api::{
 };
 use data_transformer::DataTransformer;
 use error::*;
+use gpg_key::GpgKeyHandler;
 use node::Node;
 use payload_handler::PayloadHandler;
 use server::Client;
 use versioning;
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 /// The message handling struct
 pub struct MessageHandler {
     payload_handler: Arc<PayloadHandler>,
     data_transformer: Arc<DataTransformer>,
+    gpg_key_handler: Arc<Mutex<GpgKeyHandler>>,
     local_node: Node,
     client: Arc<Client>,
 }
@@ -29,6 +31,7 @@ impl MessageHandler {
     pub fn new(
         payload_handler: Arc<PayloadHandler>,
         data_transformer: Arc<DataTransformer>,
+        gpg_key_handler: Arc<Mutex<GpgKeyHandler>>,
         local_node: Node,
         client: Arc<Client>,
     ) -> Self
@@ -36,6 +39,7 @@ impl MessageHandler {
         MessageHandler {
             payload_handler,
             data_transformer,
+            gpg_key_handler,
             local_node,
             client,
         }
