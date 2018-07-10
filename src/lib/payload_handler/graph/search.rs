@@ -82,8 +82,8 @@ impl GraphSearch {
     /// the distance in key space, provided by `GraphSearch::key_space_manager`.
     ///
     /// Differs from normal GFS as neighbour queries are done in parallel, with
-    /// some maximum (TODO: Defined by which variable?) amount of queries
-    /// running simultaneously. All querying threads push results into a
+    /// a maximum amount of queries running simultaneously (defined by
+    /// `max_num_active_threads`). All querying threads push results into a
     /// thread-safe priority queue. This means that the GFS is impacted by which
     /// one of the queries resolve first.
     ///
