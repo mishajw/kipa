@@ -217,7 +217,8 @@ impl PayloadHandler for GraphPayloadHandler {
         info!(
             self.log,
             "Received request";
-            "sender" => sender.map(|n| n.to_string()).unwrap_or_else(|| "none".into()));
+            "sender" =>
+                sender.map(|n| n.to_string()).unwrap_or_else(|| "none".into()));
 
         if sender.is_some() {
             self.neighbours_store
