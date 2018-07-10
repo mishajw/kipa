@@ -12,7 +12,7 @@ GPG_ARGS = ["--homedir", GPG_HOME]
 
 def create_keys(num: int) -> List[str]:
     if not os.path.isdir(GPG_HOME):
-        os.mkdir(GPG_HOME, 700)
+        os.mkdir(GPG_HOME)
 
     existing_key_ids = __get_existing_key_ids()
     num_keys_to_create = num - len(existing_key_ids)
@@ -57,6 +57,8 @@ def create_keys(num: int) -> List[str]:
                 "--generate-key", gpg_commands.name],
             stdout=subprocess.PIPE)
         gpg_process.wait()
+        assert gpg_process.returncode == 0, \
+            f"Key creation failed with code {gpg_process.returncode}"
         log.debug("Finished making key")
 
     key_ids = __get_existing_key_ids()
