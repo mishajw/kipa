@@ -9,6 +9,7 @@ use std::env;
 use std::fs;
 use std::io::{Read, Write};
 use std::path::Path;
+use std::sync::{Arc, Mutex};
 
 const GNUPG_HOME_VAR: &str = "GNUPGHOME";
 
@@ -18,27 +19,50 @@ pub const DEFAULT_OWNED_GNUPG_HOME_DIRECTORY: &str = "/tmp/kipa_gnupg";
 /// Default owned GnuPG home directory
 pub const DEFAULT_SECRET_PATH: &str = "./secret.txt";
 
-/// Provide wrapped GPGME functionality
-///
-/// There **must** only be one instance of this struct, as it changes
-/// environment variables and relies on them not being changed by another
-/// instance.
-///
-/// TODO: Find way to "lock" the environment variable
-pub struct GpgKeyHandler {
+/// Wrapper around the GPGME context, with operations to change the GPGME home
+/// directory
+struct GpgContext {
     context: gpgme::Context,
+}
+
+impl GpgContext {
+    /// The only instance of `GpgContext` is a global static `Mutex`, meaning
+    /// that the environment variable changes will not have read/write races.
+    fn set_gpg_home(&self, home_directory: &str) {
+        env::set_var(GNUPG_HOME_VAR, home_directory)
+    }
+}
+
+/// The wrapper is also used so  that we can unsafely implement `Send` for this
+/// trait, so that the same context can be used across multiple threads.
+///
+/// TODO: Remove `unsafe impl`
+unsafe impl Send for GpgContext {}
+
+lazy_static! {
+    /// The global context for GPGME
+    static ref GPG_CONTEXT: Arc<Mutex<GpgContext>> =
+        Arc::new(Mutex::new(GpgContext {
+            context: gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)
+                .expect("Failed to create GPGME context")
+        }));
+}
+
+/// Macro to handle locking and unwrapping the GPGME context
+macro_rules! get_context {
+    () => {
+        &mut GPG_CONTEXT.lock().unwrap().context
+    };
+}
+
+/// Interface to GPGME functionality using library constructs
+pub struct GpgKeyHandler {
     owned_gnupg_home_directory: String,
     user_gnupg_home_directory: String,
-    active_directory_type: GpgDirectoryType,
+    active_directory_type: Mutex<GpgDirectoryType>,
     secret: String,
     log: Logger,
 }
-
-// Must be implemented for `GpgKeyHandler` to be sent between threads - not
-// automatically done as `gpgme::Context` does not implement `Send`.
-//
-// TODO: Remove `unsafe impl`
-unsafe impl Send for GpgKeyHandler {}
 
 impl GpgKeyHandler {
     /// Create a new handler. Creates a new GPGME context
@@ -48,16 +72,6 @@ impl GpgKeyHandler {
         log: Logger,
     ) -> InternalResult<Self>
     {
-        let mut context = gpgme::Context::from_protocol(
-            gpgme::Protocol::OpenPgp,
-        ).map_err(|err| {
-            InternalError::public_with_error(
-                "Error on creating GPGME context",
-                ApiErrorType::Configuration,
-                err,
-            )
-        })?;
-
         // Store the original GPG directory
         let default_gnupg_home_directory = Path::new(
             &env::var("HOME").expect("No home directory set in environment")
@@ -97,7 +111,7 @@ impl GpgKeyHandler {
         // Set the pinentry mode for GPG so that we can enter passphrase
         // programatically
         to_internal_result(
-            context
+            get_context!()
                 .set_pinentry_mode(gpgme::PinentryMode::Loopback)
                 .chain_err(|| "Error on setting pinentry mode to loopback"),
         )?;
@@ -116,10 +130,9 @@ impl GpgKeyHandler {
 
         debug!(log, "Created GPG key handler");
         Ok(GpgKeyHandler {
-            context,
             owned_gnupg_home_directory,
             user_gnupg_home_directory,
-            active_directory_type: GpgDirectoryType::UserDirectory,
+            active_directory_type: Mutex::new(GpgDirectoryType::UserDirectory),
             secret,
             log,
         })
@@ -127,13 +140,13 @@ impl GpgKeyHandler {
 
     /// Get the key for a key ID string. The string must be eight characters
     /// long
-    pub fn get_key(&mut self, key_id: String) -> InternalResult<Key> {
+    pub fn get_key(&self, key_id: String) -> InternalResult<Key> {
         trace!(self.log, "Requested key ID"; "key_id" => &key_id);
-
         // Ensure we are using the user's GPG directory
         self.switch_directory_type(GpgDirectoryType::UserDirectory);
+        let context = get_context!();
 
-        let key = self.context.get_key(key_id.clone()).map_err(|_| {
+        let key = context.get_key(key_id.clone()).map_err(|_| {
             InternalError::public(
                 &format!("Could not find key with ID {}", key_id),
                 ApiErrorType::External,
@@ -141,7 +154,7 @@ impl GpgKeyHandler {
         })?;
         assert!(key.id().unwrap().ends_with(key_id.as_str()));
         let mut buffer = Vec::new();
-        self.context
+        context
             .export_keys(&[key], gpgme::ExportMode::empty(), &mut buffer)
             .chain_err(|| "Error on exporting key")
             .map_err(|err| InternalError::private(err))?;
@@ -150,15 +163,16 @@ impl GpgKeyHandler {
     }
 
     /// Encrypt data for a recipient, using the recipient's public key
-    pub fn encrypt(&mut self, data: &[u8], recipient: &Key) -> Result<Vec<u8>> {
+    pub fn encrypt(&self, data: &[u8], recipient: &Key) -> Result<Vec<u8>> {
         debug!(
             self.log, "Encrypting data";
             "length" => data.len(), "recipient" => %recipient);
-
         self.switch_directory_type(GpgDirectoryType::OwnedDirectory);
-        let gpg_key = self.ensure_key_in_gpg(recipient)?;
+        let context = get_context!();
+
+        let gpg_key = self.ensure_key_in_gpg(recipient, context)?;
         let mut encrypted_data = Vec::new();
-        self.context
+        context
             .encrypt(Some(&gpg_key), data, &mut encrypted_data)
             .chain_err(|| "Error on encrypt operation")?;
         debug!(
@@ -170,14 +184,16 @@ impl GpgKeyHandler {
     /// Decrypt data from a sender, using the recipient's private key
     ///
     /// We can only decrypt with keys in the user's GPG directory.
-    pub fn decrypt(&mut self, data: &[u8], recipient: &Key) -> Result<Vec<u8>> {
+    pub fn decrypt(&self, data: &[u8], recipient: &Key) -> Result<Vec<u8>> {
         debug!(
             self.log, "Decrypting data";
             "length" => data.len(), "recipient" => %recipient);
         self.switch_directory_type(GpgDirectoryType::UserDirectory);
+        let context = get_context!();
+
         let mut decrypted_data = Vec::new();
         let passphrase_provider = self.get_passphrase_provider();
-        self.context
+        context
             .with_passphrase_provider(passphrase_provider, |context| {
                 context.decrypt(data, &mut decrypted_data)
             })
@@ -188,30 +204,27 @@ impl GpgKeyHandler {
     /// Sign data as a sender, using the sender's private key
     ///
     /// We can only sign with keys in the user's GPG directory.
-    pub fn sign(&mut self, data: &[u8], sender: &Key) -> Result<Vec<u8>> {
+    pub fn sign(&self, data: &[u8], sender: &Key) -> Result<Vec<u8>> {
         debug!(
             self.log, "Signing data";
             "length" => data.len(), "sender" => %sender);
-
         self.switch_directory_type(GpgDirectoryType::UserDirectory);
-        let mut signature = Vec::new();
+        let context = get_context!();
 
+        let mut signature = Vec::new();
         let passphrase_provider = self.get_passphrase_provider();
-        self.context.with_passphrase_provider(
-            passphrase_provider,
-            |context| {
-                let gpg_key = context
-                    .get_secret_key(sender.get_key_id())
-                    .chain_err(|| "Error on getting key for signing")?;
-                context
-                    .add_signer(&gpg_key)
-                    .chain_err(|| "Error on adding signer")?;
-                context
-                    .sign(gpgme::SignMode::Detached, data, &mut signature)
-                    .chain_err(|| "Error on sign operation")
-            },
-        )?;
-        self.context.clear_signers();
+        context.with_passphrase_provider(passphrase_provider, |context| {
+            let gpg_key = context
+                .get_secret_key(sender.get_key_id())
+                .chain_err(|| "Error on getting key for signing")?;
+            context
+                .add_signer(&gpg_key)
+                .chain_err(|| "Error on adding signer")?;
+            context
+                .sign(gpgme::SignMode::Detached, data, &mut signature)
+                .chain_err(|| "Error on sign operation")
+        })?;
+        context.clear_signers();
         debug!(
             self.log, "Signing successful";
             "signature_length" => signature.len());
@@ -220,7 +233,7 @@ impl GpgKeyHandler {
 
     /// Verify data signed by a sender, using the sender's public key
     pub fn verify(
-        &mut self,
+        &self,
         data: &[u8],
         signature: &[u8],
         sender: &Key,
@@ -230,8 +243,9 @@ impl GpgKeyHandler {
             self.log, "Verifying data";
             "length" => data.len(), "sender" => %sender);
         self.switch_directory_type(GpgDirectoryType::OwnedDirectory);
+        let context = get_context!();
 
-        let gpg_key = self.ensure_key_in_gpg(sender)?;
+        let gpg_key = self.ensure_key_in_gpg(sender, context)?;
 
         // Get all fingerprints of the sender including subkeys, so we can check
         // if any of its subkeys signed the data
@@ -242,8 +256,7 @@ impl GpgKeyHandler {
         possible_fingerprints.push(sender.get_key_id());
 
         // Get the signatures
-        let signatures_result = self
-            .context
+        let signatures_result = context
             .verify_detached(signature, data)
             .chain_err(|| "Error on verifying signature")?;
 
@@ -278,9 +291,12 @@ impl GpgKeyHandler {
         Ok(())
     }
 
-    fn switch_directory_type(&mut self, directory_type: GpgDirectoryType) {
+    fn switch_directory_type(&self, directory_type: GpgDirectoryType) {
+        let active_directory_type: &mut GpgDirectoryType =
+            &mut self.active_directory_type.lock().unwrap();
+
         // If we're already in the correct directory, don't do anything
-        if self.active_directory_type == directory_type {
+        if *active_directory_type == directory_type {
             return;
         }
 
@@ -289,27 +305,32 @@ impl GpgKeyHandler {
                 debug!(
                     self.log, "Changing to user GPG home directory";
                     "directory" => self.user_gnupg_home_directory.clone());
-                env::set_var(
-                    GNUPG_HOME_VAR,
-                    self.user_gnupg_home_directory.clone(),
-                )
+                GPG_CONTEXT
+                    .lock()
+                    .unwrap()
+                    .set_gpg_home(&self.user_gnupg_home_directory)
             }
             GpgDirectoryType::OwnedDirectory => {
                 debug!(
                     self.log, "Changing to owned GPG home directory";
                     "directory" => self.owned_gnupg_home_directory.clone());
-                env::set_var(
-                    GNUPG_HOME_VAR,
-                    self.owned_gnupg_home_directory.clone(),
-                )
+                GPG_CONTEXT
+                    .lock()
+                    .unwrap()
+                    .set_gpg_home(&self.owned_gnupg_home_directory)
             }
         };
 
-        self.active_directory_type = directory_type;
+        *active_directory_type = directory_type;
     }
 
-    fn ensure_key_in_gpg(&mut self, key: &Key) -> Result<gpgme::Key> {
-        match self.context.get_key(key.get_key_id()) {
+    fn ensure_key_in_gpg(
+        &self,
+        key: &Key,
+        context: &mut gpgme::Context,
+    ) -> Result<gpgme::Key>
+    {
+        match context.get_key(key.get_key_id()) {
             Ok(key) => Ok(key),
             Err(_) => {
                 info!(
@@ -317,10 +338,10 @@ impl GpgKeyHandler {
                     "key_id" => key.get_key_id());
                 let mut key_data = gpgme::Data::from_bytes(key.get_data())
                     .chain_err(|| "Error on reading key bytes")?;
-                self.context
+                context
                     .import(&mut key_data)
                     .chain_err(|| "Error on importing key")?;
-                self.context
+                context
                     .get_key(key.get_key_id())
                     .chain_err(|| "Error on getting newly imported key")
             }

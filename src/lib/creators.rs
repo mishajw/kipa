@@ -278,7 +278,7 @@ impl Creator for MessageHandler {
     type Parameters = (
         Arc<PayloadHandler>,
         Arc<DataTransformer>,
-        Arc<Mutex<GpgKeyHandler>>,
+        Arc<GpgKeyHandler>,
         Node,
         Arc<Client>,
     );

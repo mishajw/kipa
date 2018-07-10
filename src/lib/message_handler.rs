@@ -14,14 +14,14 @@ use server::Client;
 use versioning;
 
 use slog::Logger;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::Duration;
 
 /// The message handling struct
 pub struct MessageHandler {
     payload_handler: Arc<PayloadHandler>,
     data_transformer: Arc<DataTransformer>,
-    gpg_key_handler: Arc<Mutex<GpgKeyHandler>>,
+    gpg_key_handler: Arc<GpgKeyHandler>,
     local_node: Node,
     client: Arc<Client>,
     log: Logger,
@@ -33,7 +33,7 @@ impl MessageHandler {
     pub fn new(
         payload_handler: Arc<PayloadHandler>,
         data_transformer: Arc<DataTransformer>,
-        gpg_key_handler: Arc<Mutex<GpgKeyHandler>>,
+        gpg_key_handler: Arc<GpgKeyHandler>,
         local_node: Node,
         client: Arc<Client>,
         log: Logger,
@@ -93,10 +93,8 @@ impl MessageHandler {
 
         let decrypted_body_data = self
             .gpg_key_handler
-            .lock()
-            .unwrap()
             .decrypt(&secure_message.encrypted_body, &self.local_node.key)?;
-        self.gpg_key_handler.lock().unwrap().verify(
+        self.gpg_key_handler.verify(
             &decrypted_body_data,
             &secure_message.body_signature,
             &secure_message.sender.key,
@@ -110,13 +108,9 @@ impl MessageHandler {
             self.data_transformer.encode_response_body(response_body)?;
         let encrypted_response_body_data = self
             .gpg_key_handler
-            .lock()
-            .unwrap()
             .encrypt(&response_body_data, &secure_message.sender.key)?;
         let signed_response_body_data = self
             .gpg_key_handler
-            .lock()
-            .unwrap()
             .sign(&response_body_data, &self.local_node.key)?;
         Ok(SecureMessage::new(
             self.local_node.clone(),
@@ -183,7 +177,7 @@ pub struct PayloadClient {
     local_node: Node,
     client: Arc<Client>,
     data_transformer: Arc<DataTransformer>,
-    gpg_key_handler: Arc<Mutex<GpgKeyHandler>>,
+    gpg_key_handler: Arc<GpgKeyHandler>,
 }
 
 impl PayloadClient {
@@ -194,7 +188,7 @@ impl PayloadClient {
         local_node: Node,
         client: Arc<Client>,
         data_transformer: Arc<DataTransformer>,
-        gpg_key_handler: Arc<Mutex<GpgKeyHandler>>,
+        gpg_key_handler: Arc<GpgKeyHandler>,
     ) -> PayloadClient
     {
         PayloadClient {
@@ -224,16 +218,10 @@ impl PayloadClient {
             self.data_transformer.encode_request_body(body),
         )?;
         let encrypted_body_data = to_internal_result(
-            self.gpg_key_handler
-                .lock()
-                .unwrap()
-                .encrypt(&body_data, &node.key),
+            self.gpg_key_handler.encrypt(&body_data, &node.key),
         )?;
         let signed_body_data = to_internal_result(
-            self.gpg_key_handler
-                .lock()
-                .unwrap()
-                .sign(&body_data, &self.local_node.key),
+            self.gpg_key_handler.sign(&body_data, &self.local_node.key),
         )?;
 
         let message = SecureMessage::new(
@@ -255,8 +243,6 @@ impl PayloadClient {
 
         let response_body_data = self
             .gpg_key_handler
-            .lock()
-            .unwrap()
             .decrypt(&response_message.encrypted_body, &self.local_node.key)
             .map_err(|err| {
                 InternalError::public_with_error(
@@ -267,8 +253,6 @@ impl PayloadClient {
             })?;
 
         self.gpg_key_handler
-            .lock()
-            .unwrap()
             .verify(
                 &response_body_data,
                 &response_message.body_signature,

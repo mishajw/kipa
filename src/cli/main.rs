@@ -102,7 +102,7 @@ fn message_daemon(
     log: &slog::Logger,
 ) -> InternalResult<()>
 {
-    let mut gpg_key_handler =
+    let gpg_key_handler =
         GpgKeyHandler::create((), args, log.new(o!("gpg" => true)))?;
 
     let data_transformer: Arc<DataTransformer> = DataTransformer::create(

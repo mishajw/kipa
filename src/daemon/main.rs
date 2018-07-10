@@ -16,7 +16,7 @@ use kipa_lib::server::{Client, LocalServer, Server};
 use kipa_lib::{Address, LocalAddressParams, Node};
 
 use error_chain::ChainedError;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 fn main() -> ApiResult<()> {
     let log = create_logger("daemon");
@@ -74,17 +74,12 @@ fn run_servers(
     log: &slog::Logger,
 ) -> InternalResult<()>
 {
-    let gpg_key_handler = Arc::new(Mutex::new(*GpgKeyHandler::create(
-        (),
-        args,
-        log.new(o!("gpg" => true)),
-    )?));
+    let gpg_key_handler: Arc<GpgKeyHandler> =
+        GpgKeyHandler::create((), args, log.new(o!("gpg" => true)))?.into();
 
     // Create local node
-    let local_key = gpg_key_handler
-        .lock()
-        .unwrap()
-        .get_key(args.value_of("key_id").unwrap().into())?;
+    let local_key =
+        gpg_key_handler.get_key(args.value_of("key_id").unwrap().into())?;
     let local_node = Node::new(
         Address::get_local(
             *LocalAddressParams::create(
