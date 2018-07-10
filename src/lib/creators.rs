@@ -7,7 +7,7 @@ use address::LocalAddressParams;
 use data_transformer::DataTransformer;
 use error::*;
 use gpg_key::GpgKeyHandler;
-use message_handler::MessageHandler;
+use message_handler::IncomingMessageHandler;
 use node::Node;
 use payload_handler::PayloadHandler;
 #[allow(unused)]
@@ -202,7 +202,7 @@ impl Creator for Client {
 }
 
 impl Creator for Server {
-    type Parameters = (Arc<MessageHandler>, Node);
+    type Parameters = (Arc<IncomingMessageHandler>, Node);
     #[cfg(feature = "use-tcp")]
     fn create(
         parameters: Self::Parameters,
@@ -221,7 +221,7 @@ impl Creator for Server {
 }
 
 impl Creator for LocalServer {
-    type Parameters = Arc<MessageHandler>;
+    type Parameters = Arc<IncomingMessageHandler>;
 
     #[cfg(feature = "use-unix-socket")]
     fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
@@ -274,7 +274,7 @@ impl Creator for LocalClient {
     }
 }
 
-impl Creator for MessageHandler {
+impl Creator for IncomingMessageHandler {
     type Parameters = (
         Arc<PayloadHandler>,
         Arc<DataTransformer>,
@@ -295,12 +295,12 @@ impl Creator for MessageHandler {
             local_node,
             client,
         ) = parameters;
-        Ok(Box::new(MessageHandler::new(
+        Ok(Box::new(IncomingMessageHandler::new(
             payload_handler,
-            data_transformer,
-            gpg_key_handler,
             local_node,
             client,
+            data_transformer,
+            gpg_key_handler,
             log,
         )))
     }

@@ -2,7 +2,7 @@
 
 use address::Address;
 use error::*;
-use message_handler::MessageHandler;
+use message_handler::IncomingMessageHandler;
 use node::Node;
 use server::socket_server::{SocketClient, SocketHandler, SocketServer};
 use server::{Client, Server};
@@ -17,7 +17,7 @@ use slog::Logger;
 /// Server that listens for global requests on a specified TCP socket
 #[derive(Clone)]
 pub struct TcpGlobalServer {
-    message_handler: Arc<MessageHandler>,
+    message_handler: Arc<IncomingMessageHandler>,
     local_node: Node,
     log: Logger,
 }
@@ -25,7 +25,7 @@ pub struct TcpGlobalServer {
 impl TcpGlobalServer {
     #[allow(missing_docs)]
     pub fn new(
-        message_handler: Arc<MessageHandler>,
+        message_handler: Arc<IncomingMessageHandler>,
         local_node: Node,
         log: Logger,
     ) -> Self

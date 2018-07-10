@@ -2,7 +2,7 @@
 
 use api::{RequestPayload, ResponsePayload};
 use error::*;
-use message_handler::PayloadClient;
+use message_handler::OutgoingMessageHandler;
 use node::Node;
 use payload_handler::PayloadHandler;
 
@@ -24,7 +24,7 @@ impl PayloadHandler for BlackHolePayloadHandler {
         &self,
         payload: &RequestPayload,
         _sender: Option<&Node>,
-        _payload_client: Arc<PayloadClient>,
+        _outgoing_message_handler: Arc<OutgoingMessageHandler>,
         _message_id: u32,
     ) -> InternalResult<ResponsePayload>
     {

@@ -17,34 +17,33 @@ use slog::Logger;
 use std::sync::Arc;
 use std::time::Duration;
 
-/// The message handling struct
-pub struct MessageHandler {
+/// Handles messages incoming from external sources (i.e. another daemon, CLI)
+pub struct IncomingMessageHandler {
     payload_handler: Arc<PayloadHandler>,
-    data_transformer: Arc<DataTransformer>,
-    gpg_key_handler: Arc<GpgKeyHandler>,
     local_node: Node,
     client: Arc<Client>,
+    data_transformer: Arc<DataTransformer>,
+    gpg_key_handler: Arc<GpgKeyHandler>,
     log: Logger,
 }
 
-impl MessageHandler {
-    /// Create a new `MessageHandler` with a `PayloadHandler` to pass payloads
-    /// to
+impl IncomingMessageHandler {
+    #[allow(missing_docs)]
     pub fn new(
         payload_handler: Arc<PayloadHandler>,
-        data_transformer: Arc<DataTransformer>,
-        gpg_key_handler: Arc<GpgKeyHandler>,
         local_node: Node,
         client: Arc<Client>,
+        data_transformer: Arc<DataTransformer>,
+        gpg_key_handler: Arc<GpgKeyHandler>,
         log: Logger,
     ) -> Self
     {
-        MessageHandler {
+        IncomingMessageHandler {
             payload_handler,
-            data_transformer,
-            gpg_key_handler,
             local_node,
             client,
+            data_transformer,
+            gpg_key_handler,
             log,
         }
     }
@@ -139,7 +138,7 @@ impl MessageHandler {
             ).into());
         }
 
-        let payload_client = Arc::new(PayloadClient::new(
+        let outgoing_message_handler = Arc::new(OutgoingMessageHandler::new(
             body.id,
             self.local_node.clone(),
             self.client.clone(),
@@ -157,7 +156,7 @@ impl MessageHandler {
                 self.payload_handler.receive(
                     &body.payload,
                     sender,
-                    payload_client,
+                    outgoing_message_handler,
                     body.id,
                 )
             });
@@ -172,7 +171,7 @@ impl MessageHandler {
 
 /// Client that will take a payload, wrap it in a message, and send to another
 /// node
-pub struct PayloadClient {
+pub struct OutgoingMessageHandler {
     message_id: u32,
     local_node: Node,
     client: Arc<Client>,
@@ -180,18 +179,17 @@ pub struct PayloadClient {
     gpg_key_handler: Arc<GpgKeyHandler>,
 }
 
-impl PayloadClient {
-    /// Create a new `PayloadClient` with information needed to create a message
-    /// and send it to another node
+impl OutgoingMessageHandler {
+    #[allow(missing_docs)]
     pub fn new(
         message_id: u32,
         local_node: Node,
         client: Arc<Client>,
         data_transformer: Arc<DataTransformer>,
         gpg_key_handler: Arc<GpgKeyHandler>,
-    ) -> PayloadClient
+    ) -> OutgoingMessageHandler
     {
-        PayloadClient {
+        OutgoingMessageHandler {
             message_id,
             local_node,
             client,

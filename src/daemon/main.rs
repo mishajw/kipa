@@ -10,7 +10,7 @@ use kipa_lib::creators::*;
 use kipa_lib::data_transformer::DataTransformer;
 use kipa_lib::error::*;
 use kipa_lib::gpg_key::GpgKeyHandler;
-use kipa_lib::message_handler::MessageHandler;
+use kipa_lib::message_handler::IncomingMessageHandler;
 use kipa_lib::payload_handler::PayloadHandler;
 use kipa_lib::server::{Client, LocalServer, Server};
 use kipa_lib::{Address, LocalAddressParams, Node};
@@ -28,7 +28,7 @@ fn main() -> ApiResult<()> {
     creator_args.append(&mut LocalAddressParams::get_clap_args());
     creator_args.append(&mut DataTransformer::get_clap_args());
     creator_args.append(&mut PayloadHandler::get_clap_args());
-    creator_args.append(&mut MessageHandler::get_clap_args());
+    creator_args.append(&mut IncomingMessageHandler::get_clap_args());
     creator_args.append(&mut Client::get_clap_args());
     creator_args.append(&mut Server::get_clap_args());
     creator_args.append(&mut LocalServer::get_clap_args());
@@ -110,17 +110,18 @@ fn run_servers(
         log.new(o!("request_handler" => true)),
     )?.into();
 
-    let message_handler: Arc<MessageHandler> = MessageHandler::create(
-        (
-            payload_handler,
-            data_transformer.clone(),
-            gpg_key_handler.clone(),
-            local_node.clone(),
-            global_client,
-        ),
-        args,
-        log.new(o!("message_handler" => true)),
-    )?.into();
+    let message_handler: Arc<IncomingMessageHandler> =
+        IncomingMessageHandler::create(
+            (
+                payload_handler,
+                data_transformer.clone(),
+                gpg_key_handler.clone(),
+                local_node.clone(),
+                global_client,
+            ),
+            args,
+            log.new(o!("message_handler" => true)),
+        )?.into();
 
     // Set up listening for connections
     let global_server = Server::create(

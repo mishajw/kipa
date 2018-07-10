@@ -29,8 +29,11 @@ All components exist in `kipa_lib`:
   daemon.
 - **`data_transformer::DataTransformer`**: Implementers are responsible for
   converting raw bytes into a `api::Message`.
-- **`message_handler::MessageHandler`**: Receives an `api::RequestMessage` and
-  returns an `api::ResponseMessage`.
+- **`message_handler::IncomingMessageHandler`**: Receives an
+  `api::RequestMessage` from another daemon or CLI and returns an
+  `api::ResponseMessage` to the daemon or CLI.
+- **`message_handler::OutgoingMessageHandler`**: Sends an `api::RequestMessage`
+  to another daemon and returns the daemon's `api::ResponseMessage`
 - **`payload_handler::PayloadHandler`**: Implementers are responsible for
   receiving an `api::RequestPayload` and replying with an
   `api::ResponsePayload`.
@@ -41,19 +44,19 @@ All components exist in `kipa_lib`:
 
 This section describes the control flow from receiving a request, to replying
 with a response:
-- `Server` receives a request on a listening port (or similar
-  mechanism) and passes the decoded message to a `MessageHandler`.
-- `MessageHandler` is responsible for:
-  - Decodes the raw bytes using a `DataTransformer`, to get sender information
+- `Server` receives a request on a listening port (or similar mechanism) and
+  will pass the raw bytes message to a `IncomingMessageHandler`.
+- `IncomingMessageHandler` will:
+  - Decode the raw bytes using a `DataTransformer`, to get sender information
     and encryped payload.
-  - Decrypting the payload, and decoding it using a `DataTransformer`.
-  - Setting the correct message identifier once the reply has been created.
-  - Creating an interface for sending messages to other nodes, in order for the
-    `PayloadHandler` to be able to perform queries.
-- `PayloadHandler` reads the payload, performs any tasks described by the
-  payload, and returns a response.
-- The message is passed back through the `MessageHandler` to the `Server` which
-  replies to the original sender.
+  - Decrypt the payload, and decoding it using a `DataTransformer`.
+  - Set the correct message identifier once the reply has been created.
+  - Create an `OutgoingMessageHandler` for sending messages to other nodes, in
+    order for the `PayloadHandler` to be able to perform queries.
+- `PayloadHandler` will read the payload, and perform any tasks described by
+  the payload, and return a response.
+- The message is passed back through the `IncomingMessageHandler` to the
+  `Server` which replies to the original sender.
 
 ## API
 

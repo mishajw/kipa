@@ -3,7 +3,7 @@
 
 use address::Address;
 use error::*;
-use message_handler::MessageHandler;
+use message_handler::IncomingMessageHandler;
 use server::socket_server::{SocketHandler, SocketServer};
 use server::{LocalClient, LocalServer};
 
@@ -21,7 +21,7 @@ pub const DEFAULT_UNIX_SOCKET_PATH: &str = "/tmp/kipa";
 /// Listens for local requests on a unix socket file
 #[derive(Clone)]
 pub struct UnixSocketLocalServer {
-    message_handler: Arc<MessageHandler>,
+    message_handler: Arc<IncomingMessageHandler>,
     socket_path: String,
     log: Logger,
 }
@@ -30,7 +30,7 @@ impl UnixSocketLocalServer {
     /// Create a new unix socket local receive server that listens on some file
     /// `socket_path`
     pub fn new(
-        message_handler: Arc<MessageHandler>,
+        message_handler: Arc<IncomingMessageHandler>,
         socket_path: String,
         log: Logger,
     ) -> Result<Self>

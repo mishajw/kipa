@@ -3,7 +3,7 @@
 
 use api::{RequestPayload, ResponsePayload};
 use error::*;
-use message_handler::PayloadClient;
+use message_handler::OutgoingMessageHandler;
 use node::Node;
 
 use std::sync::Arc;
@@ -21,7 +21,7 @@ pub trait PayloadHandler: Send + Sync {
         &self,
         payload: &RequestPayload,
         sender: Option<&Node>,
-        payload_client: Arc<PayloadClient>,
+        outgoing_message_handler: Arc<OutgoingMessageHandler>,
         message_id: u32,
     ) -> InternalResult<ResponsePayload>;
 }
