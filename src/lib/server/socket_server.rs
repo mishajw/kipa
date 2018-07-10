@@ -107,7 +107,7 @@ pub trait SocketServer: SocketHandler + Send + Sync {
     )
     {
         let result =
-            socket_result.map(|s| self.handle_socket(s, message_handler));
+            socket_result.and_then(|s| self.handle_socket(s, message_handler));
 
         if let Err(ref err) = result {
             error!(
