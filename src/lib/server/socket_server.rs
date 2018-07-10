@@ -1,12 +1,10 @@
 //! Contain socket-based operations for communicating between two nodes
 //!
 //! Servers in this file use generic socket types to read and write data from
-//! sockets, and use `DataHandler` types to convert these into `Request`s and
-//! `Response`s.
+//! sockets, and use `DataTransformer` types to convert these into `Request`s
+//! and `Response`s.
 
 use address::Address;
-use api::{RequestMessage, ResponseMessage};
-use data_transformer::DataTransformer;
 use error::*;
 use message_handler::MessageHandler;
 use node::Node;
@@ -23,7 +21,7 @@ use slog::Logger;
 
 /// Type for structs that interface with sockets
 pub trait SocketHandler {
-    /// The type of the socket to use for sending/receiveing data
+    /// The type of the socket to use for sending/receiving data
     type SocketType: Read + Write + Send + Sync + 'static;
 
     /// Set the timeout of a `SocketType`
@@ -143,9 +141,6 @@ pub trait SocketServer: SocketHandler + Send + Sync {
 
         Ok(())
     }
-
-    /// Check that the request is OK to process
-    fn check_request(&self, request: &RequestMessage) -> Result<()>;
 }
 
 /// Functionality for sending requests to other KIPA servers on a socket
@@ -164,31 +159,23 @@ pub trait SocketClient: SocketHandler {
     fn send(
         &self,
         node: &Node,
-        request: RequestMessage,
-        // TODO: Can we remove `data_transformer` usage here?
-        data_transformer: &DataTransformer,
+        request_data: &[u8],
         timeout: Duration,
-    ) -> Result<ResponseMessage>
+    ) -> Result<Vec<u8>>
     {
         let deadline = Instant::now() + timeout;
-
-        let request_bytes = data_transformer.request_to_bytes(&request)?;
-
         trace!(
             self.get_log(),
             "Setting up socket";
             "node" => %node
         );
+
         let mut socket = self.create_socket(node, deadline - Instant::now())?;
-        let address = self.get_socket_peer_address(&socket);
 
         trace!(self.get_log(), "Sending request to another node");
-        self.send_data(&request_bytes, &mut socket, Some(deadline))?;
+        self.send_data(&request_data, &mut socket, Some(deadline))?;
 
         trace!(self.get_log(), "Reading response from another node");
-        let response_data = self.receive_data(&mut socket, Some(deadline))?;
-
-        trace!(self.get_log(), "Got response bytes");
-        data_transformer.bytes_to_response(&response_data, address)
+        self.receive_data(&mut socket, Some(deadline))
     }
 }

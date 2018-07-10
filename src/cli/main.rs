@@ -7,7 +7,7 @@ extern crate slog;
 extern crate slog_async;
 extern crate slog_term;
 
-use kipa_lib::api::{RequestPayload, ResponseMessage, ResponsePayload};
+use kipa_lib::api::{RequestBody, RequestPayload, ResponsePayload};
 use kipa_lib::creators::*;
 use kipa_lib::data_transformer::DataTransformer;
 use kipa_lib::error::*;
@@ -111,23 +111,44 @@ fn message_daemon(
         log.new(o!("data_transformer" => true)),
     )?.into();
 
-    let local_client = LocalClient::create(
-        data_transformer.clone(),
-        args,
-        log.new(o!("local_client" => true)),
-    )?;
+    let local_client =
+        LocalClient::create((), args, log.new(o!("local_client" => true)))?;
 
     let message_id: u32 = thread_rng().gen();
     info!(log, "Created message ID"; "message_id" => message_id);
 
     let send_request =
-        move |request: RequestPayload| -> InternalResult<ResponseMessage> {
-            local_client.send(request, message_id).map_err(|_| {
-                InternalError::public(
-                    "Error on connecting to daemon - is it running?",
-                    ApiErrorType::Configuration,
-                )
-            })
+        move |payload: RequestPayload| -> InternalResult<ResponsePayload> {
+            let body = RequestBody::new(
+                payload,
+                message_id,
+                env!("CARGO_PKG_VERSION").to_string(),
+            );
+            let request_data =
+                to_internal_result(data_transformer.encode_request_body(body))?;
+            let response_data =
+                local_client.send(&request_data).map_err(|_| {
+                    InternalError::public(
+                        "Error on connecting to daemon - is it running?",
+                        ApiErrorType::Configuration,
+                    )
+                })?;
+            let response_message = to_internal_result(
+                data_transformer.decode_response_body(&response_data),
+            )?;
+
+            // Verify return message identifier
+            if response_message.id != message_id {
+                return Err(InternalError::private(ErrorKind::ResponseError(
+                    format!(
+                        "Incorrect message ID in resposonse: expected {}, got \
+                         {}",
+                        message_id, response_message.id
+                    ),
+                )));
+            }
+
+            api_to_internal_result(response_message.payload)
         };
 
     if let Some(search_args) = args.subcommand_matches("search") {
@@ -135,7 +156,7 @@ fn message_daemon(
             .get_key(String::from(search_args.value_of("key_id").unwrap()))?;
         let response = send_request(RequestPayload::SearchRequest(search_key))?;
 
-        match api_to_internal_result(response.payload)? {
+        match response {
             ResponsePayload::SearchResponse(Some(ref node)) => {
                 println!("Search success: {}.", node);
                 Ok(())
@@ -158,7 +179,7 @@ fn message_daemon(
 
         let response = send_request(RequestPayload::ConnectRequest(node))?;
 
-        match api_to_internal_result(response.payload)? {
+        match response {
             ResponsePayload::ConnectResponse() => {
                 println!("Connect successful");
                 Ok(())
@@ -170,7 +191,7 @@ fn message_daemon(
     } else if let Some(_) = args.subcommand_matches("list-neighbours") {
         let response = send_request(RequestPayload::ListNeighboursRequest())?;
 
-        match api_to_internal_result(response.payload)? {
+        match response {
             ResponsePayload::ListNeighboursResponse(ref neighbours) => {
                 println!("Found neighbours:");
                 for n in neighbours {

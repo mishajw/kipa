@@ -188,16 +188,16 @@ impl Creator for GpgKeyHandler {
 }
 
 impl Creator for Client {
-    type Parameters = Arc<DataTransformer>;
+    type Parameters = ();
     #[cfg(feature = "use-tcp")]
     fn create(
-        data_transformer: Self::Parameters,
+        _parameters: Self::Parameters,
         _args: &clap::ArgMatches,
         log: Logger,
     ) -> InternalResult<Box<Self>>
     {
         use server::tcp::TcpGlobalClient;
-        Ok(Box::new(TcpGlobalClient::new(data_transformer, log)))
+        Ok(Box::new(TcpGlobalClient::new(log)))
     }
 }
 
@@ -221,7 +221,7 @@ impl Creator for Server {
 }
 
 impl Creator for LocalServer {
-    type Parameters = (Arc<MessageHandler>, Arc<DataTransformer>);
+    type Parameters = Arc<MessageHandler>;
 
     #[cfg(feature = "use-unix-socket")]
     fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
@@ -244,11 +244,10 @@ impl Creator for LocalServer {
     ) -> InternalResult<Box<Self>>
     {
         use server::unix_socket::UnixSocketLocalServer;
-        let (message_handler, data_transformer) = parameters;
+        let message_handler = parameters;
         let socket_path = args.value_of("socket_path").unwrap();
         let server = to_internal_result(UnixSocketLocalServer::new(
             message_handler,
-            data_transformer,
             String::from(socket_path),
             log,
         ))?;
@@ -257,11 +256,11 @@ impl Creator for LocalServer {
 }
 
 impl Creator for LocalClient {
-    type Parameters = Arc<DataTransformer>;
+    type Parameters = ();
     // Shares `socket_path` parameter with `LocalServer`
     #[cfg(feature = "use-unix-socket")]
     fn create(
-        data_transformer: Self::Parameters,
+        _parameters: Self::Parameters,
         args: &clap::ArgMatches,
         log: Logger,
     ) -> InternalResult<Box<Self>>
@@ -269,8 +268,7 @@ impl Creator for LocalClient {
         use server::unix_socket::UnixSocketLocalClient;
         let socket_path = args.value_of("socket_path").unwrap();
         Ok(Box::new(UnixSocketLocalClient::new(
-            data_transformer,
-            &String::from(socket_path),
+            socket_path.into(),
             log,
         )))
     }
@@ -287,7 +285,7 @@ impl Creator for MessageHandler {
     fn create(
         parameters: Self::Parameters,
         _args: &clap::ArgMatches,
-        _log: Logger,
+        log: Logger,
     ) -> InternalResult<Box<Self>>
     {
         let (
@@ -303,6 +301,7 @@ impl Creator for MessageHandler {
             gpg_key_handler,
             local_node,
             client,
+            log,
         )))
     }
 }

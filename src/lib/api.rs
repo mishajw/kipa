@@ -17,46 +17,60 @@ use node::Node;
 
 use std::fmt;
 
+/// Wraps a message with security guarantees: secrecy and authenticity
+pub struct SecureMessage {
+    /// The sender of the message
+    pub sender: Node,
+    /// Signature of the decrypted body, signed by sender's private key
+    pub body_signature: Vec<u8>,
+    /// The contents of the body encrypted with the recipient's public key
+    pub encrypted_body: Vec<u8>,
+}
+
+impl SecureMessage {
+    #[allow(missing_docs)]
+    pub fn new(
+        sender: Node,
+        body_signature: Vec<u8>,
+        encrypted_body: Vec<u8>,
+    ) -> Self
+    {
+        SecureMessage {
+            sender,
+            body_signature,
+            encrypted_body,
+        }
+    }
+}
+
 /// Message passed between nodes, with a generic payload
 ///
 /// Holds metadata about the payload, including the sender and the message
 /// identifier.
-pub struct Message<T> {
+pub struct MessageBody<T> {
     /// The payload of the message
     pub payload: T,
-    /// The sender of the message
-    pub sender: MessageSender,
     /// The identifier of the message
     pub id: u32,
     /// The version of the sender of the message
     pub version: String,
 }
 
-impl<T> Message<T> {
-    /// Construct a new message with a payload and sender
-    pub fn new(
-        payload: T,
-        sender: MessageSender,
-        id: u32,
-        version: String,
-    ) -> Self
-    {
-        Message {
+impl<T> MessageBody<T> {
+    #[allow(missing_docs)]
+    pub fn new(payload: T, id: u32, version: String) -> Self {
+        MessageBody {
             payload,
-            sender,
             id,
             version,
         }
     }
 }
 
-/// Message requesting a reponse
-pub type RequestMessage = Message<RequestPayload>;
-
-/// Message response for a request
-///
-/// The payload can be an `ApiError`.
-pub type ResponseMessage = Message<ApiResult<ResponsePayload>>;
+#[allow(missing_docs)]
+pub type RequestBody = MessageBody<RequestPayload>;
+#[allow(missing_docs)]
+pub type ResponseBody = MessageBody<ApiResult<ResponsePayload>>;
 
 /// Different types of requests and their payloads
 pub enum RequestPayload {
@@ -165,21 +179,3 @@ pub enum ApiVisibility {
     Global(),
 }
 impl Eq for ApiVisibility {}
-
-/// Identifies the sender of a request
-#[derive(Clone)]
-pub enum MessageSender {
-    /// Request was sent from an external node
-    Node(Node),
-    /// Request was sent from the command line argument tool
-    Cli(),
-}
-
-impl fmt::Display for MessageSender {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            MessageSender::Node(ref n) => n.fmt(f),
-            MessageSender::Cli() => write!(f, "CLI"),
-        }
-    }
-}

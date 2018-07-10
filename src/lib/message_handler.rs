@@ -2,8 +2,8 @@
 
 use address::Address;
 use api::{
-    MessageSender, RequestMessage, RequestPayload, ResponseMessage,
-    ResponsePayload,
+    ApiVisibility, RequestBody, RequestPayload, ResponseBody, ResponsePayload,
+    SecureMessage,
 };
 use data_transformer::DataTransformer;
 use error::*;
@@ -13,6 +13,7 @@ use payload_handler::PayloadHandler;
 use server::Client;
 use versioning;
 
+use slog::Logger;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -23,6 +24,7 @@ pub struct MessageHandler {
     gpg_key_handler: Arc<Mutex<GpgKeyHandler>>,
     local_node: Node,
     client: Arc<Client>,
+    log: Logger,
 }
 
 impl MessageHandler {
@@ -34,6 +36,7 @@ impl MessageHandler {
         gpg_key_handler: Arc<Mutex<GpgKeyHandler>>,
         local_node: Node,
         client: Arc<Client>,
+        log: Logger,
     ) -> Self
     {
         MessageHandler {
@@ -42,66 +45,134 @@ impl MessageHandler {
             gpg_key_handler,
             local_node,
             client,
+            log,
         }
     }
 
     /// Receive and handle the bytes of a request message, returning the bytes
     /// of response message
+    ///
+    /// This function, and all the other `receive` functions return a `Result`
+    /// and not an `InternalResult` because the issues with communication are
+    /// usually internal errors. Public errors can occur when computing
+    /// the result of a query, but this is captured in the payload `ApiError<_>`
+    /// value.
     pub fn receive_bytes(
         &self,
         request_data: &[u8],
         address: Option<Address>,
     ) -> Result<Vec<u8>>
     {
-        let request = self
+        debug!(self.log, "Received bytes"; "from_cli" => address.is_none());
+
+        match address {
+            Some(address) => {
+                let message = self
+                    .data_transformer
+                    .decode_secure_message(request_data, address)?;
+                let response_message = self.receive_secure_message(message)?;
+                Ok(self
+                    .data_transformer
+                    .encode_secure_message(response_message)?)
+            }
+            None => {
+                let body =
+                    self.data_transformer.decode_request_body(request_data)?;
+                let response_body = self.receive_body(body, None)?;
+                Ok(self.data_transformer.encode_response_body(response_body)?)
+            }
+        }
+    }
+
+    fn receive_secure_message(
+        &self,
+        secure_message: SecureMessage,
+    ) -> Result<SecureMessage>
+    {
+        debug!(self.log, "Received secure message");
+
+        let decrypted_body_data = self
+            .gpg_key_handler
+            .lock()
+            .unwrap()
+            .decrypt(&secure_message.encrypted_body, &self.local_node.key)?;
+        self.gpg_key_handler.lock().unwrap().verify(
+            &decrypted_body_data,
+            &secure_message.body_signature,
+            &secure_message.sender.key,
+        )?;
+        let body = self
             .data_transformer
-            .bytes_to_request(&request_data.to_vec(), address)?;
-
-        let response = self.receive_message(&request)?;
-
-        self.data_transformer.response_to_bytes(&response)
+            .decode_request_body(&decrypted_body_data)?;
+        let response_body =
+            self.receive_body(body, Some(&secure_message.sender))?;
+        let response_body_data =
+            self.data_transformer.encode_response_body(response_body)?;
+        let encrypted_response_body_data = self
+            .gpg_key_handler
+            .lock()
+            .unwrap()
+            .encrypt(&response_body_data, &secure_message.sender.key)?;
+        let signed_response_body_data = self
+            .gpg_key_handler
+            .lock()
+            .unwrap()
+            .sign(&response_body_data, &self.local_node.key)?;
+        Ok(SecureMessage::new(
+            self.local_node.clone(),
+            signed_response_body_data,
+            encrypted_response_body_data,
+        ))
     }
 
     /// Receive and handle a request message, returning a response message
-    pub fn receive_message(
+    fn receive_body(
         &self,
-        message: &RequestMessage,
-    ) -> Result<ResponseMessage>
+        body: RequestBody,
+        sender: Option<&Node>,
+    ) -> Result<ResponseBody>
     {
-        let sender = match message.sender {
-            MessageSender::Node(ref n) => Some(n),
-            MessageSender::Cli() => None,
+        debug!(self.log, "Received request body");
+
+        // Check the visibility of the request is correct
+        let visibility = match sender {
+            Some(_) => ApiVisibility::Global(),
+            None => ApiVisibility::Local(),
         };
+        if !body.payload.is_visible(&visibility) {
+            return Err(ErrorKind::RequestError(
+                "Request is not locally available".into(),
+            ).into());
+        }
 
         let payload_client = Arc::new(PayloadClient::new(
-            message.id,
+            body.id,
             self.local_node.clone(),
             self.client.clone(),
+            self.data_transformer.clone(),
+            self.gpg_key_handler.clone(),
         ));
 
         let version_verification_result =
             api_to_internal_result(versioning::verify_version(
                 &versioning::get_version(),
-                &message.version,
+                &body.version,
             ));
         let response_payload_result =
             version_verification_result.and_then(|()| {
                 self.payload_handler.receive(
-                    &message.payload,
+                    &body.payload,
                     sender,
                     payload_client,
-                    message.id,
+                    body.id,
                 )
             });
 
-        let response = ResponseMessage::new(
-            to_api_result(response_payload_result),
-            MessageSender::Node(self.local_node.clone()),
-            message.id,
+        Ok(ResponseBody::new(
+            to_api_result(response_payload_result, &self.log),
+            body.id,
             versioning::get_version(),
-        );
-
-        Ok(response)
+        ))
     }
 }
 
@@ -111,6 +182,8 @@ pub struct PayloadClient {
     message_id: u32,
     local_node: Node,
     client: Arc<Client>,
+    data_transformer: Arc<DataTransformer>,
+    gpg_key_handler: Arc<Mutex<GpgKeyHandler>>,
 }
 
 impl PayloadClient {
@@ -120,12 +193,16 @@ impl PayloadClient {
         message_id: u32,
         local_node: Node,
         client: Arc<Client>,
+        data_transformer: Arc<DataTransformer>,
+        gpg_key_handler: Arc<Mutex<GpgKeyHandler>>,
     ) -> PayloadClient
     {
         PayloadClient {
             message_id,
             local_node,
             client,
+            data_transformer,
+            gpg_key_handler,
         }
     }
 
@@ -137,20 +214,80 @@ impl PayloadClient {
         timeout: Duration,
     ) -> ResponseResult<ResponsePayload>
     {
-        let request_message = RequestMessage::new(
+        let body = RequestBody::new(
             payload,
-            MessageSender::Node(self.local_node.clone()),
             self.message_id,
             versioning::get_version(),
         );
 
-        let response_message = to_internal_result(self.client.send(
-            node,
-            request_message,
-            timeout,
-        ))?;
+        let body_data = to_internal_result(
+            self.data_transformer.encode_request_body(body),
+        )?;
+        let encrypted_body_data = to_internal_result(
+            self.gpg_key_handler
+                .lock()
+                .unwrap()
+                .encrypt(&body_data, &node.key),
+        )?;
+        let signed_body_data = to_internal_result(
+            self.gpg_key_handler
+                .lock()
+                .unwrap()
+                .sign(&body_data, &self.local_node.key),
+        )?;
 
-        if response_message.id != self.message_id {
+        let message = SecureMessage::new(
+            self.local_node.clone(),
+            signed_body_data,
+            encrypted_body_data,
+        );
+        let message_data = to_internal_result(
+            self.data_transformer.encode_secure_message(message),
+        )?;
+
+        let response_message_data =
+            to_internal_result(self.client.send(node, &message_data, timeout))?;
+        let response_message =
+            to_internal_result(self.data_transformer.decode_secure_message(
+                &response_message_data,
+                node.address.clone(),
+            ))?;
+
+        let response_body_data = self
+            .gpg_key_handler
+            .lock()
+            .unwrap()
+            .decrypt(&response_message.encrypted_body, &self.local_node.key)
+            .map_err(|err| {
+                InternalError::public_with_error(
+                    "Failed to decrypt message",
+                    ApiErrorType::Parse,
+                    err,
+                )
+            })?;
+
+        self.gpg_key_handler
+            .lock()
+            .unwrap()
+            .verify(
+                &response_body_data,
+                &response_message.body_signature,
+                &node.key,
+            )
+            .map_err(|err| {
+                InternalError::public_with_error(
+                    "Invalid signature",
+                    ApiErrorType::Parse,
+                    err,
+                )
+            })?;
+
+        let response_body = to_internal_result(
+            self.data_transformer
+                .decode_response_body(&response_body_data),
+        )?;
+
+        if response_body.id != self.message_id {
             // TODO: We need to reference `InternalError` here instead of
             // `ResponseError` - seems that when you typedef enums, referencing
             // the instances of the enum still needs to be done through the
@@ -160,11 +297,11 @@ impl PayloadClient {
             return Err(InternalError::private(ErrorKind::ResponseError(
                 format!(
                     "Response had incorrect ID, expected {}, received {}",
-                    self.message_id, response_message.id
+                    self.message_id, response_body.id
                 ),
             )));
         }
 
-        api_to_internal_result(response_message.payload)
+        api_to_internal_result(response_body.payload)
     }
 }

@@ -15,6 +15,14 @@ message Node {
   Address address = 2;
 }
 
+// A node without without the IP number portion (only the port number), as the
+// IP address should be infered from the connection instead of sent in the
+// payload
+message SenderNode {
+  Key key = 1;
+  uint32 port = 2;
+}
+
 enum ApiErrorType {
     NoError = 0;
     Parse = 1;
@@ -28,31 +36,33 @@ message ApiError {
   ApiErrorType error_type = 2;
 }
 
-message MessageSender {
-  // If key and port are not set, assume command line interface sender.
-  Key key = 1;
-  uint32 port = 2;
+message SecureMessage {
+  SenderNode sender = 1;
+  bytes body_signature = 2;
+  bytes encrypted_body = 3;
 }
 
-message GeneralRequest {
+message RequestBody {
+  // Payload:
   QueryRequest query_request = 1;
   SearchRequest search_request = 2;
   ConnectRequest connect_request = 3;
   ListNeighboursRequest list_neighbours_request = 4;
-  MessageSender sender =  5;
-  uint32 id = 6;
-  string version = 7;
+
+  uint32 id = 5;
+  string version = 6;
 }
 
-message GeneralResponse {
+message ResponseBody {
+  // Payload:
   QueryResponse query_response = 1;
   SearchResponse search_response = 2;
   ConnectResponse connect_response = 3;
   ListNeighboursResponse list_neighbours_response = 4;
   ApiError api_error = 5;
-  MessageSender sender =  6;
-  uint32 id = 7;
-  string version = 8;
+
+  uint32 id = 6;
+  string version = 7;
 }
 
 message QueryRequest {

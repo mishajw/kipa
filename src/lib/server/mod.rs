@@ -1,6 +1,5 @@
 //! Traits for sending and receiving requests between KIPA nodes
 
-use api::{RequestMessage, RequestPayload, ResponseMessage};
 use error::*;
 use node::Node;
 
@@ -33,9 +32,9 @@ pub trait Client: Send + Sync {
     fn send(
         &self,
         node: &Node,
-        request: RequestMessage,
+        request_data: &[u8],
         timeout: Duration,
-    ) -> Result<ResponseMessage>;
+    ) -> Result<Vec<u8>>;
 }
 
 /// Create a server that can listen for requests from local clients
@@ -49,9 +48,5 @@ pub trait LocalServer: Send + Sync {
 /// Trait for sending requests to local KIPA daemon
 pub trait LocalClient: Send + Sync {
     /// Send a request to local KIPA daemon
-    fn send(
-        &self,
-        request: RequestPayload,
-        message_id: u32,
-    ) -> Result<ResponseMessage>;
+    fn send(&self, request_data: &[u8]) -> Result<Vec<u8>>;
 }

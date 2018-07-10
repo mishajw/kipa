@@ -1,8 +1,6 @@
 //! Implementation of servers using TCP sockets
 
 use address::Address;
-use api::{ApiVisibility, RequestMessage, ResponseMessage};
-use data_transformer::DataTransformer;
 use error::*;
 use message_handler::MessageHandler;
 use node::Node;
@@ -103,33 +101,16 @@ impl SocketHandler for TcpGlobalServer {
 
 impl SocketServer for TcpGlobalServer {
     fn get_log(&self) -> &Logger { &self.log }
-
-    fn check_request(&self, request: &RequestMessage) -> Result<()> {
-        if !request.payload.is_visible(&ApiVisibility::Global()) {
-            Err(ErrorKind::RequestError(
-                "Request is not globally available".into(),
-            ).into())
-        } else {
-            Ok(())
-        }
-    }
 }
 
 /// Implementation of sending global requests to TCP servers
 pub struct TcpGlobalClient {
-    data_transformer: Arc<DataTransformer>,
     log: Logger,
 }
 
 impl TcpGlobalClient {
-    /// Create a new sender, which uses a `DataTransformer` to serialize packets
-    /// before going on the line
-    pub fn new(data_transformer: Arc<DataTransformer>, log: Logger) -> Self {
-        TcpGlobalClient {
-            data_transformer,
-            log,
-        }
-    }
+    #[allow(missing_docs)]
+    pub fn new(log: Logger) -> Self { TcpGlobalClient { log } }
 }
 
 impl SocketHandler for TcpGlobalClient {
@@ -183,16 +164,10 @@ impl Client for TcpGlobalClient {
     fn send(
         &self,
         node: &Node,
-        request: RequestMessage,
+        request_data: &[u8],
         timeout: Duration,
-    ) -> Result<ResponseMessage>
+    ) -> Result<Vec<u8>>
     {
-        SocketClient::send(
-            self,
-            node,
-            request,
-            &*self.data_transformer,
-            timeout,
-        )
+        SocketClient::send(self, node, request_data, timeout)
     }
 }

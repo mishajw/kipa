@@ -23,6 +23,7 @@ pub use api::{ApiError, ApiErrorType, ApiResult};
 
 use error_chain;
 use error_chain::ChainedError;
+use slog::Logger;
 use std::fmt;
 
 /// Errors generated using `error_chain` module
@@ -135,11 +136,17 @@ pub fn api_to_internal_result<T>(result: ApiResult<T>) -> InternalResult<T> {
 }
 
 /// Turn an internal result into a public-facing `ApiResult`
-pub fn to_api_result<T>(result: InternalResult<T>) -> ApiResult<T> {
+pub fn to_api_result<T>(
+    result: InternalResult<T>,
+    log: &Logger,
+) -> ApiResult<T>
+{
     result.map_err(|err| match err {
         InternalError::PublicError(err, _) => err,
-        // TODO: How to log the lost error?
-        InternalError::PrivateError(_) => {
+        InternalError::PrivateError(err) => {
+            info!(
+                log, "Private error when casting to API error";
+                "err" => %err.display_chain());
             ApiError::new("Internal error".into(), ApiErrorType::Internal)
         }
     })

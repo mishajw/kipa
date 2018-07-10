@@ -185,8 +185,8 @@ guarantees are inherent, especially relating to authenticity and secrecy.
 
 ### Communication protocol
 
-**WIP:** The security of the communication protocol relies on public key
-encryption and signatures.
+The security of the communication protocol relies on public key encryption and
+signatures.
 
 Each request and response message has:
 - The message sender, including:

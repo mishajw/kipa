@@ -2,16 +2,10 @@
 //! such as the CLI
 
 use address::Address;
-use api::{
-    ApiVisibility, MessageSender, RequestMessage, RequestPayload,
-    ResponseMessage,
-};
-use data_transformer::DataTransformer;
 use error::*;
 use message_handler::MessageHandler;
 use server::socket_server::{SocketHandler, SocketServer};
 use server::{LocalClient, LocalServer};
-use versioning;
 
 use std::fs;
 use std::os::unix::net::{UnixListener, UnixStream};
@@ -28,7 +22,6 @@ pub const DEFAULT_UNIX_SOCKET_PATH: &str = "/tmp/kipa";
 #[derive(Clone)]
 pub struct UnixSocketLocalServer {
     message_handler: Arc<MessageHandler>,
-    data_transformer: Arc<DataTransformer>,
     socket_path: String,
     log: Logger,
 }
@@ -38,14 +31,12 @@ impl UnixSocketLocalServer {
     /// `socket_path`
     pub fn new(
         message_handler: Arc<MessageHandler>,
-        data_transformer: Arc<DataTransformer>,
         socket_path: String,
         log: Logger,
     ) -> Result<Self>
     {
         Ok(UnixSocketLocalServer {
             message_handler,
-            data_transformer,
             socket_path,
             log,
         })
@@ -112,21 +103,10 @@ impl SocketHandler for UnixSocketLocalServer {
 
 impl SocketServer for UnixSocketLocalServer {
     fn get_log(&self) -> &Logger { &self.log }
-
-    fn check_request(&self, request: &RequestMessage) -> Result<()> {
-        if !request.payload.is_visible(&ApiVisibility::Local()) {
-            Err(ErrorKind::RequestError(
-                "Request is not locally available".into(),
-            ).into())
-        } else {
-            Ok(())
-        }
-    }
 }
 
 /// Send requests to a local KIPA daemon through a unix socket file
 pub struct UnixSocketLocalClient {
-    data_transformer: Arc<DataTransformer>,
     socket_path: String,
     log: Logger,
 }
@@ -134,17 +114,8 @@ pub struct UnixSocketLocalClient {
 impl UnixSocketLocalClient {
     /// Create a new sender, which uses a `DataTransformer` to serialize packets
     /// before going on the line
-    pub fn new(
-        data_transformer: Arc<DataTransformer>,
-        socket_path: &str,
-        log: Logger,
-    ) -> Self
-    {
-        UnixSocketLocalClient {
-            socket_path: socket_path.to_string(),
-            data_transformer,
-            log,
-        }
+    pub fn new(socket_path: String, log: Logger) -> Self {
+        UnixSocketLocalClient { socket_path, log }
     }
 }
 
@@ -172,32 +143,15 @@ impl SocketHandler for UnixSocketLocalClient {
 }
 
 impl LocalClient for UnixSocketLocalClient {
-    fn send(
-        &self,
-        request_payload: RequestPayload,
-        message_id: u32,
-    ) -> Result<ResponseMessage>
-    {
-        let request = RequestMessage::new(
-            request_payload,
-            MessageSender::Cli(),
-            message_id,
-            versioning::get_version(),
-        );
-        let request_bytes = self.data_transformer.request_to_bytes(&request)?;
-
+    fn send(&self, request_data: &[u8]) -> Result<Vec<u8>> {
         trace!(self.log, "Setting up socket to daemon");
         let mut socket = UnixStream::connect(&self.socket_path)
             .chain_err(|| "Error on trying to connect to node")?;
 
         trace!(self.log, "Sending request to daemon");
-        self.send_data(&request_bytes, &mut socket, None)?;
+        self.send_data(&request_data, &mut socket, None)?;
 
         trace!(self.log, "Reading response from daemon");
-        let response_data = self.receive_data(&mut socket, None)?;
-
-        trace!(self.log, "Got response bytes");
-        self.data_transformer
-            .bytes_to_response(&response_data, None)
+        self.receive_data(&mut socket, None)
     }
 }

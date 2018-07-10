@@ -8,6 +8,9 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Add
+- Add use of encryption and signatures to messaging between daemons
+
 ### Refactor
 - Move `src/lib/socket_server/mod.rs` to `src/lib/server/socket_server.rs`
 - Move usage of `DataTransformer` from servers into `MessageHandler`

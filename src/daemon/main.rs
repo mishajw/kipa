@@ -105,11 +105,8 @@ fn run_servers(
     )?.into();
 
     // Set up out communication
-    let global_client: Arc<Client> = Client::create(
-        data_transformer.clone(),
-        args,
-        log.new(o!("global_client" => true)),
-    )?.into();
+    let global_client: Arc<Client> =
+        Client::create((), args, log.new(o!("global_client" => true)))?.into();
 
     // Set up request handler
     let payload_handler: Arc<PayloadHandler> = PayloadHandler::create(
@@ -139,7 +136,7 @@ fn run_servers(
 
     // Set up local listening for requests
     let local_server = LocalServer::create(
-        (message_handler.clone(), data_transformer.clone()),
+        message_handler.clone(),
         args,
         log.new(o!("local_server" => true)),
     )?;

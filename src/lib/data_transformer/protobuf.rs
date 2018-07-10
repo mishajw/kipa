@@ -5,13 +5,13 @@
 //! Some relevant files:
 //! 1) `.proto` file can be found in `resources/proto/proto_api.proto`.
 //! 2) `build.rs` file creates the protobuf objects and places them in...
-//! 3) `src/lib/data_handler/proto_api.rs` is where the generated protobuf
+//! 3) `src/lib/data_transformer/proto_api.rs` is where the generated protobuf
 //! files are placed.
 
 use address::Address;
 use api::{
-    ApiError, ApiErrorType, ApiResult, MessageSender, RequestMessage,
-    RequestPayload, ResponseMessage, ResponsePayload,
+    ApiError, ApiErrorType, ApiResult, RequestBody, RequestPayload,
+    ResponseBody, ResponsePayload, SecureMessage,
 };
 use data_transformer::{proto_api, DataTransformer};
 use error::*;
@@ -26,166 +26,190 @@ use std::convert::{From, Into};
 pub struct ProtobufDataTransformer {}
 
 impl DataTransformer for ProtobufDataTransformer {
-    fn request_to_bytes(&self, request: &RequestMessage) -> Result<Vec<u8>> {
-        let mut general_request = proto_api::GeneralRequest::new();
-        match request.payload {
+    fn encode_secure_message(&self, message: SecureMessage) -> Result<Vec<u8>> {
+        let mut proto_message = proto_api::SecureMessage::new();
+        proto_message.set_sender(message.sender.clone().into());
+        proto_message.set_body_signature(message.body_signature);
+        proto_message.set_encrypted_body(message.encrypted_body);
+        proto_message
+            .write_to_bytes()
+            .chain_err(|| "Error on write secure message to bytes")
+    }
+
+    fn decode_secure_message(
+        &self,
+        data: &[u8],
+        sender: Address,
+    ) -> Result<SecureMessage>
+    {
+        let proto_message: proto_api::SecureMessage = parse_from_bytes(data)
+            .chain_err(|| "Error on parsing secure message")?;
+        Ok(SecureMessage::new(
+            sender_node_to_node(proto_message.get_sender(), sender),
+            proto_message.get_body_signature().to_vec(),
+            proto_message.get_encrypted_body().to_vec(),
+        ))
+    }
+
+    fn encode_request_body(&self, body: RequestBody) -> Result<Vec<u8>> {
+        let proto_body: proto_api::RequestBody = body.into();
+        proto_body
+            .write_to_bytes()
+            .chain_err(|| "Error on write request body to bytes")
+    }
+
+    fn decode_request_body(&self, data: &[u8]) -> Result<RequestBody> {
+        let proto_body: proto_api::RequestBody = parse_from_bytes(data)
+            .chain_err(|| "Error on parsing request body")?;
+        proto_body.into()
+    }
+
+    fn encode_response_body(&self, body: ResponseBody) -> Result<Vec<u8>> {
+        let proto_body: proto_api::ResponseBody = body.into();
+        proto_body
+            .write_to_bytes()
+            .chain_err(|| "Error on write response body to bytes")
+    }
+
+    fn decode_response_body(&self, data: &[u8]) -> Result<ResponseBody> {
+        let proto_body: proto_api::ResponseBody = parse_from_bytes(data)
+            .chain_err(|| "Error on parsing response body")?;
+        proto_body.into()
+    }
+}
+
+// TODO: Try to remove clones from the `Into<>` impls
+
+impl Into<proto_api::RequestBody> for RequestBody {
+    fn into(self) -> proto_api::RequestBody {
+        let mut proto_body = proto_api::RequestBody::new();
+
+        match self.payload {
             RequestPayload::QueryRequest(ref key) => {
                 let mut query = proto_api::QueryRequest::new();
                 query.set_key(key.clone().into());
-                general_request.set_query_request(query);
+                proto_body.set_query_request(query);
             }
             RequestPayload::SearchRequest(ref key) => {
                 let mut search = proto_api::SearchRequest::new();
                 search.set_key(key.clone().into());
-                general_request.set_search_request(search);
+                proto_body.set_search_request(search);
             }
             RequestPayload::ConnectRequest(ref node) => {
                 let mut connect = proto_api::ConnectRequest::new();
-                let kipa_node: Result<proto_api::Node> = node.clone().into();
-                connect.set_node(kipa_node?);
-                general_request.set_connect_request(connect);
+                connect.set_node(node.clone().into());
+                proto_body.set_connect_request(connect);
             }
             RequestPayload::ListNeighboursRequest() => {
                 let mut list = proto_api::ListNeighboursRequest::new();
-                general_request.set_list_neighbours_request(list);
+                proto_body.set_list_neighbours_request(list);
             }
         };
 
-        let sender: Result<proto_api::MessageSender> =
-            request.sender.clone().into();
-        general_request.set_sender(sender?);
-        general_request.set_id(request.id);
-        general_request.set_version(request.version.clone());
-        general_request
-            .write_to_bytes()
-            .chain_err(|| "Error on write request to bytes")
+        proto_body.set_id(self.id);
+        proto_body.set_version(self.version);
+        proto_body
     }
+}
 
-    fn bytes_to_request(
-        &self,
-        data: &[u8],
-        sender: Option<Address>,
-    ) -> Result<RequestMessage>
-    {
-        // Parse the request to the protobuf type
-        let request: proto_api::GeneralRequest =
-            parse_from_bytes(data).chain_err(|| "Error on parsing request")?;
-
-        let payload = if request.has_query_request() {
-            let key = request.get_query_request().get_key().clone().into();
+impl Into<Result<RequestBody>> for proto_api::RequestBody {
+    fn into(self) -> Result<RequestBody> {
+        let payload = if self.has_query_request() {
+            let key = self.get_query_request().get_key().clone().into();
             RequestPayload::QueryRequest(key)
-        } else if request.has_search_request() {
-            let key = request.get_search_request().get_key().clone().into();
+        } else if self.has_search_request() {
+            let key = self.get_search_request().get_key().clone().into();
             RequestPayload::SearchRequest(key)
-        } else if request.has_connect_request() {
-            let node: Result<Node> =
-                request.get_connect_request().get_node().clone().into();
-            RequestPayload::ConnectRequest(node?)
-        } else if request.has_list_neighbours_request() {
+        } else if self.has_connect_request() {
+            RequestPayload::ConnectRequest(
+                self.get_connect_request().get_node().clone().into(),
+            )
+        } else if self.has_list_neighbours_request() {
             RequestPayload::ListNeighboursRequest()
         } else {
             return Err(
-                ErrorKind::ParseError("Unrecognized request".into()).into()
+                ErrorKind::RequestError("Unrecognized request".into()).into()
             );
         };
 
-        let sender: Result<MessageSender> =
-            proto_to_message_sender(&request.get_sender(), sender);
-        let version = request.get_version().to_string();
-
-        Ok(RequestMessage::new(
+        Ok(RequestBody::new(
             payload,
-            sender?,
-            request.get_id(),
-            version,
+            self.get_id(),
+            self.get_version().into(),
         ))
     }
+}
 
-    fn response_to_bytes(&self, response: &ResponseMessage) -> Result<Vec<u8>> {
-        let mut general_response = proto_api::GeneralResponse::new();
+impl Into<proto_api::ResponseBody> for ResponseBody {
+    fn into(self) -> proto_api::ResponseBody {
+        let mut proto_body = proto_api::ResponseBody::new();
 
-        match &response.payload {
+        match self.payload {
             Ok(ResponsePayload::QueryResponse(ref nodes)) => {
                 let mut query = proto_api::QueryResponse::new();
-                let kipa_nodes: Result<Vec<proto_api::Node>> =
-                    nodes.iter().map(|n| n.clone().into()).collect();
-                query.set_nodes(RepeatedField::from_vec(kipa_nodes?));
-                general_response.set_query_response(query);
+                query.set_nodes(RepeatedField::from_vec(
+                    nodes.iter().map(|n| n.clone().into()).collect(),
+                ));
+                proto_body.set_query_response(query);
             }
             Ok(ResponsePayload::SearchResponse(ref node)) => {
                 let mut search = proto_api::SearchResponse::new();
                 if let Some(node) = node {
-                    let n: Result<proto_api::Node> = node.clone().into();
-                    search.set_node(n?);
+                    search.set_node(node.clone().into());
                 }
-                general_response.set_search_response(search);
+                proto_body.set_search_response(search);
             }
-            Ok(ResponsePayload::ConnectResponse()) => general_response
+            Ok(ResponsePayload::ConnectResponse()) => proto_body
                 .set_connect_response(proto_api::ConnectResponse::new()),
             Ok(ResponsePayload::ListNeighboursResponse(ref nodes)) => {
                 let mut list = proto_api::ListNeighboursResponse::new();
-                let kipa_nodes: Result<Vec<proto_api::Node>> =
+                let kipa_nodes: Vec<proto_api::Node> =
                     nodes.iter().map(|n| n.clone().into()).collect();
-                list.set_nodes(RepeatedField::from_vec(kipa_nodes?));
-                general_response.set_list_neighbours_response(list);
+                list.set_nodes(RepeatedField::from_vec(kipa_nodes));
+                proto_body.set_list_neighbours_response(list);
             }
             Err(api_error) => {
                 let proto_error = api_error.clone().into();
-                general_response.set_api_error(proto_error);
+                proto_body.set_api_error(proto_error);
             }
         };
 
-        let sender: Result<proto_api::MessageSender> =
-            response.sender.clone().into();
-        general_response.set_sender(sender?);
-        general_response.set_id(response.id);
-        general_response.set_version(response.version.clone());
-
-        general_response
-            .write_to_bytes()
-            .chain_err(|| "Error on write response to bytes")
+        proto_body.set_id(self.id);
+        proto_body.set_version(self.version.clone());
+        proto_body
     }
+}
 
-    fn bytes_to_response(
-        &self,
-        data: &[u8],
-        sender: Option<Address>,
-    ) -> Result<ResponseMessage>
-    {
-        // Parse the request to the protobuf type
-        let response: proto_api::GeneralResponse =
-            parse_from_bytes(data).chain_err(|| "Error on parsing response")?;
-
-        let payload: ApiResult<ResponsePayload> = if response
-            .has_query_response()
-        {
-            let nodes: Result<Vec<Node>> = response
+impl Into<Result<ResponseBody>> for proto_api::ResponseBody {
+    fn into(self) -> Result<ResponseBody> {
+        let payload: ApiResult<ResponsePayload> = if self.has_query_response() {
+            let nodes: Vec<Node> = self
                 .get_query_response()
                 .get_nodes()
                 .iter()
                 .map(|n| n.clone().into())
                 .collect();
-            Ok(ResponsePayload::QueryResponse(nodes?))
-        } else if response.has_search_response() {
-            if response.get_search_response().has_node() {
-                let node: Result<Node> =
-                    response.get_search_response().get_node().clone().into();
-                Ok(ResponsePayload::SearchResponse(Some(node?)))
+            Ok(ResponsePayload::QueryResponse(nodes))
+        } else if self.has_search_response() {
+            if self.get_search_response().has_node() {
+                let node: Node =
+                    self.get_search_response().get_node().clone().into();
+                Ok(ResponsePayload::SearchResponse(Some(node)))
             } else {
                 Ok(ResponsePayload::SearchResponse(None))
             }
-        } else if response.has_connect_response() {
+        } else if self.has_connect_response() {
             Ok(ResponsePayload::ConnectResponse())
-        } else if response.has_list_neighbours_response() {
-            let nodes: Result<Vec<Node>> = response
+        } else if self.has_list_neighbours_response() {
+            let nodes: Vec<Node> = self
                 .get_list_neighbours_response()
                 .get_nodes()
                 .iter()
                 .map(|n| n.clone().into())
                 .collect();
-            Ok(ResponsePayload::ListNeighboursResponse(nodes?))
-        } else if response.has_api_error() {
-            Err(response.get_api_error().clone().into())
+            Ok(ResponsePayload::ListNeighboursResponse(nodes))
+        } else if self.has_api_error() {
+            Err(self.get_api_error().clone().into())
         } else {
             // This return is scoped to the function, not to the payload
             return Err(
@@ -193,15 +217,10 @@ impl DataTransformer for ProtobufDataTransformer {
             );
         };
 
-        let sender: Result<MessageSender> =
-            proto_to_message_sender(&response.get_sender(), sender);
-        let version = response.get_version().to_string();
-
-        Ok(ResponseMessage::new(
+        Ok(ResponseBody::new(
             payload,
-            sender?,
-            response.get_id(),
-            version,
+            self.get_id(),
+            self.get_version().into(),
         ))
     }
 }
@@ -221,81 +240,63 @@ impl From<proto_api::Key> for Key {
     }
 }
 
-impl Into<Result<proto_api::Address>> for Address {
-    fn into(self) -> Result<proto_api::Address> {
+impl Into<proto_api::Address> for Address {
+    fn into(self) -> proto_api::Address {
         let mut kipa_address = proto_api::Address::new();
         kipa_address.set_ip_data(self.ip_data);
         kipa_address.set_port(u32::from(self.port));
-        Ok(kipa_address)
+        kipa_address
     }
 }
 
-impl Into<Result<Address>> for proto_api::Address {
-    fn into(self) -> Result<Address> {
-        Ok(Address::new(
-            self.get_ip_data().to_vec(),
-            self.get_port() as u16,
-        ))
+impl Into<Address> for proto_api::Address {
+    fn into(self) -> Address {
+        assert!(self.get_port() > 0 && self.get_port() < 0xFFFF);
+        Address::new(self.get_ip_data().to_vec(), self.get_port() as u16)
     }
 }
 
-impl Into<Result<proto_api::Node>> for Node {
-    fn into(self) -> Result<proto_api::Node> {
+impl Into<proto_api::Node> for Node {
+    fn into(self) -> proto_api::Node {
         let mut kipa_node = proto_api::Node::new();
         kipa_node.set_key(self.key.clone().into());
-        let kipa_address: Result<proto_api::Address> =
-            self.address.clone().into();
-        kipa_node.set_address(kipa_address?);
-        Ok(kipa_node)
+        kipa_node.set_address(self.address.clone().into());
+        kipa_node
     }
 }
 
-impl Into<Result<Node>> for proto_api::Node {
-    fn into(self) -> Result<Node> {
-        let address: Result<Address> = self.get_address().clone().into();
-        Ok(Node::new(address?, self.get_key().clone().into()))
+impl Into<Node> for proto_api::Node {
+    fn into(self) -> Node {
+        Node::new(
+            self.get_address().clone().into(),
+            self.get_key().clone().into(),
+        )
     }
 }
 
-impl Into<Result<proto_api::MessageSender>> for MessageSender {
-    fn into(self) -> Result<proto_api::MessageSender> {
-        let mut kipa_sender = proto_api::MessageSender::new();
-        match self {
-            MessageSender::Node(ref n) => {
-                let key = n.key.clone().into();
-                let port = n.address.port;
-                kipa_sender.set_key(key);
-                kipa_sender.set_port(u32::from(port));
-            }
-            MessageSender::Cli() => {}
-        }
-        Ok(kipa_sender)
+impl Into<proto_api::SenderNode> for Node {
+    fn into(self) -> proto_api::SenderNode {
+        let mut proto_node = proto_api::SenderNode::new();
+        proto_node.set_key(self.key.into());
+        proto_node.set_port(u32::from(self.address.port));
+        proto_node
     }
 }
 
 /// We can not define this function as a `Into` trait, as we also need the
-/// `Address` to create the `MessageSender`
-fn proto_to_message_sender(
-    message_sender: &proto_api::MessageSender,
-    address: Option<Address>,
-) -> Result<MessageSender>
+/// `Address` to create the `SenderNode`
+fn sender_node_to_node(
+    sender_node: &proto_api::SenderNode,
+    address: Address,
+) -> Node
 {
-    if address.is_some() {
-        assert!(message_sender.has_key());
-        assert!(
-            message_sender.get_port() > 0 && message_sender.get_port() < 0xFFFF
-        );
-        let key = message_sender.get_key().clone().into();
-        Ok(MessageSender::Node(Node::new(
-            Address::new(
-                address.unwrap().ip_data,
-                message_sender.get_port() as u16,
-            ),
-            key,
-        )))
-    } else {
-        Ok(MessageSender::Cli())
-    }
+    assert!(sender_node.has_key());
+    assert!(sender_node.get_port() > 0 && sender_node.get_port() < 0xFFFF);
+    let key = sender_node.get_key().clone().into();
+    Node::new(
+        Address::new(address.ip_data, sender_node.get_port() as u16),
+        key,
+    )
 }
 
 impl Into<ApiErrorType> for proto_api::ApiErrorType {
