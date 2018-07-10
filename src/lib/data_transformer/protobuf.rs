@@ -104,6 +104,10 @@ impl Into<proto_api::RequestBody> for RequestBody {
                 let mut list = proto_api::ListNeighboursRequest::new();
                 proto_body.set_list_neighbours_request(list);
             }
+            RequestPayload::VerifyRequest() => {
+                let mut list = proto_api::VerifyRequest::new();
+                proto_body.set_verify_request(list);
+            }
         };
 
         proto_body.set_id(self.id);
@@ -126,6 +130,8 @@ impl Into<Result<RequestBody>> for proto_api::RequestBody {
             )
         } else if self.has_list_neighbours_request() {
             RequestPayload::ListNeighboursRequest()
+        } else if self.has_verify_request() {
+            RequestPayload::VerifyRequest()
         } else {
             return Err(
                 ErrorKind::RequestError("Unrecognized request".into()).into()
@@ -167,6 +173,10 @@ impl Into<proto_api::ResponseBody> for ResponseBody {
                     nodes.iter().map(|n| n.clone().into()).collect();
                 list.set_nodes(RepeatedField::from_vec(kipa_nodes));
                 proto_body.set_list_neighbours_response(list);
+            }
+            Ok(ResponsePayload::VerifyResponse()) => {
+                proto_body
+                    .set_verify_response(proto_api::VerifyResponse::new());
             }
             Err(api_error) => {
                 let proto_error = api_error.clone().into();
@@ -210,6 +220,8 @@ impl Into<Result<ResponseBody>> for proto_api::ResponseBody {
             Ok(ResponsePayload::ListNeighboursResponse(nodes))
         } else if self.has_api_error() {
             Err(self.get_api_error().clone().into())
+        } else if self.has_verify_response() {
+            Ok(ResponsePayload::VerifyResponse())
         } else {
             // This return is scoped to the function, not to the payload
             return Err(

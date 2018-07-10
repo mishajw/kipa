@@ -89,10 +89,30 @@ impl GraphPayloadHandler {
     {
         let callback_key = key.clone();
         let found_log = self.log.new(o!());
+        let found_message_handler = outgoing_message_handler.clone();
+        let found_timeout = Duration::from_secs(self.search_timeout_sec as u64);
         let found_callback = move |n: &Node| {
             trace!(
                 found_log, "Found node when searching"; "node" => %n);
             if n.key == callback_key {
+                // Send verification message to the node to ensure that the
+                // discovered IP address is owned by the requested key
+                //
+                // If the verification fails, then log a warning but continue
+                // the search. If we exit here, it is possible to easily attack
+                // a search by returning fake nodes whenever you receive a query
+                if let Err(err) = found_message_handler.send(
+                    n,
+                    RequestPayload::VerifyRequest(),
+                    found_timeout,
+                ) {
+                    warn!(
+                        found_log, "Error when sending verification message
+                        after finding correct node";
+                        "err" => %err);
+                    return Ok(SearchCallbackReturn::Continue());
+                }
+
                 info!(found_log, "Search success"; "node" => %n);
                 Ok(SearchCallbackReturn::Return(n.clone()))
             } else {
@@ -296,6 +316,9 @@ impl PayloadHandler for GraphPayloadHandler {
                         .collect::<Vec<String>>()
                         .join(", "));
                 Ok(ResponsePayload::ListNeighboursResponse(neighbours))
+            }
+            RequestPayload::VerifyRequest() => {
+                Ok(ResponsePayload::VerifyResponse())
             }
         }
     }

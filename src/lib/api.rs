@@ -88,6 +88,13 @@ pub enum RequestPayload {
     ConnectRequest(Node),
     /// List all neighbour nodes
     ListNeighboursRequest(),
+    /// Verify that a node is alive, and owned by a specific key
+    ///
+    /// Neither the request or response contain any fields. This is because the
+    /// response will be signed by the correct key, and therefore the
+    /// verification is correct. And due to message identifiers, the
+    /// verification is known to be up-to-date.
+    VerifyRequest(),
 }
 
 /// The response for a given request
@@ -105,6 +112,9 @@ pub enum ResponsePayload {
     /// [`ListNeighboursRequest`](
     /// ./enum.RequestPayload.html#variant.ListNeighboursRequest)
     ListNeighboursResponse(Vec<Node>),
+    /// Response for a
+    /// [`VerifyRequest`](./enum.RequestPayload.html#variant.VerifyRequest)
+    VerifyResponse(),
 }
 
 impl RequestPayload {
@@ -122,6 +132,9 @@ impl RequestPayload {
             }
             RequestPayload::ListNeighboursRequest() => {
                 visibility == &ApiVisibility::Local()
+            }
+            RequestPayload::VerifyRequest() => {
+                visibility == &ApiVisibility::Global()
             }
         }
     }

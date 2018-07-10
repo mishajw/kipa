@@ -48,9 +48,10 @@ message RequestBody {
   SearchRequest search_request = 2;
   ConnectRequest connect_request = 3;
   ListNeighboursRequest list_neighbours_request = 4;
+  VerifyRequest verify_request = 5;
 
-  uint32 id = 5;
-  string version = 6;
+  uint32 id = 6;
+  string version = 7;
 }
 
 message ResponseBody {
@@ -59,10 +60,11 @@ message ResponseBody {
   SearchResponse search_response = 2;
   ConnectResponse connect_response = 3;
   ListNeighboursResponse list_neighbours_response = 4;
-  ApiError api_error = 5;
+  VerifyResponse verify_response = 5;
+  ApiError api_error = 6;
 
-  uint32 id = 6;
-  string version = 7;
+  uint32 id = 7;
+  string version = 8;
 }
 
 message QueryRequest {
@@ -92,4 +94,8 @@ message ListNeighboursRequest {}
 message ListNeighboursResponse {
   repeated Node nodes = 1;
 }
+
+message VerifyRequest {}
+
+message VerifyResponse {}
 

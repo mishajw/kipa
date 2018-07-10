@@ -45,6 +45,10 @@ impl PayloadHandler for BlackHolePayloadHandler {
                 trace!(self.log, "Received list neighbours request");
                 Ok(ResponsePayload::ListNeighboursResponse(vec![]))
             }
+            &RequestPayload::VerifyRequest() => {
+                trace!(self.log, "Received verify request");
+                Ok(ResponsePayload::VerifyResponse())
+            }
         }
     }
 }
