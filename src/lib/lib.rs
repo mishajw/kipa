@@ -27,6 +27,7 @@ extern crate spectral;
 extern crate regex;
 #[macro_use]
 extern crate lazy_static;
+extern crate periodic;
 extern crate rand;
 
 pub mod api;

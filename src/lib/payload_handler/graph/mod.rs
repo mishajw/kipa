@@ -1,6 +1,7 @@
 //! Implement `PayloadHandler` using graph based searches through KIPA net
 
 mod key_space;
+pub mod neighbour_gc;
 mod neighbours_store;
 mod search;
 

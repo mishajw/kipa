@@ -194,6 +194,11 @@ impl NeighboursStore {
             self.neighbours.pop();
         }
     }
+
+    /// Remove a neighbour by its key
+    pub fn remove_by_key(&mut self, key: &Key) {
+        self.neighbours.retain(|(n, _)| &n.key != key);
+    }
 }
 
 #[cfg(test)]

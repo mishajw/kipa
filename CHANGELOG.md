@@ -12,6 +12,8 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 - Add use of encryption and signatures to messaging between daemons
 - Add verification message to ensure that an IP address belongs to a certain key.
   This message is used to verify the result of a key search
+- Add garbage collection of neighbours, i.e. removing neighbours once they stop
+  returning valid responses to validation requests
 
 ### Refactor
 - Move `src/lib/socket_server/mod.rs` to `src/lib/server/socket_server.rs`

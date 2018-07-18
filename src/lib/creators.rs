@@ -422,6 +422,10 @@ impl Creator for PayloadHandler {
 
     #[cfg(feature = "use-graph")]
     fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
+        use payload_handler::graph::neighbour_gc::{
+            DEFAULT_FREQUENCY_SEC, DEFAULT_NUM_RETRIES,
+            DEFAULT_RETRY_FREQUENCY_SEC,
+        };
         use payload_handler::graph::{
             DEFAULT_CONNECT_SEARCH_BREADTH, DEFAULT_MAX_NUM_SEARCH_THREADS,
             DEFAULT_SEARCH_BREADTH, DEFAULT_SEARCH_TIMEOUT_SEC,
@@ -448,6 +452,27 @@ impl Creator for PayloadHandler {
                 .help("Timeout for querying other node's neighbours")
                 .takes_value(true)
                 .default_value(DEFAULT_SEARCH_TIMEOUT_SEC),
+            clap::Arg::with_name("neighbour_gc_frequency_sec")
+                .long("neighbour-gc-frequency-sec")
+                .help(
+                    "How often to check if neighbours are still responding to \
+                     requests",
+                )
+                .takes_value(true)
+                .default_value(DEFAULT_FREQUENCY_SEC),
+            clap::Arg::with_name("neighbour_gc_num_retries")
+                .long("neighbour-gc-num-retries")
+                .help(
+                    "Number of retries to attempt before regarding a \
+                     neighbour as unresponsive",
+                )
+                .takes_value(true)
+                .default_value(DEFAULT_NUM_RETRIES),
+            clap::Arg::with_name("neighbour_gc_retry_frequency_sec")
+                .long("neighbour-gc-retry-frequency-sec")
+                .help("Time to wait between checking if a neighbour is alive")
+                .takes_value(true)
+                .default_value(DEFAULT_RETRY_FREQUENCY_SEC),
         ];
 
         args.append(&mut KeySpaceManager::get_clap_args());
@@ -462,7 +487,8 @@ impl Creator for PayloadHandler {
         log: Logger,
     ) -> InternalResult<Box<Self>>
     {
-        use payload_handler::graph::GraphPayloadHandler;
+        use payload_handler::graph::{neighbour_gc, GraphPayloadHandler};
+        use std::time::Duration;
 
         let (local_node, message_handler_client) = parameters;
 
@@ -470,6 +496,9 @@ impl Creator for PayloadHandler {
         parse_with_err!(connect_search_breadth, usize, args);
         parse_with_err!(max_num_search_threads, usize, args);
         parse_with_err!(search_timeout_sec, usize, args);
+        parse_with_err!(neighbour_gc_frequency_sec, u64, args);
+        parse_with_err!(neighbour_gc_num_retries, u32, args);
+        parse_with_err!(neighbour_gc_retry_frequency_sec, u64, args);
 
         let key_space_manager: Arc<KeySpaceManager> = KeySpaceManager::create(
             local_node.clone(),
@@ -484,6 +513,15 @@ impl Creator for PayloadHandler {
                 log.new(o!("neighbours_store" => true)),
             )?),
         ));
+
+        neighbour_gc::start_gc(
+            neighbours_store.clone(),
+            message_handler_client.clone(),
+            Duration::from_secs(neighbour_gc_frequency_sec),
+            neighbour_gc_num_retries,
+            Duration::from_secs(neighbour_gc_retry_frequency_sec),
+            log.new(o!("neighbour_gc" => true)),
+        );
 
         Ok(Box::new(GraphPayloadHandler::new(
             &local_node.key,
