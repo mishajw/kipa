@@ -90,7 +90,7 @@ impl NeighboursStore {
             "distance" => self.key_space_manager.distance(
                 &key_space, &self.local_key_space));
 
-        // New algorithm:
+        // Algorithm:
         // - Get distance from local to all neighbours
         // - Get min angle for each neighbour to other neighbours
         // - Normalise distances and angle
