@@ -16,13 +16,13 @@ use slog::Logger;
 
 /// Server that listens for global requests on a specified TCP socket
 #[derive(Clone)]
-pub struct TcpGlobalServer {
+pub struct TcpServer {
     message_handler: Arc<IncomingMessageHandler>,
     local_node: Node,
     log: Logger,
 }
 
-impl TcpGlobalServer {
+impl TcpServer {
     #[allow(missing_docs)]
     pub fn new(
         message_handler: Arc<IncomingMessageHandler>,
@@ -30,7 +30,7 @@ impl TcpGlobalServer {
         log: Logger,
     ) -> Self
     {
-        TcpGlobalServer {
+        TcpServer {
             message_handler,
             local_node,
             log,
@@ -38,7 +38,7 @@ impl TcpGlobalServer {
     }
 }
 
-impl Server for TcpGlobalServer {
+impl Server for TcpServer {
     fn start(&self) -> Result<thread::JoinHandle<()>> {
         let listener = TcpListener::bind(SocketAddr::new(
             IpAddr::V6(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0)),
@@ -68,7 +68,7 @@ impl Server for TcpGlobalServer {
     }
 }
 
-impl SocketHandler for TcpGlobalServer {
+impl SocketHandler for TcpServer {
     type SocketType = TcpStream;
 
     fn set_socket_timeout(
@@ -99,7 +99,7 @@ impl SocketHandler for TcpGlobalServer {
     }
 }
 
-impl SocketServer for TcpGlobalServer {
+impl SocketServer for TcpServer {
     fn get_log(&self) -> &Logger { &self.log }
 }
 

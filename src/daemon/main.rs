@@ -100,8 +100,8 @@ fn run_servers(
     )?.into();
 
     // Set up out communication
-    let global_client: Arc<Client> =
-        Client::create((), args, log.new(o!("global_client" => true)))?.into();
+    let client: Arc<Client> =
+        Client::create((), args, log.new(o!("client" => true)))?.into();
 
     // Set up request handler
     let payload_handler: Arc<PayloadHandler> = PayloadHandler::create(
@@ -117,17 +117,17 @@ fn run_servers(
                 data_transformer.clone(),
                 gpg_key_handler.clone(),
                 local_node.clone(),
-                global_client,
+                client,
             ),
             args,
             log.new(o!("message_handler" => true)),
         )?.into();
 
     // Set up listening for connections
-    let global_server = Server::create(
+    let server = Server::create(
         (message_handler.clone(), local_node.clone()),
         args,
-        log.new(o!("global_server" => true)),
+        log.new(o!("server" => true)),
     )?;
 
     // Set up local listening for requests
@@ -137,9 +137,9 @@ fn run_servers(
         log.new(o!("local_server" => true)),
     )?;
 
-    let global_server_thread = global_server.start().map_err(|_| {
+    let server_thread = server.start().map_err(|_| {
         InternalError::public(
-            "Error on creating global server thread",
+            "Error on creating server thread",
             ApiErrorType::Configuration,
         )
     })?;
@@ -150,9 +150,9 @@ fn run_servers(
         )
     })?;
 
-    global_server_thread
+    server_thread
         .join()
-        .expect("Error on joining global server thread");
+        .expect("Error on joining server thread");
     local_server_thread
         .join()
         .expect("Error on joining local server thread");

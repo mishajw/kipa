@@ -210,9 +210,9 @@ impl Creator for Server {
         log: Logger,
     ) -> InternalResult<Box<Self>>
     {
-        use server::tcp::TcpGlobalServer;
+        use server::tcp::TcpServer;
         let (message_handler, local_node) = parameters;
-        Ok(Box::new(TcpGlobalServer::new(
+        Ok(Box::new(TcpServer::new(
             message_handler,
             local_node,
             log,
