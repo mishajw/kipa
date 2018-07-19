@@ -10,7 +10,7 @@ use error::*;
 use gpg_key::GpgKeyHandler;
 use node::Node;
 use payload_handler::PayloadHandler;
-use server::Client;
+use server::{Client, LocalClient};
 use versioning;
 
 use slog::Logger;
@@ -285,5 +285,67 @@ impl MessageHandlerClient {
         }
 
         api_to_internal_result(response_body.payload)
+    }
+}
+
+/// Client that will take a payload, wrap it in a message, and send to a local
+/// daemon node
+pub struct MessageHandlerLocalClient {
+    message_id: u32,
+    local_client: Arc<LocalClient>,
+    data_transformer: Arc<DataTransformer>,
+}
+
+impl MessageHandlerLocalClient {
+    #[allow(missing_docs)]
+    pub fn new(
+        message_id: u32,
+        local_client: Arc<LocalClient>,
+        data_transformer: Arc<DataTransformer>,
+    ) -> Self
+    {
+        MessageHandlerLocalClient {
+            message_id,
+            local_client,
+            data_transformer,
+        }
+    }
+
+    /// Send a payload to a node
+    pub fn send(
+        &self,
+        payload: RequestPayload,
+    ) -> ResponseResult<ResponsePayload>
+    {
+        let body = RequestBody::new(
+            payload,
+            self.message_id,
+            env!("CARGO_PKG_VERSION").to_string(),
+        );
+        let request_data = to_internal_result(
+            self.data_transformer.encode_request_body(body),
+        )?;
+        let response_data =
+            self.local_client.send(&request_data).map_err(|_| {
+                InternalError::public(
+                    "Error on connecting to daemon - is it running?",
+                    ApiErrorType::Configuration,
+                )
+            })?;
+        let response_message = to_internal_result(
+            self.data_transformer.decode_response_body(&response_data),
+        )?;
+
+        // Verify return message identifier
+        if response_message.id != self.message_id {
+            return Err(InternalError::private(ErrorKind::ResponseError(
+                format!(
+                    "Incorrect message ID in resposonse: expected {}, got {}",
+                    self.message_id, response_message.id
+                ),
+            )));
+        }
+
+        api_to_internal_result(response_message.payload)
     }
 }

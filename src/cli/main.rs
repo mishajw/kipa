@@ -7,11 +7,12 @@ extern crate slog;
 extern crate slog_async;
 extern crate slog_term;
 
-use kipa_lib::api::{RequestBody, RequestPayload, ResponsePayload};
+use kipa_lib::api::{RequestPayload, ResponsePayload};
 use kipa_lib::creators::*;
 use kipa_lib::data_transformer::DataTransformer;
 use kipa_lib::error::*;
 use kipa_lib::gpg_key::GpgKeyHandler;
+use kipa_lib::message_handler::MessageHandlerLocalClient;
 use kipa_lib::server::{LocalClient, LocalServer};
 use kipa_lib::{Address, Node};
 
@@ -102,8 +103,8 @@ fn message_daemon(
     log: &slog::Logger,
 ) -> InternalResult<()>
 {
-    let gpg_key_handler =
-        GpgKeyHandler::create((), args, log.new(o!("gpg" => true)))?;
+    let gpg_key_handler: Arc<GpgKeyHandler> =
+        GpgKeyHandler::create((), args, log.new(o!("gpg" => true)))?.into();
 
     let data_transformer: Arc<DataTransformer> = DataTransformer::create(
         (),
@@ -111,50 +112,24 @@ fn message_daemon(
         log.new(o!("data_transformer" => true)),
     )?.into();
 
-    let local_client =
-        LocalClient::create((), args, log.new(o!("local_client" => true)))?;
+    let local_client: Arc<LocalClient> =
+        LocalClient::create((), args, log.new(o!("local_client" => true)))?
+            .into();
 
     let message_id: u32 = thread_rng().gen();
     info!(log, "Created message ID"; "message_id" => message_id);
 
-    let send_request =
-        move |payload: RequestPayload| -> InternalResult<ResponsePayload> {
-            let body = RequestBody::new(
-                payload,
-                message_id,
-                env!("CARGO_PKG_VERSION").to_string(),
-            );
-            let request_data =
-                to_internal_result(data_transformer.encode_request_body(body))?;
-            let response_data =
-                local_client.send(&request_data).map_err(|_| {
-                    InternalError::public(
-                        "Error on connecting to daemon - is it running?",
-                        ApiErrorType::Configuration,
-                    )
-                })?;
-            let response_message = to_internal_result(
-                data_transformer.decode_response_body(&response_data),
-            )?;
-
-            // Verify return message identifier
-            if response_message.id != message_id {
-                return Err(InternalError::private(ErrorKind::ResponseError(
-                    format!(
-                        "Incorrect message ID in resposonse: expected {}, got \
-                         {}",
-                        message_id, response_message.id
-                    ),
-                )));
-            }
-
-            api_to_internal_result(response_message.payload)
-        };
+    let message_handler_local_client = MessageHandlerLocalClient::create(
+        (message_id, local_client, data_transformer),
+        args,
+        log.new(o!("message_handler_local_client" => true)),
+    )?;
 
     if let Some(search_args) = args.subcommand_matches("search") {
         let search_key = gpg_key_handler
             .get_key(String::from(search_args.value_of("key_id").unwrap()))?;
-        let response = send_request(RequestPayload::SearchRequest(search_key))?;
+        let response = message_handler_local_client
+            .send(RequestPayload::SearchRequest(search_key))?;
 
         match response {
             ResponsePayload::SearchResponse(Some(ref node)) => {
@@ -177,7 +152,8 @@ fn message_daemon(
             Address::from_string(connect_args.value_of("address").unwrap())?;
         let node = Node::new(node_address, node_key);
 
-        let response = send_request(RequestPayload::ConnectRequest(node))?;
+        let response = message_handler_local_client
+            .send(RequestPayload::ConnectRequest(node))?;
 
         match response {
             ResponsePayload::ConnectResponse() => {
@@ -189,7 +165,8 @@ fn message_daemon(
             ))),
         }
     } else if let Some(_) = args.subcommand_matches("list-neighbours") {
-        let response = send_request(RequestPayload::ListNeighboursRequest())?;
+        let response = message_handler_local_client
+            .send(RequestPayload::ListNeighboursRequest())?;
 
         match response {
             ResponsePayload::ListNeighboursResponse(ref neighbours) => {

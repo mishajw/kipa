@@ -7,7 +7,7 @@ use address::LocalAddressParams;
 use data_transformer::DataTransformer;
 use error::*;
 use gpg_key::GpgKeyHandler;
-use message_handler::MessageHandlerServer;
+use message_handler::{MessageHandlerLocalClient, MessageHandlerServer};
 use node::Node;
 use payload_handler::PayloadHandler;
 #[allow(unused)]
@@ -302,6 +302,23 @@ impl Creator for MessageHandlerServer {
             data_transformer,
             gpg_key_handler,
             log,
+        )))
+    }
+}
+
+impl Creator for MessageHandlerLocalClient {
+    type Parameters = (u32, Arc<LocalClient>, Arc<DataTransformer>);
+    fn create(
+        parameters: Self::Parameters,
+        _args: &clap::ArgMatches,
+        _log: Logger,
+    ) -> InternalResult<Box<Self>>
+    {
+        let (message_id, local_client, data_transformer) = parameters;
+        Ok(Box::new(MessageHandlerLocalClient::new(
+            message_id,
+            local_client,
+            data_transformer,
         )))
     }
 }
