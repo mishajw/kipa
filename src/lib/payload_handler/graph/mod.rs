@@ -16,7 +16,7 @@ use address::Address;
 use api::{RequestPayload, ResponsePayload};
 use error::*;
 use key::Key;
-use message_handler::OutgoingMessageHandler;
+use message_handler::MessageHandlerClient;
 use node::Node;
 use payload_handler::graph::search::{
     GetNeighboursFn, GraphSearch, SearchCallbackReturn,
@@ -83,13 +83,13 @@ impl GraphPayloadHandler {
     fn search(
         &self,
         key: &Key,
-        outgoing_message_handler: Arc<OutgoingMessageHandler>,
+        message_handler_client: Arc<MessageHandlerClient>,
         log: Logger,
     ) -> InternalResult<Option<Node>>
     {
         let callback_key = key.clone();
         let found_log = self.log.new(o!());
-        let found_message_handler = outgoing_message_handler.clone();
+        let found_message_handler_server = message_handler_client.clone();
         let found_timeout = Duration::from_secs(self.search_timeout_sec as u64);
         let found_callback = move |n: &Node| {
             trace!(
@@ -101,7 +101,7 @@ impl GraphPayloadHandler {
                 // If the verification fails, then log a warning but continue
                 // the search. If we exit here, it is possible to easily attack
                 // a search by returning fake nodes whenever you receive a query
-                if let Err(err) = found_message_handler.send(
+                if let Err(err) = found_message_handler_server.send(
                     n,
                     RequestPayload::VerifyRequest(),
                     found_timeout,
@@ -129,7 +129,7 @@ impl GraphPayloadHandler {
                 Address::new(vec![0, 0, 0, 0], 10842),
                 self.key.clone(),
             )],
-            self.create_get_neighbours_fn(outgoing_message_handler),
+            self.create_get_neighbours_fn(message_handler_client),
             Arc::new(found_callback),
             Arc::new(move |n| {
                 trace!(
@@ -149,7 +149,7 @@ impl GraphPayloadHandler {
     fn connect(
         &self,
         node: &Node,
-        outgoing_message_handler: Arc<OutgoingMessageHandler>,
+        message_handler_client: Arc<MessageHandlerClient>,
         log: Logger,
     ) -> InternalResult<()>
     {
@@ -181,7 +181,7 @@ impl GraphPayloadHandler {
             &self.key,
             self.connect_search_breadth,
             vec![node.clone()],
-            self.create_get_neighbours_fn(outgoing_message_handler),
+            self.create_get_neighbours_fn(message_handler_client),
             Arc::new(found_callback),
             Arc::new(explored_callback),
             self.max_num_search_threads,
@@ -195,7 +195,7 @@ impl GraphPayloadHandler {
 
     fn create_get_neighbours_fn(
         &self,
-        outgoing_message_handler: Arc<OutgoingMessageHandler>,
+        message_handler_client: Arc<MessageHandlerClient>,
     ) -> GetNeighboursFn
     {
         let neighbours_store = self.neighbours_store.clone();
@@ -206,7 +206,7 @@ impl GraphPayloadHandler {
                 return Ok(neighbours_store.lock().unwrap().get_all());
             }
 
-            let response = outgoing_message_handler.send(
+            let response = message_handler_client.send(
                 n,
                 RequestPayload::QueryRequest(k.clone()),
                 timeout,
@@ -230,7 +230,7 @@ impl PayloadHandler for GraphPayloadHandler {
         &self,
         payload: &RequestPayload,
         sender: Option<&Node>,
-        outgoing_message_handler: Arc<OutgoingMessageHandler>,
+        message_handler_client: Arc<MessageHandlerClient>,
         message_id: u32,
     ) -> InternalResult<ResponsePayload>
     {
@@ -274,7 +274,7 @@ impl PayloadHandler for GraphPayloadHandler {
                     "key" => %key);
                 Ok(ResponsePayload::SearchResponse(self.search(
                     &key,
-                    outgoing_message_handler,
+                    message_handler_client,
                     self.log.new(o!(
                             "message_id" => message_id,
                             "search_request" => true
@@ -288,7 +288,7 @@ impl PayloadHandler for GraphPayloadHandler {
                     "node" => %node);
                 self.connect(
                     node,
-                    outgoing_message_handler,
+                    message_handler_client,
                     self.log.new(o!(
                             "message_id" => message_id,
                             "connect_request" => true

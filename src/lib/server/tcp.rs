@@ -2,7 +2,7 @@
 
 use address::Address;
 use error::*;
-use message_handler::IncomingMessageHandler;
+use message_handler::MessageHandlerServer;
 use node::Node;
 use server::socket_server::{SocketClient, SocketHandler, SocketServer};
 use server::{Client, Server};
@@ -17,7 +17,7 @@ use slog::Logger;
 /// Server that listens for global requests on a specified TCP socket
 #[derive(Clone)]
 pub struct TcpServer {
-    message_handler: Arc<IncomingMessageHandler>,
+    message_handler_server: Arc<MessageHandlerServer>,
     local_node: Node,
     log: Logger,
 }
@@ -25,13 +25,13 @@ pub struct TcpServer {
 impl TcpServer {
     #[allow(missing_docs)]
     pub fn new(
-        message_handler: Arc<IncomingMessageHandler>,
+        message_handler_server: Arc<MessageHandlerServer>,
         local_node: Node,
         log: Logger,
     ) -> Self
     {
         TcpServer {
-            message_handler,
+            message_handler_server,
             local_node,
             log,
         }
@@ -58,7 +58,7 @@ impl Server for TcpServer {
                 thread::spawn(move || {
                     spawn_self.handle_socket_result(
                         socket.chain_err(|| "Failed to create socket"),
-                        spawn_self.message_handler.clone(),
+                        spawn_self.message_handler_server.clone(),
                     )
                 });
             });

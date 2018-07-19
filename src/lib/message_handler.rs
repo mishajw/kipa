@@ -18,7 +18,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 /// Handles messages incoming from external sources (i.e. another daemon, CLI)
-pub struct IncomingMessageHandler {
+pub struct MessageHandlerServer {
     payload_handler: Arc<PayloadHandler>,
     local_node: Node,
     client: Arc<Client>,
@@ -27,7 +27,7 @@ pub struct IncomingMessageHandler {
     log: Logger,
 }
 
-impl IncomingMessageHandler {
+impl MessageHandlerServer {
     #[allow(missing_docs)]
     pub fn new(
         payload_handler: Arc<PayloadHandler>,
@@ -38,7 +38,7 @@ impl IncomingMessageHandler {
         log: Logger,
     ) -> Self
     {
-        IncomingMessageHandler {
+        MessageHandlerServer {
             payload_handler,
             local_node,
             client,
@@ -138,7 +138,7 @@ impl IncomingMessageHandler {
             ).into());
         }
 
-        let outgoing_message_handler = Arc::new(OutgoingMessageHandler::new(
+        let message_handler_client = Arc::new(MessageHandlerClient::new(
             body.id,
             self.local_node.clone(),
             self.client.clone(),
@@ -156,7 +156,7 @@ impl IncomingMessageHandler {
                 self.payload_handler.receive(
                     &body.payload,
                     sender,
-                    outgoing_message_handler,
+                    message_handler_client,
                     body.id,
                 )
             });
@@ -171,7 +171,7 @@ impl IncomingMessageHandler {
 
 /// Client that will take a payload, wrap it in a message, and send to another
 /// node
-pub struct OutgoingMessageHandler {
+pub struct MessageHandlerClient {
     message_id: u32,
     local_node: Node,
     client: Arc<Client>,
@@ -179,7 +179,7 @@ pub struct OutgoingMessageHandler {
     gpg_key_handler: Arc<GpgKeyHandler>,
 }
 
-impl OutgoingMessageHandler {
+impl MessageHandlerClient {
     #[allow(missing_docs)]
     pub fn new(
         message_id: u32,
@@ -187,9 +187,9 @@ impl OutgoingMessageHandler {
         client: Arc<Client>,
         data_transformer: Arc<DataTransformer>,
         gpg_key_handler: Arc<GpgKeyHandler>,
-    ) -> OutgoingMessageHandler
+    ) -> MessageHandlerClient
     {
-        OutgoingMessageHandler {
+        MessageHandlerClient {
             message_id,
             local_node,
             client,

@@ -6,7 +6,7 @@
 
 use address::Address;
 use error::*;
-use message_handler::IncomingMessageHandler;
+use message_handler::MessageHandlerServer;
 use node::Node;
 
 use byteorder::{NetworkEndian, ReadBytesExt, WriteBytesExt};
@@ -103,11 +103,11 @@ pub trait SocketServer: SocketHandler + Send + Sync {
     fn handle_socket_result(
         &self,
         socket_result: Result<Self::SocketType>,
-        message_handler: Arc<IncomingMessageHandler>,
+        message_handler_server: Arc<MessageHandlerServer>,
     )
     {
-        let result =
-            socket_result.and_then(|s| self.handle_socket(s, message_handler));
+        let result = socket_result
+            .and_then(|s| self.handle_socket(s, message_handler_server));
 
         if let Err(ref err) = result {
             error!(
@@ -121,7 +121,7 @@ pub trait SocketServer: SocketHandler + Send + Sync {
     fn handle_socket(
         &self,
         socket: Self::SocketType,
-        message_handler: Arc<IncomingMessageHandler>,
+        message_handler_server: Arc<MessageHandlerServer>,
     ) -> Result<()>
     {
         let log = self.get_log();
@@ -133,7 +133,7 @@ pub trait SocketServer: SocketHandler + Send + Sync {
 
         trace!(log, "Processing request");
         let response_data =
-            message_handler.receive_bytes(&request_data, address)?;
+            message_handler_server.receive_bytes(&request_data, address)?;
 
         trace!(log, "Sending response");
         self.send_data(&response_data, &mut inner_socket, None)?;

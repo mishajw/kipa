@@ -3,7 +3,7 @@
 
 use address::Address;
 use error::*;
-use message_handler::IncomingMessageHandler;
+use message_handler::MessageHandlerServer;
 use server::socket_server::{SocketHandler, SocketServer};
 use server::{LocalClient, LocalServer};
 
@@ -21,7 +21,7 @@ pub const DEFAULT_UNIX_SOCKET_PATH: &str = "/tmp/kipa";
 /// Listens for local requests on a unix socket file
 #[derive(Clone)]
 pub struct UnixSocketLocalServer {
-    message_handler: Arc<IncomingMessageHandler>,
+    message_handler_server: Arc<MessageHandlerServer>,
     socket_path: String,
     log: Logger,
 }
@@ -30,13 +30,13 @@ impl UnixSocketLocalServer {
     /// Create a new unix socket local receive server that listens on some file
     /// `socket_path`
     pub fn new(
-        message_handler: Arc<IncomingMessageHandler>,
+        message_handler_server: Arc<MessageHandlerServer>,
         socket_path: String,
         log: Logger,
     ) -> Result<Self>
     {
         Ok(UnixSocketLocalServer {
-            message_handler,
+            message_handler_server,
             socket_path,
             log,
         })
@@ -68,7 +68,7 @@ impl LocalServer for UnixSocketLocalServer {
                 thread::spawn(move || {
                     spawn_self.handle_socket_result(
                         socket.chain_err(|| "Failed to create socket"),
-                        spawn_self.message_handler.clone(),
+                        spawn_self.message_handler_server.clone(),
                     )
                 });
             });

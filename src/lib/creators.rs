@@ -7,7 +7,7 @@ use address::LocalAddressParams;
 use data_transformer::DataTransformer;
 use error::*;
 use gpg_key::GpgKeyHandler;
-use message_handler::IncomingMessageHandler;
+use message_handler::MessageHandlerServer;
 use node::Node;
 use payload_handler::PayloadHandler;
 #[allow(unused)]
@@ -202,7 +202,7 @@ impl Creator for Client {
 }
 
 impl Creator for Server {
-    type Parameters = (Arc<IncomingMessageHandler>, Node);
+    type Parameters = (Arc<MessageHandlerServer>, Node);
     #[cfg(feature = "use-tcp")]
     fn create(
         parameters: Self::Parameters,
@@ -211,9 +211,9 @@ impl Creator for Server {
     ) -> InternalResult<Box<Self>>
     {
         use server::tcp::TcpServer;
-        let (message_handler, local_node) = parameters;
+        let (message_handler_server, local_node) = parameters;
         Ok(Box::new(TcpServer::new(
-            message_handler,
+            message_handler_server,
             local_node,
             log,
         )))
@@ -221,7 +221,7 @@ impl Creator for Server {
 }
 
 impl Creator for LocalServer {
-    type Parameters = Arc<IncomingMessageHandler>;
+    type Parameters = Arc<MessageHandlerServer>;
 
     #[cfg(feature = "use-unix-socket")]
     fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
@@ -244,10 +244,10 @@ impl Creator for LocalServer {
     ) -> InternalResult<Box<Self>>
     {
         use server::unix_socket::UnixSocketLocalServer;
-        let message_handler = parameters;
+        let message_handler_server = parameters;
         let socket_path = args.value_of("socket_path").unwrap();
         let server = to_internal_result(UnixSocketLocalServer::new(
-            message_handler,
+            message_handler_server,
             String::from(socket_path),
             log,
         ))?;
@@ -274,7 +274,7 @@ impl Creator for LocalClient {
     }
 }
 
-impl Creator for IncomingMessageHandler {
+impl Creator for MessageHandlerServer {
     type Parameters = (
         Arc<PayloadHandler>,
         Arc<DataTransformer>,
@@ -295,7 +295,7 @@ impl Creator for IncomingMessageHandler {
             local_node,
             client,
         ) = parameters;
-        Ok(Box::new(IncomingMessageHandler::new(
+        Ok(Box::new(MessageHandlerServer::new(
             payload_handler,
             local_node,
             client,
