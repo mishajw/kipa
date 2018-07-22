@@ -13,6 +13,7 @@ use payload_handler::PayloadHandler;
 use server::{Client, LocalClient};
 use versioning;
 
+use rand::{thread_rng, Rng};
 use slog::Logger;
 use std::sync::Arc;
 use std::time::Duration;
@@ -139,11 +140,11 @@ impl MessageHandlerServer {
         }
 
         let message_handler_client = Arc::new(MessageHandlerClient::new(
-            body.id,
             self.local_node.clone(),
             self.client.clone(),
             self.data_transformer.clone(),
             self.gpg_key_handler.clone(),
+            self.log.new(o!("message_handler_client" => true)),
         ));
 
         let version_verification_result =
@@ -172,29 +173,29 @@ impl MessageHandlerServer {
 /// Client that will take a payload, wrap it in a message, and send to another
 /// node
 pub struct MessageHandlerClient {
-    message_id: u32,
     local_node: Node,
     client: Arc<Client>,
     data_transformer: Arc<DataTransformer>,
     gpg_key_handler: Arc<GpgKeyHandler>,
+    log: Logger,
 }
 
 impl MessageHandlerClient {
     #[allow(missing_docs)]
     pub fn new(
-        message_id: u32,
         local_node: Node,
         client: Arc<Client>,
         data_transformer: Arc<DataTransformer>,
         gpg_key_handler: Arc<GpgKeyHandler>,
+        log: Logger,
     ) -> MessageHandlerClient
     {
         MessageHandlerClient {
-            message_id,
             local_node,
             client,
             data_transformer,
             gpg_key_handler,
+            log,
         }
     }
 
@@ -206,11 +207,11 @@ impl MessageHandlerClient {
         timeout: Duration,
     ) -> ResponseResult<ResponsePayload>
     {
-        let body = RequestBody::new(
-            payload,
-            self.message_id,
-            versioning::get_version(),
-        );
+        let message_id: u32 = thread_rng().gen();
+        debug!(
+            self.log, "Created message identifier"; "message_id" => message_id);
+        let body =
+            RequestBody::new(payload, message_id, versioning::get_version());
 
         let body_data = to_internal_result(
             self.data_transformer.encode_request_body(body),
@@ -269,7 +270,7 @@ impl MessageHandlerClient {
                 .decode_response_body(&response_body_data),
         )?;
 
-        if response_body.id != self.message_id {
+        if response_body.id != message_id {
             // TODO: We need to reference `InternalError` here instead of
             // `ResponseError` - seems that when you typedef enums, referencing
             // the instances of the enum still needs to be done through the
@@ -279,7 +280,7 @@ impl MessageHandlerClient {
             return Err(InternalError::private(ErrorKind::ResponseError(
                 format!(
                     "Response had incorrect ID, expected {}, received {}",
-                    self.message_id, response_body.id
+                    message_id, response_body.id
                 ),
             )));
         }
@@ -291,23 +292,23 @@ impl MessageHandlerClient {
 /// Client that will take a payload, wrap it in a message, and send to a local
 /// daemon node
 pub struct MessageHandlerLocalClient {
-    message_id: u32,
     local_client: Arc<LocalClient>,
     data_transformer: Arc<DataTransformer>,
+    log: Logger,
 }
 
 impl MessageHandlerLocalClient {
     #[allow(missing_docs)]
     pub fn new(
-        message_id: u32,
         local_client: Arc<LocalClient>,
         data_transformer: Arc<DataTransformer>,
+        log: Logger,
     ) -> Self
     {
         MessageHandlerLocalClient {
-            message_id,
             local_client,
             data_transformer,
+            log,
         }
     }
 
@@ -317,11 +318,11 @@ impl MessageHandlerLocalClient {
         payload: RequestPayload,
     ) -> ResponseResult<ResponsePayload>
     {
-        let body = RequestBody::new(
-            payload,
-            self.message_id,
-            env!("CARGO_PKG_VERSION").to_string(),
-        );
+        let message_id: u32 = thread_rng().gen();
+        debug!(
+            self.log, "Created message identifier"; "message_id" => message_id);
+        let body =
+            RequestBody::new(payload, message_id, versioning::get_version());
         let request_data = to_internal_result(
             self.data_transformer.encode_request_body(body),
         )?;
@@ -337,11 +338,11 @@ impl MessageHandlerLocalClient {
         )?;
 
         // Verify return message identifier
-        if response_message.id != self.message_id {
+        if response_message.id != message_id {
             return Err(InternalError::private(ErrorKind::ResponseError(
                 format!(
                     "Incorrect message ID in resposonse: expected {}, got {}",
-                    self.message_id, response_message.id
+                    message_id, response_message.id
                 ),
             )));
         }

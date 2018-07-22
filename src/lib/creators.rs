@@ -307,18 +307,18 @@ impl Creator for MessageHandlerServer {
 }
 
 impl Creator for MessageHandlerLocalClient {
-    type Parameters = (u32, Arc<LocalClient>, Arc<DataTransformer>);
+    type Parameters = (Arc<LocalClient>, Arc<DataTransformer>);
     fn create(
         parameters: Self::Parameters,
         _args: &clap::ArgMatches,
-        _log: Logger,
+        log: Logger,
     ) -> InternalResult<Box<Self>>
     {
-        let (message_id, local_client, data_transformer) = parameters;
+        let (local_client, data_transformer) = parameters;
         Ok(Box::new(MessageHandlerLocalClient::new(
-            message_id,
             local_client,
             data_transformer,
+            log,
         )))
     }
 }

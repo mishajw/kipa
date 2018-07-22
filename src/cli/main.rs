@@ -17,7 +17,6 @@ use kipa_lib::server::{LocalClient, LocalServer};
 use kipa_lib::{Address, Node};
 
 use error_chain::ChainedError;
-use rand::{thread_rng, Rng};
 use std::sync::Arc;
 
 // TODO: Change from returning `ApiResult<()>` to an error code linked to
@@ -116,11 +115,8 @@ fn message_daemon(
         LocalClient::create((), args, log.new(o!("local_client" => true)))?
             .into();
 
-    let message_id: u32 = thread_rng().gen();
-    info!(log, "Created message ID"; "message_id" => message_id);
-
     let message_handler_local_client = MessageHandlerLocalClient::create(
-        (message_id, local_client, data_transformer),
+        (local_client, data_transformer),
         args,
         log.new(o!("message_handler_local_client" => true)),
     )?;
