@@ -7,7 +7,9 @@ use address::LocalAddressParams;
 use data_transformer::DataTransformer;
 use error::*;
 use gpg_key::GpgKeyHandler;
-use message_handler::{MessageHandlerLocalClient, MessageHandlerServer};
+use message_handler::{
+    MessageHandlerClient, MessageHandlerLocalClient, MessageHandlerServer,
+};
 use node::Node;
 use payload_handler::PayloadHandler;
 #[allow(unused)]
@@ -280,7 +282,6 @@ impl Creator for MessageHandlerServer {
         Arc<DataTransformer>,
         Arc<GpgKeyHandler>,
         Node,
-        Arc<Client>,
     );
     fn create(
         parameters: Self::Parameters,
@@ -288,15 +289,30 @@ impl Creator for MessageHandlerServer {
         log: Logger,
     ) -> InternalResult<Box<Self>>
     {
-        let (
-            payload_handler,
-            data_transformer,
-            gpg_key_handler,
-            local_node,
-            client,
-        ) = parameters;
+        let (payload_handler, data_transformer, gpg_key_handler, local_node) =
+            parameters;
         Ok(Box::new(MessageHandlerServer::new(
             payload_handler,
+            local_node,
+            data_transformer,
+            gpg_key_handler,
+            log,
+        )))
+    }
+}
+
+impl Creator for MessageHandlerClient {
+    type Parameters =
+        (Node, Arc<Client>, Arc<DataTransformer>, Arc<GpgKeyHandler>);
+    fn create(
+        parameters: Self::Parameters,
+        _args: &clap::ArgMatches,
+        log: Logger,
+    ) -> InternalResult<Box<Self>>
+    {
+        let (local_node, client, data_transformer, gpg_key_handler) =
+            parameters;
+        Ok(Box::new(MessageHandlerClient::new(
             local_node,
             client,
             data_transformer,
@@ -402,7 +418,7 @@ impl Creator for NeighboursStore {
 }
 
 impl Creator for PayloadHandler {
-    type Parameters = Node;
+    type Parameters = (Node, Arc<MessageHandlerClient>);
 
     #[cfg(feature = "use-graph")]
     fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
@@ -441,12 +457,14 @@ impl Creator for PayloadHandler {
 
     #[cfg(feature = "use-graph")]
     fn create(
-        local_node: Self::Parameters,
+        parameters: Self::Parameters,
         args: &clap::ArgMatches,
         log: Logger,
     ) -> InternalResult<Box<Self>>
     {
         use payload_handler::graph::GraphPayloadHandler;
+
+        let (local_node, message_handler_client) = parameters;
 
         parse_with_err!(search_breadth, usize, args);
         parse_with_err!(connect_search_breadth, usize, args);
@@ -473,6 +491,7 @@ impl Creator for PayloadHandler {
             connect_search_breadth,
             max_num_search_threads,
             search_timeout_sec,
+            message_handler_client,
             key_space_manager,
             neighbours_store,
             log,

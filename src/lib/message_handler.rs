@@ -22,7 +22,6 @@ use std::time::Duration;
 pub struct MessageHandlerServer {
     payload_handler: Arc<PayloadHandler>,
     local_node: Node,
-    client: Arc<Client>,
     data_transformer: Arc<DataTransformer>,
     gpg_key_handler: Arc<GpgKeyHandler>,
     log: Logger,
@@ -33,7 +32,6 @@ impl MessageHandlerServer {
     pub fn new(
         payload_handler: Arc<PayloadHandler>,
         local_node: Node,
-        client: Arc<Client>,
         data_transformer: Arc<DataTransformer>,
         gpg_key_handler: Arc<GpgKeyHandler>,
         log: Logger,
@@ -42,7 +40,6 @@ impl MessageHandlerServer {
         MessageHandlerServer {
             payload_handler,
             local_node,
-            client,
             data_transformer,
             gpg_key_handler,
             log,
@@ -139,28 +136,14 @@ impl MessageHandlerServer {
             ).into());
         }
 
-        let message_handler_client = Arc::new(MessageHandlerClient::new(
-            self.local_node.clone(),
-            self.client.clone(),
-            self.data_transformer.clone(),
-            self.gpg_key_handler.clone(),
-            self.log.new(o!("message_handler_client" => true)),
-        ));
-
         let version_verification_result =
             api_to_internal_result(versioning::verify_version(
                 &versioning::get_version(),
                 &body.version,
             ));
-        let response_payload_result =
-            version_verification_result.and_then(|()| {
-                self.payload_handler.receive(
-                    &body.payload,
-                    sender,
-                    message_handler_client,
-                    body.id,
-                )
-            });
+        let response_payload_result = version_verification_result.and_then(
+            |()| self.payload_handler.receive(&body.payload, sender, body.id),
+        );
 
         Ok(ResponseBody::new(
             to_api_result(response_payload_result, &self.log),

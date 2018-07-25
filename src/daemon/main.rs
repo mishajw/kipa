@@ -10,7 +10,7 @@ use kipa_lib::creators::*;
 use kipa_lib::data_transformer::DataTransformer;
 use kipa_lib::error::*;
 use kipa_lib::gpg_key::GpgKeyHandler;
-use kipa_lib::message_handler::MessageHandlerServer;
+use kipa_lib::message_handler::{MessageHandlerClient, MessageHandlerServer};
 use kipa_lib::payload_handler::PayloadHandler;
 use kipa_lib::server::{Client, LocalServer, Server};
 use kipa_lib::{Address, LocalAddressParams, Node};
@@ -103,9 +103,21 @@ fn run_servers(
     let client: Arc<Client> =
         Client::create((), args, log.new(o!("client" => true)))?.into();
 
+    let message_handler_client: Arc<MessageHandlerClient> =
+        MessageHandlerClient::create(
+            (
+                local_node.clone(),
+                client,
+                data_transformer.clone(),
+                gpg_key_handler.clone(),
+            ),
+            args,
+            log.new(o!("message_handler_client" => true)),
+        )?.into();
+
     // Set up request handler
     let payload_handler: Arc<PayloadHandler> = PayloadHandler::create(
-        local_node.clone(),
+        (local_node.clone(), message_handler_client),
         args,
         log.new(o!("request_handler" => true)),
     )?.into();
@@ -117,7 +129,6 @@ fn run_servers(
                 data_transformer.clone(),
                 gpg_key_handler.clone(),
                 local_node.clone(),
-                client,
             ),
             args,
             log.new(o!("message_handler_server" => true)),

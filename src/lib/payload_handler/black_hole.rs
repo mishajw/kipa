@@ -2,12 +2,10 @@
 
 use api::{RequestPayload, ResponsePayload};
 use error::*;
-use message_handler::MessageHandlerClient;
 use node::Node;
 use payload_handler::PayloadHandler;
 
 use slog::Logger;
-use std::sync::Arc;
 
 /// The request handler that returns nothing
 pub struct BlackHolePayloadHandler {
@@ -24,7 +22,6 @@ impl PayloadHandler for BlackHolePayloadHandler {
         &self,
         payload: &RequestPayload,
         _sender: Option<&Node>,
-        _message_handler_client: Arc<MessageHandlerClient>,
         _message_id: u32,
     ) -> InternalResult<ResponsePayload>
     {
