@@ -237,7 +237,7 @@ impl GraphSearch {
                 "current_cost" => current_node.cost,
                 "previously_found" => found
                     .iter()
-                    .map(|k| k.get_key_id().clone())
+                    .map(|k| k.key_id.clone())
                     .collect::<Vec<String>>()
                     .join(", "),
                 "left_to_explore" => to_explore.len());
@@ -266,7 +266,7 @@ impl GraphSearch {
                         "node" => %current_node.node,
                         "neighbours" => neighbours
                             .iter()
-                            .map(|n| n.key.get_key_id().clone())
+                            .map(|n| n.key.key_id.clone())
                             .collect::<Vec<String>>()
                             .join(", ")),
                     Err(ref err) => info!(

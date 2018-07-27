@@ -215,7 +215,7 @@ impl GpgKeyHandler {
         let passphrase_provider = self.get_passphrase_provider();
         context.with_passphrase_provider(passphrase_provider, |context| {
             let gpg_key = context
-                .get_secret_key(sender.get_key_id())
+                .get_secret_key(&sender.key_id)
                 .chain_err(|| "Error on getting key for signing")?;
             context
                 .add_signer(&gpg_key)
@@ -253,7 +253,7 @@ impl GpgKeyHandler {
             .subkeys()
             .filter_map(|k| k.fingerprint().ok())
             .collect();
-        possible_fingerprints.push(sender.get_key_id());
+        possible_fingerprints.push(&sender.key_id);
 
         // Get the signatures
         let signatures_result = context
@@ -330,19 +330,19 @@ impl GpgKeyHandler {
         context: &mut gpgme::Context,
     ) -> Result<gpgme::Key>
     {
-        match context.get_key(key.get_key_id()) {
+        match context.get_key(&key.key_id) {
             Ok(key) => Ok(key),
             Err(_) => {
                 info!(
                     self.log, "Importing key into GPG";
-                    "key_id" => key.get_key_id());
-                let mut key_data = gpgme::Data::from_bytes(key.get_data())
+                    "key_id" => &key.key_id);
+                let mut key_data = gpgme::Data::from_bytes(&key.data)
                     .chain_err(|| "Error on reading key bytes")?;
                 context
                     .import(&mut key_data)
                     .chain_err(|| "Error on importing key")?;
                 context
-                    .get_key(key.get_key_id())
+                    .get_key(&key.key_id)
                     .chain_err(|| "Error on getting newly imported key")
             }
         }

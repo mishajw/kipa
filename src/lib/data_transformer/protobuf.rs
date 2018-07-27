@@ -240,8 +240,8 @@ impl Into<Result<ResponseBody>> for proto_api::ResponseBody {
 impl Into<proto_api::Key> for Key {
     fn into(self) -> proto_api::Key {
         let mut kipa_key = proto_api::Key::new();
-        kipa_key.set_key_id(self.get_key_id().clone());
-        kipa_key.set_data(self.get_data().clone());
+        kipa_key.set_key_id(self.key_id.clone());
+        kipa_key.set_data(self.data.clone());
         kipa_key
     }
 }

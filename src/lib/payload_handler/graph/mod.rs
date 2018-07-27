@@ -260,7 +260,7 @@ impl PayloadHandler for GraphPayloadHandler {
                     "Replying";
                     "response" => nodes
                         .iter()
-                        .map(|n| n.key.get_key_id().clone())
+                        .map(|n| n.key.key_id.clone())
                         .collect::<Vec<String>>()
                         .join(", ")
                 );
@@ -312,7 +312,7 @@ impl PayloadHandler for GraphPayloadHandler {
                         .join(", "),
                     "neighbour_keys" => neighbours
                         .iter()
-                        .map(|n| n.key.get_key_id().clone())
+                        .map(|n| n.key.key_id.clone())
                         .collect::<Vec<String>>()
                         .join(", "));
                 Ok(ResponsePayload::ListNeighboursResponse(neighbours))

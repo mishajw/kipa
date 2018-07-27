@@ -180,12 +180,12 @@ impl NeighboursStore {
 
         let mut scores_map = HashMap::new();
         for (&(ref n, _), s) in self.neighbours.iter().zip(scores) {
-            scores_map.insert(n.key.get_key_id().clone(), s);
+            scores_map.insert(n.key.key_id.clone(), s);
         }
 
         self.neighbours.sort_by(|&(ref a, _), &(ref b, _)| {
-            let a_score = scores_map[a.key.get_key_id()];
-            let b_score = scores_map[b.key.get_key_id()];
+            let a_score = scores_map[&a.key.key_id];
+            let b_score = scores_map[&b.key.key_id];
             a_score.partial_cmp(&b_score).unwrap()
         });
 
@@ -237,7 +237,7 @@ mod test {
         let mut data = ns
             .get_all()
             .iter()
-            .map(|n| n.key.get_data()[0])
+            .map(|n| n.key.data[0])
             .collect::<Vec<u8>>();
         data.sort();
         assert_that!(data).is_equal_to(vec![4, 5, 6]);
@@ -273,7 +273,7 @@ mod test {
         let mut data = ns
             .get_all()
             .iter()
-            .map(|n| n.key.get_data()[3])
+            .map(|n| n.key.data[3])
             .collect::<Vec<u8>>();
         data.sort();
         assert_that!(data).is_equal_to(vec![2, 6]);
