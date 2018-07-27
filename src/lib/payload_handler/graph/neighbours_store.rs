@@ -103,8 +103,22 @@ impl NeighboursStore {
 
         let neighbours_entry = (node.clone(), key_space);
 
-        // Don't add a neighbour if it is already one
-        if self.neighbours.contains(&neighbours_entry) {
+        // Check if there is an existing neighbour with the same key - if there
+        // is, check if the address needs updating. If we find any matching
+        // nodes, exit the function
+        //
+        // TODO: This opens up a vulnerability where a malicious node can reply
+        // to query requests with real keys but fake addresses, overriding
+        // the daemon's neighbour entry
+        let mut found_duplicate_node = false;
+        self.neighbours.iter_mut()
+            .for_each(|(ref mut n, ref _ks)| if n.key == node.key {
+                found_duplicate_node = true;
+                if n.address != node.address {
+                    n.address = node.address.clone();
+                }
+            });
+        if found_duplicate_node {
             return;
         }
 
