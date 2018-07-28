@@ -90,12 +90,6 @@ impl NeighboursStore {
             "distance" => self.key_space_manager.distance(
                 &key_space, &self.local_key_space));
 
-        // Algorithm:
-        // - Get distance from local to all neighbours
-        // - Get min angle for each neighbour to other neighbours
-        // - Normalise distances and angle
-        // - Take top `n`, ranked by `angle - distance`
-
         // Don't add ourselves
         if key_space == self.local_key_space {
             return;
@@ -111,29 +105,68 @@ impl NeighboursStore {
         // to query requests with real keys but fake addresses, overriding
         // the daemon's neighbour entry
         let mut found_duplicate_node = false;
-        self.neighbours.iter_mut()
-            .for_each(|(ref mut n, ref _ks)| if n.key == node.key {
+        self.neighbours.iter_mut().for_each(|(ref mut n, ref _ks)| {
+            if n.key == node.key {
                 found_duplicate_node = true;
                 if n.address != node.address {
                     n.address = node.address.clone();
                 }
-            });
+            }
+        });
         if found_duplicate_node {
             return;
         }
 
-        // Add the key to neighbours
-        self.neighbours.push(neighbours_entry);
-
+        // If we have space for the new node, add it and return
         if self.neighbours.len() < self.max_num_neighbours {
+            self.neighbours.push(neighbours_entry);
             return;
         }
 
-        let min_angles: Vec<f32> = self
-            .neighbours
+        let mut potential_neighbours = self.neighbours.clone();
+        potential_neighbours.push(neighbours_entry.clone());
+        let scores = self.get_neighbour_scores(&potential_neighbours);
+        let (min_key_id, _) = scores
+            .iter()
+            .min_by(|(_, a_score), (_, b_score)| {
+                b_score.partial_cmp(a_score).unwrap()
+            })
+            // We can be certain of a result, as `potential_neighbours` has at
+            // least one element in it
+            .unwrap();
+
+        // If the new node has *not* got the worst score, remove the node with
+        // the worst score and add the new node
+        if min_key_id != &node.key.key_id {
+            self.neighbours
+                .retain(|(node, _)| &node.key.key_id != min_key_id);
+            self.neighbours.push(neighbours_entry);
+        }
+
+        debug_assert!(self.neighbours.len() <= self.max_num_neighbours);
+    }
+
+    /// Remove a neighbour by its key
+    pub fn remove_by_key(&mut self, key: &Key) {
+        self.neighbours.retain(|(n, _)| &n.key != key);
+    }
+
+    /// Get the scores of each neighbour
+    ///
+    /// This is calculated as a weighted score of:
+    /// - The distance in keyspace between the local node and the neighbour node
+    /// - How "unique" the angle between the local node and the neighbour node
+    ///   is, i.e. does adding this neighbour add a link in a new direction?
+    fn get_neighbour_scores(
+        &mut self,
+        neighbours: &Vec<(Node, KeySpace)>,
+    ) -> HashMap<String, f32>
+    {
+        // Calculate the angle metric
+        let min_angles: Vec<f32> = neighbours
             .iter()
             .map(|&(_, ref ks)| {
-                self.neighbours
+                neighbours
                     .iter()
                     .filter(|&&(_, ref ks2)| ks != ks2)
                     .map(|&(_, ref ks2)| {
@@ -150,36 +183,29 @@ impl NeighboursStore {
             })
             .collect();
 
-        let distances: Vec<f32> = self
-            .neighbours
+        // Calculate the distance metric
+        let distances: Vec<f32> = neighbours
             .iter()
             .map(|&(_, ref ks)| {
                 self.key_space_manager.distance(&self.local_key_space, ks)
             })
             .collect();
 
-        fn min_floats(v: &[f32]) -> f32 {
-            *v.iter()
-                .min_by(|a, b| a.partial_cmp(b).unwrap())
-                .expect("Error on unwrapping min")
-        }
-        fn max_floats(v: &[f32]) -> f32 {
-            *v.iter()
-                .max_by(|a, b| a.partial_cmp(b).unwrap())
-                .expect("Error on unwrapping max")
-        }
-        // let min_min_angle = min_floats(&min_angles);
-        // let max_min_angle = max_floats(&min_angles);
-        let min_distance = min_floats(&distances);
-        let max_distance = max_floats(&distances);
+        // Calculate the min/max distances for scaling
+        let min_distance = distances
+            .iter()
+            .min_by(|a, b| a.partial_cmp(b).unwrap())
+            .expect("Error on unwrapping min distance");
+        let max_distance = distances
+            .iter()
+            .max_by(|a, b| a.partial_cmp(b).unwrap())
+            .expect("Error on unwrapping max distance");
 
-        let distance_weighting = self.distance_weighting;
-        let angle_weighting = self.angle_weighting;
+        // Calculate the scores of each neighbour
         let scores = min_angles.iter().zip(&distances).map(|(a, d)| {
             assert!(&0.0 <= a && a <= &::std::f32::consts::PI);
 
             let normalized_a = 1.0 - (a / ::std::f32::consts::PI);
-
             let normalized_d =
                 if (max_distance - min_distance).abs() > ::std::f32::EPSILON {
                     (d - min_distance) / (max_distance - min_distance)
@@ -187,31 +213,17 @@ impl NeighboursStore {
                     0.0
                 };
 
-            ((normalized_d * distance_weighting)
-                + (normalized_a * angle_weighting))
-                / (distance_weighting + angle_weighting)
+            ((normalized_d * self.distance_weighting)
+                + (normalized_a * self.angle_weighting))
+                / (self.distance_weighting + self.angle_weighting)
         });
 
+        // Put the scores into a map
         let mut scores_map = HashMap::new();
-        for (&(ref n, _), s) in self.neighbours.iter().zip(scores) {
+        for (&(ref n, _), s) in neighbours.iter().zip(scores) {
             scores_map.insert(n.key.key_id.clone(), s);
         }
-
-        self.neighbours.sort_by(|&(ref a, _), &(ref b, _)| {
-            let a_score = scores_map[&a.key.key_id];
-            let b_score = scores_map[&b.key.key_id];
-            a_score.partial_cmp(&b_score).unwrap()
-        });
-
-        // ...remove the furthest neighbours.
-        while self.neighbours.len() > self.max_num_neighbours {
-            self.neighbours.pop();
-        }
-    }
-
-    /// Remove a neighbour by its key
-    pub fn remove_by_key(&mut self, key: &Key) {
-        self.neighbours.retain(|(n, _)| &n.key != key);
+        scores_map
     }
 }
 
