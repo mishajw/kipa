@@ -370,7 +370,8 @@ impl Creator for KeySpaceManager {
 use payload_handler::graph::NeighboursStore;
 #[cfg(feature = "use-graph")]
 impl Creator for NeighboursStore {
-    type Parameters = (::key::Key, Arc<KeySpaceManager>);
+    type Parameters =
+        (::key::Key, Arc<KeySpaceManager>, Arc<MessageHandlerClient>);
     fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
         use payload_handler::graph::{
             DEFAULT_ANGLE_WEIGHTING, DEFAULT_DISTANCE_WEIGHTING,
@@ -401,7 +402,10 @@ impl Creator for NeighboursStore {
         log: Logger,
     ) -> InternalResult<Box<Self>>
     {
-        let (local_key, key_space_manager) = parameters;
+        use api::RequestPayload;
+        use std::time::Duration;
+
+        let (local_key, key_space_manager, message_handler_client) = parameters;
         parse_with_err!(neighbours_size, usize, args);
         parse_with_err!(distance_weighting, f32, args);
         parse_with_err!(angle_weighting, f32, args);
@@ -412,6 +416,15 @@ impl Creator for NeighboursStore {
             distance_weighting,
             angle_weighting,
             key_space_manager,
+            Arc::new(move |n| {
+                message_handler_client
+                    .send(
+                        n,
+                        RequestPayload::VerifyRequest(),
+                        Duration::from_secs(3),
+                    )
+                    .map(|_| ())
+            }),
             log.new(o!("neighbours_store" => true)),
         )))
     }
@@ -508,7 +521,11 @@ impl Creator for PayloadHandler {
 
         let neighbours_store = Arc::new(Mutex::new(
             *(NeighboursStore::create(
-                (local_node.key.clone(), key_space_manager.clone()),
+                (
+                    local_node.key.clone(),
+                    key_space_manager.clone(),
+                    message_handler_client.clone(),
+                ),
                 args,
                 log.new(o!("neighbours_store" => true)),
             )?),

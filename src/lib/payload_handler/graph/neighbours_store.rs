@@ -1,5 +1,6 @@
 //! Stores the neighbours of a node, managing what nodes to keep as neighbours
 
+use error::*;
 use key::Key;
 use node::Node;
 use payload_handler::graph::key_space::{KeySpace, KeySpaceManager};
@@ -21,6 +22,7 @@ pub const DEFAULT_ANGLE_WEIGHTING: &str = "0.5";
 pub struct NeighboursStore {
     local_key_space: KeySpace,
     key_space_manager: Arc<KeySpaceManager>,
+    verify_neighbour_fn: Arc<Fn(&Node) -> InternalResult<()> + Send + Sync>,
     max_num_neighbours: usize,
     distance_weighting: f32,
     angle_weighting: f32,
@@ -37,6 +39,7 @@ impl NeighboursStore {
         distance_weighting: f32,
         angle_weighting: f32,
         key_space_manager: Arc<KeySpaceManager>,
+        verify_neighbour_fn: Arc<Fn(&Node) -> InternalResult<()> + Send + Sync>,
         log: Logger,
     ) -> Self
     {
@@ -48,6 +51,7 @@ impl NeighboursStore {
         NeighboursStore {
             local_key_space,
             key_space_manager,
+            verify_neighbour_fn,
             max_num_neighbours,
             distance_weighting,
             angle_weighting,
@@ -80,51 +84,64 @@ impl NeighboursStore {
     }
 
     /// Given a node, consider keeping it as a neighbour
-    pub fn consider_candidate(&mut self, node: &Node) {
+    pub fn consider_candidate(&mut self, node: &Node, trusted: bool) {
         let key_space = self.key_space_manager.create_from_key(&node.key);
-
-        info!(
-            self.log,
-            "Considering candidate neighbour";
-            "node" => %node,
-            "distance" => self.key_space_manager.distance(
-                &key_space, &self.local_key_space));
 
         // Don't add ourselves
         if key_space == self.local_key_space {
             return;
         }
 
-        let neighbours_entry = (node.clone(), key_space);
+        info!(
+            self.log,
+            "Considering candidate neighbour";
+            "node" => %node,
+            "distance" => self.key_space_manager.distance(
+                &key_space, &self.local_key_space),
+            "trusted" => trusted);
 
         // Check if there is an existing neighbour with the same key - if there
         // is, check if the address needs updating. If we find any matching
         // nodes, exit the function
-        //
-        // TODO: This opens up a vulnerability where a malicious node can reply
-        // to query requests with real keys but fake addresses, overriding
-        // the daemon's neighbour entry
-        let mut found_duplicate_node = false;
-        self.neighbours.iter_mut().for_each(|(ref mut n, ref _ks)| {
-            if n.key == node.key {
-                found_duplicate_node = true;
-                if n.address != node.address {
-                    n.address = node.address.clone();
-                }
+        if let Some((n, _)) = self
+            .neighbours
+            .iter()
+            .filter(|(n, _)| n.key == node.key)
+            .next()
+            .map(|n| n.clone())
+        {
+            // Check if the address has changed, and if the new address is
+            // valid. If so, update the address
+            if n.address != node.address
+                && (trusted || self.verify_neighbour(node))
+            {
+                info!(
+                    self.log, "Updating neighbour with new address";
+                    "new_node" => %node,
+                    "old_node" => %n);
+                self.neighbours.iter_mut().for_each(|(n, _)| {
+                    if n.key == node.key {
+                        n.address = node.address.clone()
+                    }
+                })
             }
-        });
-        if found_duplicate_node {
+
+            debug!(
+                self.log, "Considered existing candidate neighbour, ignoring";
+                "neighbour" => %node);
+
+            // If we've already got the node as a neighbour, we can exit
             return;
         }
 
         // If we have space for the new node, add it and return
         if self.neighbours.len() < self.max_num_neighbours {
-            self.neighbours.push(neighbours_entry);
+            self.add_neighbour(node.clone(), key_space, trusted);
             return;
         }
 
         let mut potential_neighbours = self.neighbours.clone();
-        potential_neighbours.push(neighbours_entry.clone());
+        potential_neighbours.push((node.clone(), key_space.clone()));
         let scores = self.get_neighbour_scores(&potential_neighbours);
         let (min_key_id, _) = scores
             .iter()
@@ -138,9 +155,14 @@ impl NeighboursStore {
         // If the new node has *not* got the worst score, remove the node with
         // the worst score and add the new node
         if min_key_id != &node.key.key_id {
-            self.neighbours
-                .retain(|(node, _)| &node.key.key_id != min_key_id);
-            self.neighbours.push(neighbours_entry);
+            if self.add_neighbour(node.clone(), key_space, trusted) {
+                self.neighbours
+                    .retain(|(node, _)| &node.key.key_id != min_key_id);
+            }
+        } else {
+            debug!(
+                self.log, "Discarding potential neighbour, as score too low";
+                "node" => %node);
         }
 
         debug_assert!(self.neighbours.len() <= self.max_num_neighbours);
@@ -149,6 +171,44 @@ impl NeighboursStore {
     /// Remove a neighbour by its key
     pub fn remove_by_key(&mut self, key: &Key) {
         self.neighbours.retain(|(n, _)| &n.key != key);
+    }
+
+    /// Add a neighbour to the list, first verifying it exists. Returns true if
+    /// adding succeeded
+    fn add_neighbour(
+        &mut self,
+        neighbour: Node,
+        key_space: KeySpace,
+        trusted: bool,
+    ) -> bool
+    {
+        let verified = trusted || self.verify_neighbour(&neighbour);
+        if verified {
+            info!(
+                self.log, "Adding new neighbour";
+                "neighbour" => %neighbour,
+                "trusted" => trusted,
+                "num_neighbours" => self.neighbours.len() + 1);
+            self.neighbours.push((neighbour, key_space));
+        }
+        verified
+    }
+
+    /// Check if the node is valid, must be used before adding a new neighbour
+    fn verify_neighbour(&self, neighbour: &Node) -> bool {
+        let verify_response = (*self.verify_neighbour_fn)(&neighbour);
+
+        if let Err(ref err) = &verify_response {
+            debug!(
+                self.log,
+                "Found new neighbour, but did not respond correctly to \
+                 verification request";
+                "neighbour" => %neighbour,
+                "err" => %err,
+            );
+        }
+
+        verify_response.is_ok()
     }
 
     /// Get the scores of each neighbour
@@ -256,13 +316,14 @@ mod test {
             1.0,
             0.0,
             Arc::new(KeySpaceManager::new(1)),
+            Arc::new(|_| Ok(())),
             test_log,
         );
         for i in 0..keys.len() - 1 {
-            ns.consider_candidate(&Node::new(
-                Address::new(vec![0, 0, 0, 0], 0),
-                keys[i].clone(),
-            ));
+            ns.consider_candidate(
+                &Node::new(Address::new(vec![0, 0, 0, 0], 0), keys[i].clone()),
+                true,
+            );
         }
 
         let mut data = ns
@@ -291,14 +352,15 @@ mod test {
             0.5,
             0.5,
             Arc::new(KeySpaceManager::new(1)),
+            Arc::new(|_| Ok(())),
             test_log,
         );
 
         for k in keys {
-            ns.consider_candidate(&Node::new(
-                Address::new(vec![0, 0, 0, 0], 0),
-                k.clone(),
-            ));
+            ns.consider_candidate(
+                &Node::new(Address::new(vec![0, 0, 0, 0], 0), k.clone()),
+                true,
+            );
         }
 
         let mut data = ns

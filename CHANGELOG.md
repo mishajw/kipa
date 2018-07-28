@@ -14,6 +14,8 @@ Versioning](http://semver.org/spec/v2.0.0.html).
   This message is used to verify the result of a key search
 - Add garbage collection of neighbours, i.e. removing neighbours once they stop
   returning valid responses to validation requests
+- Add use of verification message when adding a new neighbour, in order to
+  verify their address
 
 ### Refactor
 - Move `src/lib/socket_server/mod.rs` to `src/lib/server/socket_server.rs`

@@ -156,7 +156,7 @@ impl GraphPayloadHandler {
             found_neighbours_store
                 .lock()
                 .expect("Failed to lock found_neighbours_store")
-                .consider_candidate(n);
+                .consider_candidate(n, false);
             Ok(SearchCallbackReturn::Continue())
         };
 
@@ -232,7 +232,7 @@ impl PayloadHandler for GraphPayloadHandler {
             self.neighbours_store
                 .lock()
                 .unwrap()
-                .consider_candidate(&sender.unwrap());
+                .consider_candidate(&sender.unwrap(), true);
         }
 
         match *payload {
