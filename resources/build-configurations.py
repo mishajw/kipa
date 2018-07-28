@@ -45,10 +45,12 @@ def build_and_test(args: List[str]) -> None:
     """
 
     print(f"Checking with flags: {args}")
-    assert run_command(["cargo", "check"] + args), "Failed check"
+    assert run_command(["cargo", "check"] + args), \
+        f"Failed check with flags: {args}"
 
     print(f"Testing with flags: {args}")
-    assert run_command(["cargo", "test"] + args), "Failed test"
+    assert run_command(["cargo", "test"] + args), \
+        f"Failed test with flags: {args}"
 
 
 # Run default, i.e. no arguments
@@ -60,3 +62,5 @@ feature_sets = [
     "", "use-graph use-protobuf use-tcp use-unix-socket", "use-black-hole"]
 for fs in feature_sets:
     build_and_test(["--no-default-features", "--features", fs])
+
+print("Success!")
