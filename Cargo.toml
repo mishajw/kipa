@@ -30,7 +30,7 @@ use-graph = []
 use-black-hole = []
 
 [dependencies]
-error-chain = "0.11.0"
+error-chain = "0.12.0"
 protobuf = "1.5.0"
 gpgme = "0.8.0"
 clap = "2"
