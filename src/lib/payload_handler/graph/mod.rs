@@ -107,9 +107,9 @@ impl GraphPayloadHandler {
                     found_timeout,
                 ) {
                     warn!(
-                        found_log, "Error when sending verification message
+                        found_log, "Error when sending verification message \
                         after finding correct node";
-                        "err" => %err);
+                        "err" => %err, "node" => %n);
                     return Ok(SearchCallbackReturn::Continue());
                 }
 

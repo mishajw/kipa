@@ -275,10 +275,14 @@ impl GraphSearch {
                         "err" => %err),
                 }
 
-                spawn_explored_channel_tx
+                if let Err(err) = spawn_explored_channel_tx
                     .send((current_node.node.clone(), neighbours))
-                    .chain_err(|| "Error on `send` when getting neighbours")
-                    .expect("3");
+                {
+                    warn!(
+                        spawn_log,
+                        "Failed to send found nodes to explored channel";
+                        "err" => %err);
+                }
             });
         }
     }
