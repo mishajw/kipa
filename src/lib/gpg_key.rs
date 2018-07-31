@@ -21,20 +21,58 @@ pub const DEFAULT_SECRET_PATH: &str = "./secret.txt";
 
 /// Wrapper around the GPGME context, with operations to change the GPGME home
 /// directory
+///
+/// There *must* be only one instance of this variable (`GPG_CONTEXT` in this
+/// file), and it must be wrapped in a `Mutex`. This is because the struct can
+/// set the `$GNUPGHOME` environment variable, which can not be locked. By
+/// putting it in a `Mutex`, we can guarantee that the environment variable
+/// will not be changed (by this code) as long as a reference to the
+/// `gpgme::Context` persists. This means that `$GNUPGHOME` will not change
+/// while a `gpgme::Context` is being used.
 struct GpgContext {
     context: gpgme::Context,
+    default_home_directory: String,
+    current_home_directory: String,
 }
 
 impl GpgContext {
-    /// The only instance of `GpgContext` is a global static `Mutex`, meaning
-    /// that the environment variable changes will not have read/write races.
-    fn set_gpg_home(&self, home_directory: &str) {
-        env::set_var(GNUPG_HOME_VAR, home_directory)
+    fn new() -> Self {
+        // Get the original GnuPG home variable
+        //
+        // If it doesn't exist, the original is then `~/.gnupg`.
+        let default_home_directory =
+            env::var(GNUPG_HOME_VAR).unwrap_or_else(|_| {
+                Path::new(&env::var("HOME")
+                    .expect("No home directory set in environment"))
+                    .join(".gnupg")
+                    .to_str()
+                    .expect("Error on getting string from path")
+                    .to_string()
+            });
+        GpgContext {
+            context: gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)
+                .expect("Failed to create GPGME context"),
+            default_home_directory: default_home_directory.clone(),
+            current_home_directory: default_home_directory,
+        }
+    }
+
+    fn set_gpg_home(&mut self, home_directory: String) {
+        if home_directory == self.current_home_directory {
+            return;
+        }
+        env::set_var(GNUPG_HOME_VAR, &home_directory);
+        self.current_home_directory = home_directory;
+    }
+
+    fn reset_gpg_home(&mut self) {
+        let directory = self.default_home_directory.clone();
+        self.set_gpg_home(directory);
     }
 }
 
-/// The wrapper is also used so  that we can unsafely implement `Send` for this
-/// trait, so that the same context can be used across multiple threads.
+/// The wrapper is also used so that we can unsafely implement `Send` for this
+/// trait, so that the same context can be used across multiple threads
 ///
 /// TODO: Remove `unsafe impl`
 unsafe impl Send for GpgContext {}
@@ -42,24 +80,39 @@ unsafe impl Send for GpgContext {}
 lazy_static! {
     /// The global context for GPGME
     static ref GPG_CONTEXT: Arc<Mutex<GpgContext>> =
-        Arc::new(Mutex::new(GpgContext {
-            context: gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)
-                .expect("Failed to create GPGME context")
-        }));
+        Arc::new(Mutex::new(GpgContext::new()));
 }
 
-/// Macro to handle locking and unwrapping the GPGME context
+/// Get the GPGME context, the home directory does not matter
 macro_rules! get_context {
-    () => {
-        &mut GPG_CONTEXT.lock().unwrap().context
+    ($name:ident) => {
+        let $name = &mut GPG_CONTEXT.lock().unwrap().context;
+    };
+}
+
+/// Get the GPGME context with the "owned" home directory, i.e. the directory
+/// that we can add/remove keys to/from
+macro_rules! get_owned_context {
+    ($name:ident, $directory:expr) => {
+        let mut wrapper = GPG_CONTEXT.lock().unwrap();
+        wrapper.set_gpg_home($directory);
+        let $name = &mut wrapper.context;
+    };
+}
+
+/// Get the GPGME context with the "user" home directory, i.e. the directory
+/// that is managed by the user and which we must not edit
+macro_rules! get_user_context {
+    ($name:ident) => {
+        let mut wrapper = GPG_CONTEXT.lock().unwrap();
+        wrapper.reset_gpg_home();
+        let $name = &mut wrapper.context;
     };
 }
 
 /// Interface to GPGME functionality using library constructs
 pub struct GpgKeyHandler {
     owned_gnupg_home_directory: String,
-    user_gnupg_home_directory: String,
-    active_directory_type: Mutex<GpgDirectoryType>,
     secret: String,
     log: Logger,
 }
@@ -72,16 +125,6 @@ impl GpgKeyHandler {
         log: Logger,
     ) -> InternalResult<Self>
     {
-        // Store the original GPG directory
-        let default_gnupg_home_directory = Path::new(
-            &env::var("HOME").expect("No home directory set in environment")
-        ).join(".gnupg")
-            .to_str()
-            .expect("Error on getting string from path")
-            .to_string();
-        let user_gnupg_home_directory =
-            env::var(GNUPG_HOME_VAR).unwrap_or(default_gnupg_home_directory);
-
         // Create the directory for our GPG directory
         fs::create_dir_all(&owned_gnupg_home_directory).map_err(|err| {
             InternalError::public_with_error(
@@ -110,11 +153,14 @@ impl GpgKeyHandler {
 
         // Set the pinentry mode for GPG so that we can enter passphrase
         // programatically
-        to_internal_result(
-            get_context!()
-                .set_pinentry_mode(gpgme::PinentryMode::Loopback)
-                .chain_err(|| "Error on setting pinentry mode to loopback"),
-        )?;
+        {
+            get_context!(context);
+            to_internal_result(
+                context
+                    .set_pinentry_mode(gpgme::PinentryMode::Loopback)
+                    .chain_err(|| "Error on setting pinentry mode to loopback"),
+            )?;
+        }
 
         // Read the password from the secret file
         let mut secret_file = to_internal_result(
@@ -131,8 +177,6 @@ impl GpgKeyHandler {
         debug!(log, "Created GPG key handler");
         Ok(GpgKeyHandler {
             owned_gnupg_home_directory,
-            user_gnupg_home_directory,
-            active_directory_type: Mutex::new(GpgDirectoryType::UserDirectory),
             secret,
             log,
         })
@@ -142,9 +186,7 @@ impl GpgKeyHandler {
     /// long
     pub fn get_key(&self, key_id: String) -> InternalResult<Key> {
         trace!(self.log, "Requested key ID"; "key_id" => &key_id);
-        // Ensure we are using the user's GPG directory
-        self.switch_directory_type(GpgDirectoryType::UserDirectory);
-        let context = get_context!();
+        get_user_context!(context);
 
         let key = context.get_key(key_id.clone()).map_err(|_| {
             InternalError::public(
@@ -167,8 +209,7 @@ impl GpgKeyHandler {
         debug!(
             self.log, "Encrypting data";
             "length" => data.len(), "recipient" => %recipient);
-        self.switch_directory_type(GpgDirectoryType::OwnedDirectory);
-        let context = get_context!();
+        get_owned_context!(context, self.owned_gnupg_home_directory.clone());
 
         let gpg_key = self.ensure_key_in_gpg(recipient, context)?;
         let mut encrypted_data = Vec::new();
@@ -188,8 +229,7 @@ impl GpgKeyHandler {
         debug!(
             self.log, "Decrypting data";
             "length" => data.len(), "recipient" => %recipient);
-        self.switch_directory_type(GpgDirectoryType::UserDirectory);
-        let context = get_context!();
+        get_user_context!(context);
 
         let mut decrypted_data = Vec::new();
         let passphrase_provider = self.get_passphrase_provider();
@@ -208,8 +248,7 @@ impl GpgKeyHandler {
         debug!(
             self.log, "Signing data";
             "length" => data.len(), "sender" => %sender);
-        self.switch_directory_type(GpgDirectoryType::UserDirectory);
-        let context = get_context!();
+        get_user_context!(context);
 
         let mut signature = Vec::new();
         let passphrase_provider = self.get_passphrase_provider();
@@ -242,8 +281,7 @@ impl GpgKeyHandler {
         debug!(
             self.log, "Verifying data";
             "length" => data.len(), "sender" => %sender);
-        self.switch_directory_type(GpgDirectoryType::OwnedDirectory);
-        let context = get_context!();
+        get_owned_context!(context, self.owned_gnupg_home_directory.clone());
 
         let gpg_key = self.ensure_key_in_gpg(sender, context)?;
 
@@ -291,39 +329,6 @@ impl GpgKeyHandler {
         Ok(())
     }
 
-    fn switch_directory_type(&self, directory_type: GpgDirectoryType) {
-        let active_directory_type: &mut GpgDirectoryType =
-            &mut self.active_directory_type.lock().unwrap();
-
-        // If we're already in the correct directory, don't do anything
-        if *active_directory_type == directory_type {
-            return;
-        }
-
-        match directory_type {
-            GpgDirectoryType::UserDirectory => {
-                debug!(
-                    self.log, "Changing to user GPG home directory";
-                    "directory" => self.user_gnupg_home_directory.clone());
-                GPG_CONTEXT
-                    .lock()
-                    .unwrap()
-                    .set_gpg_home(&self.user_gnupg_home_directory)
-            }
-            GpgDirectoryType::OwnedDirectory => {
-                debug!(
-                    self.log, "Changing to owned GPG home directory";
-                    "directory" => self.owned_gnupg_home_directory.clone());
-                GPG_CONTEXT
-                    .lock()
-                    .unwrap()
-                    .set_gpg_home(&self.owned_gnupg_home_directory)
-            }
-        };
-
-        *active_directory_type = directory_type;
-    }
-
     fn ensure_key_in_gpg(
         &self,
         key: &Key,
@@ -360,13 +365,4 @@ impl GpgKeyHandler {
             Ok(())
         }
     }
-}
-
-/// The type of a GPG directory
-#[derive(PartialEq, Eq)]
-enum GpgDirectoryType {
-    /// Directory owned by a user, should not be modified
-    UserDirectory,
-    /// Directory owned by us, can be modified by adding new keys
-    OwnedDirectory,
 }
