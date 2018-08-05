@@ -50,12 +50,12 @@ pub trait SocketHandler {
             .write_u32::<NetworkEndian>(data.len() as u32)
             .chain_err(|| "Error on encoding length as byte array")?;
 
-        self.set_socket_timeout(socket, deadline.map(|d| d - Instant::now()))?;
+        self.set_socket_timeout(socket, deadline.map(deadline_to_duration))?;
         socket
             .write(&len_data)
             .chain_err(|| "Error on writing length")?;
 
-        self.set_socket_timeout(socket, deadline.map(|d| d - Instant::now()))?;
+        self.set_socket_timeout(socket, deadline.map(deadline_to_duration))?;
         socket
             .write(&data)
             .chain_err(|| "Error on writing response data")?;
@@ -73,7 +73,7 @@ pub trait SocketHandler {
         const SIZE_OF_LEN: usize = size_of::<u32>();
         let mut len_data: [u8; SIZE_OF_LEN] = [0; SIZE_OF_LEN];
 
-        self.set_socket_timeout(socket, deadline.map(|d| d - Instant::now()))?;
+        self.set_socket_timeout(socket, deadline.map(deadline_to_duration))?;
         socket
             .read_exact(&mut len_data)
             .chain_err(|| "Error on reading length data")?;
@@ -84,7 +84,7 @@ pub trait SocketHandler {
             .chain_err(|| "Error on casting length data to u32")?;
         let mut data = vec![0 as u8; len as usize];
 
-        self.set_socket_timeout(socket, deadline.map(|d| d - Instant::now()))?;
+        self.set_socket_timeout(socket, deadline.map(deadline_to_duration))?;
         socket
             .read_exact(&mut data)
             .chain_err(|| "Error on read main data")?;
@@ -170,12 +170,23 @@ pub trait SocketClient: SocketHandler {
             "node" => %node
         );
 
-        let mut socket = self.create_socket(node, deadline - Instant::now())?;
+        let mut socket =
+            self.create_socket(node, deadline_to_duration(deadline))?;
 
         trace!(self.get_log(), "Sending request to another node");
         self.send_data(&request_data, &mut socket, Some(deadline))?;
 
         trace!(self.get_log(), "Reading response from another node");
         self.receive_data(&mut socket, Some(deadline))
+    }
+}
+
+fn deadline_to_duration(deadline: Instant) -> Duration {
+    let now = Instant::now();
+
+    if now < deadline {
+        deadline - now
+    } else {
+        Duration::from_secs(0)
     }
 }
