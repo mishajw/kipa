@@ -332,6 +332,7 @@ impl GraphSearch {
         };
 
         let explored_n_closest = n_closest.clone();
+        let explored_log = log.clone();
         let wrapped_explored_node_callback = move |n: &Node| {
             // Set the `n_closest` value to explored
             let mut n_closest_local = explored_n_closest
@@ -347,6 +348,10 @@ impl GraphSearch {
             let all_explored = n_closest_local.iter().all(&|&(_, ref e)| *e);
 
             if all_explored && n_closest_local.len() == breadth {
+                debug!(
+                    explored_log, "Exiting search because the closest nodes to \
+                    the goal have been explored";
+                    "search_breadth" => breadth);
                 Ok(SearchCallbackReturn::Exit())
             } else {
                 // Return the value from the callback passed in
