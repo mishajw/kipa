@@ -118,12 +118,12 @@ class Configuration:
                 self.connection_quality.rate)
 
         # Create the `connect` function for connecting all nodes
-        if self.connect_type == ConnectType.CYCLICAL:
+        if self.connect_type == ConnectType.ROOTED:
             [root_key_id] = network.get_random_keys(1)
 
             def connect():
                 networks.modifier.connect_nodes_to_one(network, root_key_id)
-        elif self.connect_type == ConnectType.ROOTED:
+        elif self.connect_type == ConnectType.CYCLICAL:
             def connect():
                 networks.modifier.connect_nodes_cyclically(network)
         else:
