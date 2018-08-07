@@ -6,7 +6,7 @@ from typing import Dict, Any
 
 import yaml
 
-from benchmarks import networks
+from simulation import networks
 
 log = logging.getLogger(__name__)
 

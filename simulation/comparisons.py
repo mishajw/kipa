@@ -1,7 +1,7 @@
 import logging
 import os
 
-from benchmarks import networks, utils
+from simulation import networks, utils
 
 log = logging.getLogger(__name__)
 

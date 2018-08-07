@@ -11,13 +11,13 @@ from typing import Iterator, List
 
 import docker
 
-from benchmarks.networks import Node
-from benchmarks.key_creator import create_keys, GPG_HOME
-from benchmarks.networks import Network
+from simulation.networks import Node
+from simulation.key_creator import create_keys, GPG_HOME
+from simulation.networks import Network
 
 log = logging.getLogger(__name__)
 
-DOCKER_PREFIX = "kipa_benchmark"
+DOCKER_PREFIX = "kipa_simulation"
 IMAGE_NAME = DOCKER_PREFIX
 NETWORK_NAME = f"{DOCKER_PREFIX}_network"
 IPV4_PREFIX = "192.168.123"

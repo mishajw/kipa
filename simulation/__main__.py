@@ -4,23 +4,23 @@ import argparse
 import logging
 import os
 
-from benchmarks import networks, utils, comparisons
+from simulation import networks, utils, comparisons
 
 
 def main():
-    parser = argparse.ArgumentParser("benchmarks")
+    parser = argparse.ArgumentParser("simulation")
     parser.add_argument(
         "-c",
         "--network_config",
         type=str,
         required=True,
-        help="The file to read the benchmark configuration from")
+        help="The file to read the simulation configuration from")
     parser.add_argument(
         "-o",
         "--output_directory",
         type=str,
-        default="benchmarks_output",
-        help="Where to output benchmark results")
+        default="simulation_output",
+        help="Where to output simulation results")
     parser.add_argument(
         "--comparison",
         type=str,

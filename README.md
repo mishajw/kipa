@@ -113,12 +113,13 @@ cargo build --release
 cargo test
 ```
 
-### Benchmarks
-All benchmarking code is found in `./benchmarks`. This also includes end-to-end
-tests. Benchmark results are written to `./benchmarks_output`.
+### Simulation
+KIPA network simulation code is found in `./simulation`. This also includes
+end-to-end tests, and benchmarking. Simulation results are written to
+`./simulation_output`.
 
-The benchmarks create a network of Docker containers. All created resources are
-prefixed with `kipa_benchmark_` and are removed after the benchmark is
+The simulations create a network of Docker containers. All created resources are
+prefixed with `kipa_simulation_` and are removed after the simulation is
 finished.
 
 Prerequisites:
@@ -130,12 +131,12 @@ Prerequisites:
 ```bash
 # Install dependencies in virtualenv
 python -m venv .env && source .env/bin/activate
-pip install -r benchmarks/requirements.txt
+pip install -r simulation/requirements.txt
 
 # Run end-to-end tests
-python -m unittest discover benchmarks
+python -m unittest discover simulation
 
-# Run benchmark configuration
-# Example network configurations exist in `./resources/benchmark_configs/`
-python -m benchmarks --network_config $NETWORK_CONFIGURATION_FILE
+# Run simulation configuration
+# Example network configurations exist in `./resources/simulaton_configs/`
+python -m simulation --network_config $NETWORK_CONFIGURATION_FILE
 ```

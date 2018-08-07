@@ -1,4 +1,4 @@
-from benchmarks.tests import test_search
+from simulation.tests import test_search
 import logging
 
 logging.basicConfig()

@@ -3,7 +3,7 @@ import logging
 import random
 from typing import List, Tuple
 
-from benchmarks.networks import Network
+from simulation.networks import Network
 
 log = logging.getLogger(__name__)
 

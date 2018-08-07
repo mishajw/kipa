@@ -1,7 +1,7 @@
 import logging
 import time
 
-from benchmarks.networks import Network
+from simulation.networks import Network
 
 log = logging.getLogger(__name__)
 

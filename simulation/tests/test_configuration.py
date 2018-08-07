@@ -1,6 +1,6 @@
 import unittest
 
-from benchmarks import networks, utils
+from simulation import networks, utils
 
 
 class TestIpv6(unittest.TestCase):
@@ -9,7 +9,7 @@ class TestIpv6(unittest.TestCase):
             num_nodes=5,
             connect_type=networks.configuration.ConnectType.ROOTED,
             num_connects=1,
-            ipv6=True).run(f"benchmarks_output/tests/"
+            ipv6=True).run(f"simulation_output/tests/"
                            f"test_ipv6_{utils.get_formatted_time()}")
 
         self.assertEqual(results["percentage_success"], 1)
