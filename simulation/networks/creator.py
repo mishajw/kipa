@@ -12,7 +12,7 @@ from typing import Iterator, List
 import docker
 
 from simulation.networks import Node
-from simulation.key_creator import create_keys, GPG_HOME
+from simulation.key_creator import GPG_HOME
 from simulation.networks import Network
 
 log = logging.getLogger(__name__)
@@ -24,19 +24,40 @@ IPV4_PREFIX = "192.168.123"
 IPV6_PREFIX = "fd92:bd99:d235:d1c5::"
 
 
-def create(
+def create_docker_network(ipv6: bool = False):
+    log.info("Creating a docker network for nodes")
+    client = docker.from_env()
+
+    if not ipv6:
+        log.debug("Using IPv4")
+        ipam_pool = docker.types.IPAMPool(
+            subnet=f"{IPV4_PREFIX}.0/24", gateway=f"{IPV4_PREFIX}.123")
+    else:
+        log.debug("Using IPv6")
+        ipam_pool = docker.types.IPAMPool(
+            subnet=f"{IPV6_PREFIX}/64", gateway=f"{IPV6_PREFIX}123")
+
+    return client.networks.create(
+        NETWORK_NAME,
+        driver="bridge",
+        ipam=docker.types.IPAMConfig(
+            pool_configs=[ipam_pool]),
+        enable_ipv6=ipv6)
+
+
+def create_containers(
         size: int,
         daemon_args: str,
-        ipv6: bool = False,
+        group_index: int,
+        key_ids: List[str],
+        network: docker.models.networks.Network,
+        ipv6: bool,
         debug: bool = True) -> Network:
     """Create a network of the specified size"""
 
     log.info(
-        f"Creating network of size {size}, with arguments \"{daemon_args}\"")
-
-    key_ids = create_keys(size)
-
-    log.info("Getting docker client")
+        f"Creating network of size {size}, "
+        f"with arguments \"{daemon_args}\" and group index {group_index}")
     client = docker.from_env()
 
     log.info("Creating docker directory")
@@ -51,30 +72,29 @@ def create(
     log.info("Removing docker directory")
     shutil.rmtree(docker_directory)
 
-    log.info("Deleting old docker constructs")
-    __delete_old(client)
-
-    if not ipv6:
-        log.debug("Using IPv4")
-        ipam_pool = docker.types.IPAMPool(
-            subnet=f"{IPV4_PREFIX}.0/24", gateway=f"{IPV4_PREFIX}.123")
-    else:
-        log.debug("Using IPv6")
-        ipam_pool = docker.types.IPAMPool(
-            subnet=f"{IPV6_PREFIX}/64", gateway=f"{IPV6_PREFIX}123")
-
-    log.info("Building a network for containers")
-    network = client.networks.create(
-        NETWORK_NAME,
-        driver="bridge",
-        ipam=docker.types.IPAMConfig(
-            pool_configs=[ipam_pool]),
-        enable_ipv6=ipv6)
-
     log.info(f"Creating {len(key_ids)} containers")
     containers = list(__create_nodes(
-        client, key_ids, daemon_args, ipv6, network))
+        client, key_ids, group_index, daemon_args, ipv6, network))
     return Network(containers)
+
+
+def delete_old_containers() -> None:
+    log.info("Getting docker client")
+    client = docker.from_env()
+
+    log.info("Deleting old docker containers")
+
+    for container in client.containers.list(all=True):
+        if not container.name.startswith(DOCKER_PREFIX):
+            continue
+        log.debug(f"Removing container {container.name}")
+        container.remove(force=True)
+
+    for network in client.networks.list():
+        if not network.name.startswith(DOCKER_PREFIX):
+            continue
+        log.debug(f"Removing network {network.name}")
+        network.remove()
 
 
 def __create_docker_directory(debug: bool) -> str:
@@ -133,6 +153,7 @@ def __create_docker_directory(debug: bool) -> str:
 def __create_nodes(
         client,
         key_ids: List[str],
+        group_index: int,
         daemon_args: str,
         ipv6: bool,
         network: docker.models.networks.Network) -> Iterator[Node]:
@@ -142,7 +163,7 @@ def __create_nodes(
     api_client = docker.APIClient()
 
     for i, key_id in enumerate(key_ids):
-        name = f"{DOCKER_PREFIX}_{i:04d}_{key_id}"
+        name = f"{DOCKER_PREFIX}_{group_index:02d}_{i:04d}_{key_id}"
 
         log.info(f"Creating container with name {name}")
         container = client.containers.run(
@@ -168,17 +189,3 @@ def __create_nodes(
         log.debug(f"Created container with IP address {ip_address}")
 
         yield Node(key_id, ip_address, container)
-
-
-def __delete_old(client) -> None:
-    for container in client.containers.list(all=True):
-        if not container.name.startswith(DOCKER_PREFIX):
-            continue
-        log.debug(f"Removing container {container.name}")
-        container.remove(force=True)
-
-    for network in client.networks.list():
-        if not network.name.startswith(DOCKER_PREFIX):
-            continue
-        log.debug(f"Removing network {network.name}")
-        network.remove()

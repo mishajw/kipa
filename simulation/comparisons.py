@@ -22,8 +22,9 @@ def run_angle_comparison(
         configuration = networks.configuration.Configuration.from_yaml(
             network_config_path)
 
-        configuration.daemon_args["angle_weighting"] = angle_weighting
-        configuration.daemon_args["distance_weighting"] = 1 - angle_weighting
+        for group in configuration.groups:
+            group.daemon_args["angle_weighting"] = angle_weighting
+            group.daemon_args["distance_weighting"] = 1 - angle_weighting
 
         configuration_output_directory = os.path.join(
             output_directory, f"aw-{angle_weighting:.3f}")

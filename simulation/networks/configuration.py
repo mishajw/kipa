@@ -1,12 +1,13 @@
+import itertools
 import json
 import logging
 import os
 from enum import Enum
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 import yaml
 
-from simulation import networks
+from simulation import networks, key_creator
 
 log = logging.getLogger(__name__)
 
@@ -47,44 +48,78 @@ class ConnectionQuality:
             d["rate"] if "delay" in d else 0)
 
 
-class Configuration:
+class GroupConfiguration:
+    """Configuration of a group of nodes in a network"""
+
     def __init__(
             self,
-            num_nodes: int,
-            connect_type: ConnectType,
-            num_connects: int,
-            num_search_tests: int = None,
+            size: int,
             daemon_args: Dict[str, str] = None,
             connection_quality: ConnectionQuality = None,
-            ipv6: bool = False,
-            debug: bool = True):
-        self.num_nodes = num_nodes
-        self.connect_type = connect_type
-        self.num_connects = num_connects
-        self.num_search_tests = num_search_tests
+            ipv6: bool = False):
+        self.size = size
         self.daemon_args = daemon_args if daemon_args is not None else {}
         self.connection_quality = connection_quality
         self.ipv6 = ipv6
+        pass
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "GroupConfiguration":
+        assert "size" in d, "Missing size field in group configuration"
+        return cls(
+            d["size"],
+            d["daemon_args"] if "daemon_args" in d else {},
+            ConnectionQuality.from_dict(d["connection_quality"])
+            if "connection_quality" in d else None,
+            d["ipv6"]
+            if "ipv6" in d else False)
+
+    def get_daemon_args_str(self) -> str:
+        args_str = " ".join(
+            [f"--{arg.replace('_', '-')} {self.daemon_args[arg]}"
+             for arg in self.daemon_args])
+
+        if self.ipv6:
+            args_str += " --force-ipv6=true"
+
+        return args_str
+
+
+class Configuration:
+    def __init__(
+            self,
+            groups: List[GroupConfiguration],
+            connect_type: ConnectType,
+            num_connects: int,
+            num_search_tests: int = None,
+            debug: bool = True,
+            original_parameters: dict = None):
+        if original_parameters is None:
+            original_parameters = {}
+        self.groups = groups
+        self.connect_type = connect_type
+        self.num_connects = num_connects
+        self.num_search_tests = num_search_tests
         self.debug = debug
+        self.original_parameters = original_parameters
 
     @classmethod
     def from_yaml(cls, yaml_path: str) -> "Configuration":
         with open(yaml_path, "r") as f:
             parameters = yaml.load(f)
+        assert "groups" in parameters and type(parameters["groups"]) == list, \
+            "Missing groups list in configuration"
 
         return cls(
-            parameters["num_nodes"],
+            [GroupConfiguration.from_dict(group)
+             for group in parameters["groups"]],
             ConnectType.from_str(parameters["connect_type"]),
             parameters["num_connects"],
             parameters["num_search_tests"]
             if "num_search_tests" in parameters else None,
-            parameters["daemon_args"] if "daemon_args" in parameters else None,
-            ConnectionQuality.from_dict(parameters["connection_quality"])
-            if "connection_quality" in parameters else None,
-            parameters["ipv6"]
-            if "ipv6" in parameters else False,
             parameters["debug"]
-            if "debug" in parameters else True)
+            if "debug" in parameters else True,
+            original_parameters=parameters)
 
     def run(self, output_directory: str) -> dict:
         """
@@ -95,27 +130,41 @@ class Configuration:
         # The results dictionary that will be written detailing the
         # configuration run
         results_dict: Dict[str, Any] = dict(
-            original_config=dict(
-                num_nodes=self.num_nodes,
-                connect_type=self.connect_type.to_str(),
-                num_connects=self.num_connects))
+            original_config=self.original_parameters)
 
         # Create the directory for outputting configuration run data
         if not os.path.isdir(output_directory):
             os.makedirs(output_directory)
 
-        log.info(f"Creating network of size {self.num_nodes}")
-        network = networks.creator.create(
-            self.num_nodes, self.__get_daemon_args_str(), self.ipv6, self.debug)
-        results_dict["keys"] = network.get_all_keys()
+        networks.creator.delete_old_containers()
 
-        log.info("Setting connection quality")
-        if self.connection_quality is not None:
-            networks.modifier.fake_poor_connection(
-                network,
-                self.connection_quality.loss,
-                self.connection_quality.delay,
-                self.connection_quality.rate)
+        log.info("Creating keys")
+        key_ids = iter(
+            key_creator.create_keys(sum(g.size for g in self.groups)))
+
+        log.info(f"Creating network with {len(self.groups)} groups")
+        docker_network = networks.creator.create_docker_network(
+            ipv6=any(g.ipv6 for g in self.groups))
+        network = networks.Network([], docker_network)
+        for i, group in enumerate(self.groups):
+            log.info(f"Creating group with {group.size} nodes")
+            group_network = networks.creator.create_containers(
+                group.size,
+                group.get_daemon_args_str(),
+                i,
+                list(itertools.islice(key_ids, group.size)),
+                docker_network,
+                group.ipv6,
+                self.debug)
+            if group.connection_quality is not None:
+                log.info("Setting connection quality")
+                networks.modifier.fake_poor_connection(
+                    group_network,
+                    group.connection_quality.loss,
+                    group.connection_quality.delay,
+                    group.connection_quality.rate)
+            network += group_network
+        results_dict["keys"] = network.get_all_keys()
 
         # Create the `connect` function for connecting all nodes
         if self.connect_type == ConnectType.ROOTED:
@@ -147,7 +196,7 @@ class Configuration:
 
         log.info("Getting logs")
         # This will call `list-neighbours` so that we have an up-to-date account
-        # of each nodes neighbours in the logs
+        # of each node's neighbours in the logs
         networks.modifier.ensure_alive(network)
         network_logs = dict()
         network_human_readable_logs = dict()
@@ -200,14 +249,6 @@ class Configuration:
         with open(os.path.join(output_directory, "details.yaml"), "w") as f:
             yaml.dump(results_dict, f, default_flow_style=False)
 
+        networks.creator.delete_old_containers()
+
         return results_dict
-
-    def __get_daemon_args_str(self) -> str:
-        args_str = " ".join(
-            [f"--{arg.replace('_', '-')} {self.daemon_args[arg]}"
-             for arg in self.daemon_args])
-
-        if self.ipv6:
-            args_str += " --force-ipv6=true"
-
-        return args_str

@@ -22,6 +22,9 @@ class Network:
         self.__key_dict: Dict[str, Node] = dict(
             [(n.key_id, n) for n in self.__nodes])
 
+    def __add__(self, other: "Network") -> "Network":
+        return Network(self.__nodes + other.__nodes)
+
     def get_random_keys(self, num: int) -> List[str]:
         return random.sample(self.__key_ids, num)
 

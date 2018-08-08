@@ -1,4 +1,5 @@
-num_nodes: 5
 connect_type: rooted
 num_connects: 1
 num_search_tests: 50
+groups:
+  - size: 5
