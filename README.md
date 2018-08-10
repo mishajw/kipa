@@ -13,13 +13,14 @@ key. Each node on the KIPA network allows itself to be looked up by its key, and
 is used for looking up other nodes in the network.
 
 It is **distributed**, meaning that there is no single server on which the
-network relies. (TODO: back up with benchmarks)
+network relies (backed up by [benchmarks](./docs/benchmarks.md#reliability)).
 
 It is **zero-trust**, meaning that even with malicious nodes in the network, the
-network is still secure and reliable. (TODO: back up with benchmarks)
+network is still secure and reliable (backed up by
+[benchmarks](./docs/benchmarks.md#resilience)).
 
-It is **fast**, with look-ups taking... (TODO: back up with benchmarks)
-
+It is **fast**, with look-ups taking (TODO add figures) (backed up by
+[benchmarks](./docs/benchmarks.md#speed)).
 ## How does it work?
 
 When a node joins the KIPA network, its public key is mapped to an
@@ -113,10 +114,13 @@ cargo build --release
 cargo test
 ```
 
-### Simulation
+### Simulations
 KIPA network simulation code is found in `./simulation`. This also includes
 end-to-end tests, and benchmarking. Simulation results are written to
 `./simulation_output`.
+
+The [benchmarks](./docs/benchmarks.md) document discusses how the simulations
+are used to evaluate the performance of KIPA.
 
 The simulations create a network of Docker containers. All created resources are
 prefixed with `kipa_simulation_` and are removed after the simulation is
