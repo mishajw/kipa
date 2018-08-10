@@ -16,14 +16,19 @@ class Node:
 
 
 class Network:
-    def __init__(self, nodes: List[Node]) -> None:
+    def __init__(self, nodes: List[Node], network) -> None:
         self.__nodes = nodes
+        self.__network = network
         self.__key_ids = [n.key_id for n in self.__nodes]
         self.__key_dict: Dict[str, Node] = dict(
             [(n.key_id, n) for n in self.__nodes])
 
     def __add__(self, other: "Network") -> "Network":
-        return Network(self.__nodes + other.__nodes)
+        if self.__network is not None:
+            network = self.__network
+        else:
+            network = other.__network
+        return Network(self.__nodes + other.__nodes, network)
 
     def get_random_keys(self, num: int) -> List[str]:
         return random.sample(self.__key_ids, num)
@@ -49,6 +54,9 @@ class Network:
             f"Bad return code when executing command: {command}. " \
             f"Output was: {output}"
         return output
+
+    def stop_networking(self, key_id: str):
+        self.__network.disconnect(self.__key_dict[key_id].container)
 
     def get_logs(self, key_id: str) -> List[dict]:
         return self.__get_logs_from_file(key_id, "/root/log-daemon.json")

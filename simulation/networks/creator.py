@@ -75,7 +75,7 @@ def create_containers(
     log.info(f"Creating {len(key_ids)} containers")
     containers = list(__create_nodes(
         client, key_ids, group_index, daemon_args, ipv6, network))
-    return Network(containers)
+    return Network(containers, network)
 
 
 def delete_old_containers() -> None:

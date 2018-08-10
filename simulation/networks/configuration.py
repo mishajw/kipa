@@ -2,6 +2,7 @@ import itertools
 import json
 import logging
 import os
+import random
 from enum import Enum
 from typing import Dict, Any, List
 
@@ -61,7 +62,6 @@ class GroupConfiguration:
         self.daemon_args = daemon_args if daemon_args is not None else {}
         self.connection_quality = connection_quality
         self.ipv6 = ipv6
-        pass
 
     @classmethod
     def from_dict(cls, d: dict) -> "GroupConfiguration":
@@ -93,7 +93,8 @@ class Configuration:
             num_connects: int,
             num_search_tests: int = None,
             debug: bool = True,
-            original_parameters: dict = None):
+            original_parameters: dict = None,
+            disconnect_probability: float = 0.0):
         if original_parameters is None:
             original_parameters = {}
         self.groups = groups
@@ -102,6 +103,12 @@ class Configuration:
         self.num_search_tests = num_search_tests
         self.debug = debug
         self.original_parameters = original_parameters
+
+        self.disconnect_probability = disconnect_probability
+        """
+        Probability of a node not being reachable during a search, resampled
+        every search test
+        """
 
     @classmethod
     def from_yaml(cls, yaml_path: str) -> "Configuration":
@@ -183,6 +190,15 @@ class Configuration:
         for i in range(self.num_connects):
             log.info(f"Performing connection #{i + 1}")
             connect()
+
+        if self.disconnect_probability != 0:
+            log.info(
+                "Disconnecting nodes with probability "
+                f"{self.disconnect_probability * 100:.2f}%")
+            for key_id in network.get_all_keys():
+                if random.random() < self.disconnect_probability:
+                    log.debug(f"Disconnecting {key_id}")
+                    network.stop_networking(key_id)
 
         log.info("Getting search results")
         search_results = networks.tester.sample_test_searches(
