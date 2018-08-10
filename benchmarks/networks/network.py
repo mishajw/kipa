@@ -59,7 +59,13 @@ class Network:
         for line in (raw_logs.split("\n")):
             if line.strip() == "":
                 continue
-            logs.append(json.loads(line))
+            try:
+                json_dict = json.loads(line)
+            except json.decoder.JSONDecodeError as e:
+                log.warning(f"Failed to decode JSON string: {line}, error: {e}")
+                continue
+            logs.append(json_dict)
+
         return logs
 
     def get_human_readable_logs(self, key_id: str) -> bytes:

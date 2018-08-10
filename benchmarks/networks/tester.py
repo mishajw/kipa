@@ -59,6 +59,8 @@ class SearchResult:
     def average_num_requests(self) -> float:
         successful_num_requests = [
             nr for nr, r in zip(self.num_requests, self.results) if r]
+        if len(successful_num_requests) == 0:
+            return 0.0
         return sum(successful_num_requests) / len(successful_num_requests)
 
 
