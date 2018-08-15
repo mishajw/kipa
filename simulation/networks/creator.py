@@ -51,9 +51,15 @@ def create_containers(
         group_index: int,
         key_ids: List[str],
         network: docker.models.networks.Network,
-        ipv6: bool,
+        test_searches: bool,
+        additional_features: List[str] = None,
+        clear_default_features: bool = False,
+        ipv6: bool = False,
         debug: bool = True) -> Network:
     """Create a network of the specified size"""
+
+    if additional_features is None:
+        additional_features = []
 
     log.info(
         f"Creating network of size {size}, "
@@ -61,7 +67,8 @@ def create_containers(
     client = docker.from_env()
 
     log.info("Creating docker directory")
-    docker_directory = __create_docker_directory(debug)
+    docker_directory = __create_docker_directory(
+        debug, additional_features, clear_default_features)
 
     log.info("Building KIPA image (may take a while)")
     client.images.build(
@@ -74,7 +81,13 @@ def create_containers(
 
     log.info(f"Creating {len(key_ids)} containers")
     containers = list(__create_nodes(
-        client, key_ids, group_index, daemon_args, ipv6, network))
+        client,
+        key_ids,
+        group_index,
+        daemon_args,
+        ipv6,
+        network,
+        test_searches))
     return Network(containers, network)
 
 
@@ -97,7 +110,10 @@ def delete_old_containers() -> None:
         network.remove()
 
 
-def __create_docker_directory(debug: bool) -> str:
+def __create_docker_directory(
+        debug: bool,
+        additional_features: List[str],
+        clear_default_features: bool) -> str:
     docker_directory = tempfile.mkdtemp()
 
     log.debug(f"Made docker directory at {docker_directory}")
@@ -105,6 +121,10 @@ def __create_docker_directory(debug: bool) -> str:
     build_command = ["cargo", "build"]
     if not debug:
         build_command += ["--release"]
+    if clear_default_features:
+        build_command += ["--no-default-features"]
+    if additional_features:
+        build_command += ["--features", " ".join(additional_features)]
 
     build_process = subprocess.Popen(build_command)
     build_process.wait()
@@ -156,7 +176,8 @@ def __create_nodes(
         group_index: int,
         daemon_args: str,
         ipv6: bool,
-        network: docker.models.networks.Network) -> Iterator[Node]:
+        network: docker.models.networks.Network,
+        test_searches: bool) -> Iterator[Node]:
     assert len(key_ids) < 256, "No support for more than 256 nodes"
 
     # Used to get a container's IP address
@@ -188,4 +209,4 @@ def __create_nodes(
             ip_address = f"[{network_details['GlobalIPv6Address']}]:10842"
         log.debug(f"Created container with IP address {ip_address}")
 
-        yield Node(key_id, ip_address, container)
+        yield Node(key_id, ip_address, container, test_searches)

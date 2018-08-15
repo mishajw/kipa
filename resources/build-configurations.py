@@ -59,7 +59,10 @@ build_and_test([])
 # Run different combinations of features
 feature_sets = [
     # Run all configurations
-    "", "use-graph use-protobuf use-tcp use-unix-socket", "use-black-hole"]
+    "",
+    "use-graph use-protobuf use-tcp use-unix-socket",
+    "use-protobuf use-tcp use-unix-socket use-black-hole",
+    "use-protobuf use-tcp use-unix-socket use-random-response"]
 for fs in feature_sets:
     build_and_test(["--no-default-features", "--features", fs])
 

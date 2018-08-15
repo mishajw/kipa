@@ -9,10 +9,16 @@ log = logging.getLogger(__name__)
 
 
 class Node:
-    def __init__(self, key_id: str, address: str, container: Container):
+    def __init__(
+            self,
+            key_id: str,
+            address: str,
+            container: Container,
+            test_search: bool):
         self.key_id = key_id
         self.address = address
         self.container = container
+        self.test_search = test_search
 
 
 class Network:
@@ -35,6 +41,9 @@ class Network:
 
     def get_all_keys(self) -> List[str]:
         return self.__key_ids
+
+    def get_search_keys(self) -> List[str]:
+        return [n.key_id for n in self.__nodes if n.test_search]
 
     def get_address(self, key_id: str) -> str:
         return self.__key_dict[key_id].address

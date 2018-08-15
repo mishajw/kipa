@@ -57,11 +57,17 @@ class GroupConfiguration:
             size: int,
             daemon_args: Dict[str, str] = None,
             connection_quality: ConnectionQuality = None,
-            ipv6: bool = False):
+            ipv6: bool = False,
+            additional_features: List[str] = None,
+            clear_default_features: bool = False,
+            test_searches: bool = True):
         self.size = size
         self.daemon_args = daemon_args if daemon_args is not None else {}
         self.connection_quality = connection_quality
         self.ipv6 = ipv6
+        self.additional_features = additional_features
+        self.clear_default_features = clear_default_features
+        self.test_searches = test_searches
 
     @classmethod
     def from_dict(cls, d: dict) -> "GroupConfiguration":
@@ -72,7 +78,10 @@ class GroupConfiguration:
             ConnectionQuality.from_dict(d["connection_quality"])
             if "connection_quality" in d else None,
             d["ipv6"]
-            if "ipv6" in d else False)
+            if "ipv6" in d else False,
+            d["additional_features"] if "additional_features" in d else [],
+            d["clear_default_features"]
+            if "clear_default_features" in d else False)
 
     def get_daemon_args_str(self) -> str:
         args_str = " ".join(
@@ -161,6 +170,9 @@ class Configuration:
                 i,
                 list(itertools.islice(key_ids, group.size)),
                 docker_network,
+                group.test_searches,
+                group.additional_features,
+                group.clear_default_features,
                 group.ipv6,
                 self.debug)
             if group.connection_quality is not None:

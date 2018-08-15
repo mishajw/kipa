@@ -30,7 +30,7 @@ def main():
     parser.add_argument(
         "--benchmark",
         type=str,
-        choices=["reliability"],
+        choices=["reliability", "resilience"],
         default=None,
         help="Run a benchmark to see how well a configuration performs under "
              "varying conditions")
@@ -49,6 +49,9 @@ def main():
     if args.benchmark is not None:
         if args.benchmark == "reliability":
             benchmarks.run_reliability_benchmark(
+                network_config, output_directory)
+        elif args.benchmark == "resilience":
+            benchmarks.run_resilience_benchmark(
                 network_config, output_directory)
         else:
             raise ValueError(f"Unrecognized benchmark type: {args.benchmark}")

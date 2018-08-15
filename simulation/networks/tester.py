@@ -54,6 +54,8 @@ class SearchResult:
         return all(self.results)
 
     def percentage_success(self) -> float:
+        if len(self.results) == 0:
+            return 0.0
         return sum(1 for r in self.results if r) / len(self.results)
 
     def average_num_requests(self) -> float:
@@ -116,7 +118,7 @@ def sample_test_searches(
         network: Network, num_searches: int=None) -> SearchResult:
     if num_searches is None:
         num_searches = 500
-    key_pairs = list(itertools.permutations(network.get_all_keys(), 2))
+    key_pairs = list(itertools.permutations(network.get_search_keys(), 2))
     num_searches = min(len(key_pairs), num_searches)
     results = SearchResult.empty()
     for k1, k2 in random.sample(key_pairs, num_searches):

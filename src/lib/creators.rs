@@ -563,4 +563,15 @@ impl Creator for PayloadHandler {
         use payload_handler::black_hole::BlackHolePayloadHandler;
         Ok(Box::new(BlackHolePayloadHandler::new(log)))
     }
+
+    #[cfg(feature = "use-random-response")]
+    fn create(
+        _local_node: Self::Parameters,
+        _args: &clap::ArgMatches,
+        log: Logger,
+    ) -> InternalResult<Box<Self>>
+    {
+        use payload_handler::random_response::RandomResponsePayloadHandler;
+        Ok(Box::new(RandomResponsePayloadHandler::new(log)))
+    }
 }
