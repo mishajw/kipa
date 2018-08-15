@@ -14,7 +14,7 @@ pub struct Key {
 impl Key {
     #[allow(missing_docs)]
     pub fn new(key_id: String, data: Vec<u8>) -> Self {
-        assert!(key_id.len() == 8);
+        assert_eq!(key_id.len(), 8);
         Key { key_id, data }
     }
 }
