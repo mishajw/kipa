@@ -2,8 +2,8 @@
 
 use error::*;
 use key::Key;
+use key_space::{KeySpace, KeySpaceManager};
 use node::Node;
-use payload_handler::graph::key_space::{KeySpace, KeySpaceManager};
 
 use slog::Logger;
 use std::collections::HashMap;

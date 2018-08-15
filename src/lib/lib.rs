@@ -49,3 +49,6 @@ pub use key::Key;
 
 mod node;
 pub use node::Node;
+
+mod key_space;
+pub use key_space::KeySpace;

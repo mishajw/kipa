@@ -18,6 +18,7 @@ pub struct KeySpace {
 }
 
 impl KeySpace {
+    #[allow(missing_docs)]
     pub fn get_size(&self) -> usize { self.coords.len() }
 }
 

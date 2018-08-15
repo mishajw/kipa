@@ -7,6 +7,7 @@ use address::LocalAddressParams;
 use data_transformer::DataTransformer;
 use error::*;
 use gpg_key::GpgKeyHandler;
+use key_space::KeySpaceManager;
 use message_handler::{
     MessageHandlerClient, MessageHandlerLocalClient, MessageHandlerServer,
 };
@@ -339,13 +340,10 @@ impl Creator for MessageHandlerLocalClient {
     }
 }
 
-#[cfg(feature = "use-graph")]
-use payload_handler::graph::KeySpaceManager;
-#[cfg(feature = "use-graph")]
 impl Creator for KeySpaceManager {
     type Parameters = Node;
     fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
-        use payload_handler::graph::DEFAULT_KEY_SPACE_SIZE;
+        use key_space::DEFAULT_KEY_SPACE_SIZE;
         vec![
             clap::Arg::with_name("key_space_size")
                 .long("key-space-size")

@@ -2,8 +2,8 @@
 
 use error::*;
 use key::Key;
+use key_space::KeySpaceManager;
 use node::Node;
-use payload_handler::graph::key_space::KeySpaceManager;
 
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashSet};

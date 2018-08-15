@@ -1,13 +1,9 @@
 //! Implement `PayloadHandler` using graph based searches through KIPA net
 
-mod key_space;
 pub mod neighbour_gc;
 mod neighbours_store;
 mod search;
 
-pub use payload_handler::graph::key_space::{
-    KeySpaceManager, DEFAULT_KEY_SPACE_SIZE,
-};
 pub use payload_handler::graph::neighbours_store::{
     NeighboursStore, DEFAULT_ANGLE_WEIGHTING, DEFAULT_DISTANCE_WEIGHTING,
     DEFAULT_MAX_NUM_NEIGHBOURS,
@@ -17,6 +13,7 @@ use address::Address;
 use api::{RequestPayload, ResponsePayload};
 use error::*;
 use key::Key;
+use key_space::KeySpaceManager;
 use message_handler::MessageHandlerClient;
 use node::Node;
 use payload_handler::graph::search::{
