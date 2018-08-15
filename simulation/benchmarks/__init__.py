@@ -1,2 +1,3 @@
 from simulation.benchmarks.reliability import run_reliability_benchmark
 from simulation.benchmarks.resilience import run_resilience_benchmark
+from simulation.benchmarks.speed import run_speed_benchmark

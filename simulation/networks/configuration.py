@@ -46,7 +46,7 @@ class ConnectionQuality:
         return cls(
             d["loss"] if "loss" in d else 0,
             d["delay"] if "delay" in d else 0,
-            d["rate"] if "delay" in d else 0)
+            d["rate"] if "rate" in d else 0)
 
 
 class GroupConfiguration:
@@ -217,10 +217,13 @@ class Configuration:
             network, num_searches=self.num_search_tests)
         percentage_success = search_results.percentage_success()
         average_num_requests = search_results.average_num_requests()
+        average_search_time_sec = search_results.average_search_time_sec()
         results_dict["percentage_success"] = percentage_success
         results_dict["average_num_requests"] = average_num_requests
+        results_dict["average_search_time_sec"] = average_search_time_sec
         log.info(f"Search results: {percentage_success * 100}% success, "
-                 f"average {average_num_requests} requests")
+                 f"average {average_num_requests} requests, "
+                 f"average {average_search_time_sec} seconds per search")
 
         log.info("Getting logs")
         # This will call `list-neighbours` so that we have an up-to-date account
@@ -256,7 +259,8 @@ class Configuration:
         log.info("Drawing search networks and collecting search results")
         results_dict["search_results"] = []
         for i in range(len(search_results)):
-            from_key_id, to_key_id, result, message_id, num_requests = \
+            from_key_id, to_key_id, result, message_id, num_requests, \
+            search_time_sec = \
                 search_results[i]
             query_graph_path = os.path.join(
                 graph_directory, f"{message_id}.png")
@@ -272,6 +276,7 @@ class Configuration:
                 success=result,
                 message_id=message_id,
                 num_requests=num_requests,
+                search_time_sec=search_time_sec,
                 graph="file://" + query_graph_path))
 
         with open(os.path.join(output_directory, "details.yaml"), "w") as f:
