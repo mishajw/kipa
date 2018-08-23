@@ -63,6 +63,88 @@ with a response:
 The API is described in the source file for the module
 [`kipa_lib::api`](https://docs.rs/kipa/*/kipa_lib/api/index.html).
 
+## Messaging protocol
+
+Communication between nodes has two different modes: **fast mode**, and
+**private mode**. These modes can be used for any API call between daemons.
+
+**Fast mode** guarantees that responses are authentic, but sacrifices the
+secrecy of communication for speed - however, secrecy is still somewhat
+maintained by [key space lookups]() (TODO: add link).
+
+**Private mode** has full encryption of requests and responses, on top of the
+authenticity guarantees from fast mode. However, as several small requests can
+be made per search, private mode can lead to slower search times. (TODO: add
+benchmarks).
+
+### Fast mode protocol
+
+Requests are defined as:
+- Request body (plain text)
+  - Message ID (randomly generated)
+  - Request payload
+- Sender's key space
+
+Responses are defined as:
+- Response body (plain text)
+  - Message ID (identical to request's message ID)
+  - Response payload
+- Signature of response body
+
+The signature of response guarantees that it came from the owner of the key and
+has not been modified in transit. The message ID guarantees that the response
+is up-to-date. The sender's key space is used to check if the recipient wants
+the sender as a neighbour. If so, then the recipient must send a verification
+request to the sender.
+
+This mode does not protect against the *request* being modified in transit.
+However, the worst outcome of this case is that the response returns useless
+information.
+
+### Private mode protocol
+
+Requests are defined as:
+- Request body (encrypted with recipient's public key)
+  - Message ID (randomly generated)
+  - Request payload
+- Signature of unencrypted request body
+- Sender's public key
+
+Responses are defined as:
+- Response body (encrypted with sender's public key)
+  - Message ID (identical to request's message ID)
+  - Response payload
+- Signature of unencrypted response body
+
+All guarantees from fast mode exist in private mode. The signature of the
+request body also ensures that the request has not been tampered with in
+transit. The encryption of requests and responses also guarantees that only the
+recipient sees the request, and only the sender sees the response.
+
+### Mode comparison
+
+Several costs are added per message for private mode:
+- Time spent encrypting request
+- Time spent signing request
+- Time spent encrypting response
+- Sending full public key in request
+
+This adds a slowdown of (TODO: add benchmark for slowdown).
+
+However, use of fast mode also has compromises:
+- Payloads in plain text, and therefore observers can see what nodes are
+  searching for
+  - However, for query requests, we can use [key sapce lookups]() and
+    [fuzzy key space lookups]() (TODO: add link) to help hide the search
+    requests
+- Requests can be tampered with
+  - However, the effects of this are minimal, as discussed
+    [above](#fast-mode-protocol).
+
+There is a compromise between efficiency and privacy between fast and
+private modes. Therefore, the choice is left to the user by setting `--mode
+{fast,private}`. The default value is `private`.
+
 ## Payload handling
 
 `kipa_lib::payload_handler::graph` contains the main implementation of

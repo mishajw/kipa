@@ -21,7 +21,7 @@ impl PayloadHandler for BlackHolePayloadHandler {
     fn receive(
         &self,
         payload: &RequestPayload,
-        _sender: Option<&Node>,
+        _sender: Option<Node>,
         _message_id: u32,
     ) -> InternalResult<ResponsePayload>
     {
@@ -30,7 +30,7 @@ impl PayloadHandler for BlackHolePayloadHandler {
                 trace!(self.log, "Received query request");
                 Ok(ResponsePayload::QueryResponse(vec![]))
             }
-            &RequestPayload::SearchRequest(_) => {
+            &RequestPayload::SearchRequest(..) => {
                 trace!(self.log, "Received search request");
                 Ok(ResponsePayload::SearchResponse(None))
             }

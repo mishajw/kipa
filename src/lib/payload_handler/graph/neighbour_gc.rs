@@ -77,7 +77,7 @@ fn check_neighbour_fn(
         log, "Checking liveness of neighbour";
         "neighbour" => %neighbour, "num_retires_left" => num_retires_left);
 
-    let response = message_handler_client.send(
+    let response = message_handler_client.send_private_message(
         &neighbour,
         RequestPayload::VerifyRequest(),
         Duration::from_secs(3),

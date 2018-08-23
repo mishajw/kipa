@@ -416,7 +416,7 @@ impl Creator for NeighboursStore {
             key_space_manager,
             Arc::new(move |n| {
                 message_handler_client
-                    .send(
+                    .send_fast_message(
                         n,
                         RequestPayload::VerifyRequest(),
                         Duration::from_secs(3),
@@ -429,7 +429,7 @@ impl Creator for NeighboursStore {
 }
 
 impl Creator for PayloadHandler {
-    type Parameters = (Node, Arc<MessageHandlerClient>);
+    type Parameters = (Node, Arc<MessageHandlerClient>, Arc<KeySpaceManager>);
 
     #[cfg(feature = "use-graph")]
     fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
@@ -486,7 +486,6 @@ impl Creator for PayloadHandler {
                 .default_value(DEFAULT_RETRY_FREQUENCY_SEC),
         ];
 
-        args.append(&mut KeySpaceManager::get_clap_args());
         args.append(&mut NeighboursStore::get_clap_args());
         args
     }
@@ -501,7 +500,8 @@ impl Creator for PayloadHandler {
         use payload_handler::graph::{neighbour_gc, GraphPayloadHandler};
         use std::time::Duration;
 
-        let (local_node, message_handler_client) = parameters;
+        let (local_node, message_handler_client, key_space_manager) =
+            parameters;
 
         parse_with_err!(search_breadth, usize, args);
         parse_with_err!(connect_search_breadth, usize, args);
@@ -510,12 +510,6 @@ impl Creator for PayloadHandler {
         parse_with_err!(neighbour_gc_frequency_sec, u64, args);
         parse_with_err!(neighbour_gc_num_retries, u32, args);
         parse_with_err!(neighbour_gc_retry_frequency_sec, u64, args);
-
-        let key_space_manager: Arc<KeySpaceManager> = KeySpaceManager::create(
-            local_node.clone(),
-            args,
-            log.new(o!("key_space_manager" => true)),
-        )?.into();
 
         let neighbours_store = Arc::new(
             *(NeighboursStore::create(

@@ -37,7 +37,7 @@ impl PayloadHandler for RandomResponsePayloadHandler {
     fn receive(
         &self,
         payload: &RequestPayload,
-        _sender: Option<&Node>,
+        _sender: Option<Node>,
         _message_id: u32,
     ) -> InternalResult<ResponsePayload>
     {
@@ -52,7 +52,7 @@ impl PayloadHandler for RandomResponsePayloadHandler {
                         .collect(),
                 ))
             }
-            &RequestPayload::SearchRequest(_) => {
+            &RequestPayload::SearchRequest(..) => {
                 trace!(self.log, "Received search request");
                 if thread_rng().gen() {
                     Ok(ResponsePayload::SearchResponse(None))

@@ -2,8 +2,9 @@
 
 use address::Address;
 use api::{
-    ApiVisibility, RequestBody, RequestPayload, ResponseBody, ResponsePayload,
-    SecureMessage,
+    ApiVisibility, FastRequest, FastResponse, MessageMode, PrivateRequest,
+    PrivateResponse, RequestBody, RequestMessage, RequestPayload, ResponseBody,
+    ResponseMessage, ResponsePayload,
 };
 use data_transformer::DataTransformer;
 use error::*;
@@ -66,11 +67,11 @@ impl MessageHandlerServer {
             Some(address) => {
                 let message = self
                     .data_transformer
-                    .decode_secure_message(request_data, address)?;
-                let response_message = self.receive_secure_message(message)?;
+                    .decode_request_message(request_data, address)?;
+                let response_message = self.receive_request_message(message)?;
                 Ok(self
                     .data_transformer
-                    .encode_secure_message(response_message)?)
+                    .encode_response_message(response_message)?)
             }
             None => {
                 let body =
@@ -81,38 +82,70 @@ impl MessageHandlerServer {
         }
     }
 
-    fn receive_secure_message(
+    fn receive_request_message(
         &self,
-        secure_message: SecureMessage,
-    ) -> Result<SecureMessage>
+        secure_request: RequestMessage,
+    ) -> Result<ResponseMessage>
+    {
+        Ok(match secure_request {
+            RequestMessage::Private(private) => {
+                ResponseMessage::Private(self.receive_private_message(private)?)
+            }
+            RequestMessage::Fast(fast) => {
+                ResponseMessage::Fast(self.receive_fast_message(fast)?)
+            }
+        })
+    }
+
+    fn receive_private_message(
+        &self,
+        private_request: PrivateRequest,
+    ) -> Result<PrivateResponse>
     {
         debug!(self.log, "Received secure message");
 
         let decrypted_body_data = self
             .gpg_key_handler
-            .decrypt(&secure_message.encrypted_body, &self.local_node.key)?;
-        self.gpg_key_handler.verify(
-            &decrypted_body_data,
-            &secure_message.body_signature,
-            &secure_message.sender.key,
-        )?;
+            .decrypt(&private_request.encrypted_body, &self.local_node.key)?;
         let body = self
             .data_transformer
             .decode_request_body(&decrypted_body_data)?;
         let response_body =
-            self.receive_body(body, Some(&secure_message.sender))?;
+            self.receive_body(body, Some(private_request.sender.clone()))?;
         let response_body_data =
             self.data_transformer.encode_response_body(response_body)?;
         let encrypted_response_body_data = self
             .gpg_key_handler
-            .encrypt(&response_body_data, &secure_message.sender.key)?;
+            .encrypt(&response_body_data, &private_request.sender.key)?;
         let signed_response_body_data = self
             .gpg_key_handler
             .sign(&response_body_data, &self.local_node.key)?;
-        Ok(SecureMessage::new(
-            self.local_node.clone(),
+        Ok(PrivateResponse::new(
             signed_response_body_data,
             encrypted_response_body_data,
+        ))
+    }
+
+    fn receive_fast_message(
+        &self,
+        fast_request: FastRequest,
+    ) -> Result<FastResponse>
+    {
+        debug!(self.log, "Received secure message");
+
+        let body = self
+            .data_transformer
+            .decode_request_body(&fast_request.body)?;
+
+        let response_body = self.receive_body(body, Some(fast_request.sender))?;
+        let response_body_data =
+            self.data_transformer.encode_response_body(response_body)?;
+        let signed_response_body_data = self
+            .gpg_key_handler
+            .sign(&response_body_data, &self.local_node.key)?;
+        Ok(FastResponse::new(
+            response_body_data,
+            signed_response_body_data,
         ))
     }
 
@@ -120,7 +153,7 @@ impl MessageHandlerServer {
     fn receive_body(
         &self,
         body: RequestBody,
-        sender: Option<&Node>,
+        sender: Option<Node>,
     ) -> Result<ResponseBody>
     {
         debug!(self.log, "Received request body");
@@ -182,8 +215,27 @@ impl MessageHandlerClient {
         }
     }
 
-    /// Send a payload to a node
-    pub fn send(
+    /// Send a message in a specified message mode
+    pub fn send_message(
+        &self,
+        node: &Node,
+        payload: RequestPayload,
+        timeout: Duration,
+        mode: &MessageMode,
+    ) -> ResponseResult<ResponsePayload>
+    {
+        match mode {
+            MessageMode::Fast() => {
+                self.send_fast_message(node, payload, timeout)
+            }
+            MessageMode::Private() => {
+                self.send_private_message(node, payload, timeout)
+            }
+        }
+    }
+
+    /// Send a payload to a node in private mode
+    pub fn send_private_message(
         &self,
         node: &Node,
         payload: RequestPayload,
@@ -192,7 +244,7 @@ impl MessageHandlerClient {
     {
         let message_id: u32 = thread_rng().gen();
         debug!(
-            self.log, "Created message identifier"; "message_id" => message_id);
+            self.log, "Sending private request"; "message_id" => message_id);
         let body =
             RequestBody::new(payload, message_id, versioning::get_version());
 
@@ -206,26 +258,37 @@ impl MessageHandlerClient {
             self.gpg_key_handler.sign(&body_data, &self.local_node.key),
         )?;
 
-        let message = SecureMessage::new(
+        let message = PrivateRequest::new(
             self.local_node.clone(),
             signed_body_data,
             encrypted_body_data,
         );
         let message_data = to_internal_result(
-            self.data_transformer.encode_secure_message(message),
+            self.data_transformer
+                .encode_request_message(RequestMessage::Private(message)),
         )?;
 
         let response_message_data =
             to_internal_result(self.client.send(node, &message_data, timeout))?;
         let response_message =
-            to_internal_result(self.data_transformer.decode_secure_message(
+            to_internal_result(self.data_transformer.decode_response_message(
                 &response_message_data,
                 node.address.clone(),
             ))?;
 
+        let private_response = match response_message {
+            ResponseMessage::Private(private) => private,
+            ResponseMessage::Fast(_) => {
+                return Err(InternalError::private(ErrorKind::ResponseError(
+                    "Expected private mode response, found fast mode response"
+                        .into(),
+                )))
+            }
+        };
+
         let response_body_data = self
             .gpg_key_handler
-            .decrypt(&response_message.encrypted_body, &self.local_node.key)
+            .decrypt(&private_response.encrypted_body, &self.local_node.key)
             .map_err(|err| {
                 InternalError::public_with_error(
                     "Failed to decrypt message",
@@ -237,7 +300,7 @@ impl MessageHandlerClient {
         self.gpg_key_handler
             .verify(
                 &response_body_data,
-                &response_message.body_signature,
+                &private_response.body_signature,
                 &node.key,
             )
             .map_err(|err| {
@@ -251,6 +314,85 @@ impl MessageHandlerClient {
         let response_body = to_internal_result(
             self.data_transformer
                 .decode_response_body(&response_body_data),
+        )?;
+
+        if response_body.id != message_id {
+            // TODO: We need to reference `InternalError` here instead of
+            // `ResponseError` - seems that when you typedef enums, referencing
+            // the instances of the enum still needs to be done through the
+            // original enum type. Find a solution to this, and make sure that
+            // *all* mentions of `{Public,Private}Error` are to the correct enum
+            // type.
+            return Err(InternalError::private(ErrorKind::ResponseError(
+                format!(
+                    "Response had incorrect ID, expected {}, received {}",
+                    message_id, response_body.id
+                ),
+            )));
+        }
+
+        api_to_internal_result(response_body.payload)
+    }
+
+    /// Send a payload to a node in fast mode
+    pub fn send_fast_message(
+        &self,
+        node: &Node,
+        payload: RequestPayload,
+        timeout: Duration,
+    ) -> ResponseResult<ResponsePayload>
+    {
+        let message_id: u32 = thread_rng().gen();
+        debug!(
+            self.log, "Sending fast request"; "message_id" => message_id);
+        let body =
+            RequestBody::new(payload, message_id, versioning::get_version());
+
+        let body_data = to_internal_result(
+            self.data_transformer.encode_request_body(body),
+        )?;
+
+        let message = FastRequest::new(body_data, self.local_node.clone());
+        let message_data = to_internal_result(
+            self.data_transformer
+                .encode_request_message(RequestMessage::Fast(message)),
+        )?;
+
+        let response_message_data =
+            to_internal_result(self.client.send(node, &message_data, timeout))?;
+        let response_message =
+            to_internal_result(self.data_transformer.decode_response_message(
+                &response_message_data,
+                node.address.clone(),
+            ))?;
+
+        let fast_response = match response_message {
+            ResponseMessage::Fast(fast) => fast,
+            ResponseMessage::Private(_) => {
+                return Err(InternalError::private(ErrorKind::ResponseError(
+                    "Expected fast mode response, found private mode response"
+                        .into(),
+                )))
+            }
+        };
+
+        self.gpg_key_handler
+            .verify(
+                &fast_response.body,
+                &fast_response.body_signature,
+                &node.key,
+            )
+            .map_err(|err| {
+                InternalError::public_with_error(
+                    "Invalid signature",
+                    ApiErrorType::Parse,
+                    err,
+                )
+            })?;
+
+        let response_body = to_internal_result(
+            self.data_transformer
+                .decode_response_body(&fast_response.body),
         )?;
 
         if response_body.id != message_id {

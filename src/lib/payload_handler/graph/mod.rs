@@ -10,7 +10,7 @@ pub use payload_handler::graph::neighbours_store::{
 };
 
 use address::Address;
-use api::{RequestPayload, ResponsePayload};
+use api::{MessageMode, RequestPayload, ResponsePayload};
 use error::*;
 use key::Key;
 use key_space::KeySpaceManager;
@@ -19,7 +19,7 @@ use node::Node;
 use payload_handler::graph::search::{
     GetNeighboursFn, GraphSearch, SearchCallbackReturn,
 };
-use payload_handler::{InternalResult, PayloadHandler};
+use payload_handler::PayloadHandler;
 
 use slog::Logger;
 use std::sync::Arc;
@@ -81,11 +81,18 @@ impl GraphPayloadHandler {
         }
     }
 
-    fn search(&self, key: &Key, log: Logger) -> InternalResult<Option<Node>> {
+    fn search(
+        &self,
+        key: &Key,
+        mode: &MessageMode,
+        log: Logger,
+    ) -> InternalResult<Option<Node>>
+    {
         let callback_key = key.clone();
         let found_log = self.log.new(o!());
         let found_message_handler_server = self.message_handler_client.clone();
         let found_timeout = Duration::from_secs(self.search_timeout_sec as u64);
+        let found_mode = mode.clone();
         let found_callback = move |n: &Node| {
             trace!(
                 found_log, "Found node when searching"; "node" => %n);
@@ -96,10 +103,11 @@ impl GraphPayloadHandler {
                 // If the verification fails, then log a warning but continue
                 // the search. If we exit here, it is possible to easily attack
                 // a search by returning fake nodes whenever you receive a query
-                if let Err(err) = found_message_handler_server.send(
+                if let Err(err) = found_message_handler_server.send_message(
                     n,
                     RequestPayload::VerifyRequest(),
                     found_timeout,
+                    &found_mode,
                 ) {
                     warn!(
                         found_log, "Error when sending verification message \
@@ -124,7 +132,7 @@ impl GraphPayloadHandler {
                 Address::new(vec![0, 0, 0, 0], 10842),
                 self.key.clone(),
             )],
-            self.create_get_neighbours_fn(),
+            self.create_get_neighbours_fn(mode.clone()),
             Arc::new(found_callback),
             Arc::new(move |n| {
                 trace!(
@@ -167,7 +175,11 @@ impl GraphPayloadHandler {
             &self.key,
             self.connect_search_breadth,
             vec![node.clone()],
-            self.create_get_neighbours_fn(),
+            // Use fast mode, as we don't care about secrecy when connecting:
+            // the only possible gained information is that we are searching
+            // for ourselves, and therefore are connecting, which
+            // is useless information
+            self.create_get_neighbours_fn(MessageMode::Fast()),
             Arc::new(found_callback),
             Arc::new(explored_callback),
             self.max_num_search_threads,
@@ -179,7 +191,7 @@ impl GraphPayloadHandler {
         Ok(())
     }
 
-    fn create_get_neighbours_fn(&self) -> GetNeighboursFn {
+    fn create_get_neighbours_fn(&self, mode: MessageMode) -> GetNeighboursFn {
         let neighbours_store = self.neighbours_store.clone();
         let key = self.key.clone();
         let timeout = Duration::from_secs(self.search_timeout_sec as u64);
@@ -189,10 +201,11 @@ impl GraphPayloadHandler {
                 return Ok(neighbours_store.get_all());
             }
 
-            let response = message_handler_client.send(
+            let response = message_handler_client.send_message(
                 n,
                 RequestPayload::QueryRequest(k.clone()),
                 timeout,
+                &mode,
             );
 
             match response {
@@ -212,19 +225,18 @@ impl PayloadHandler for GraphPayloadHandler {
     fn receive(
         &self,
         payload: &RequestPayload,
-        sender: Option<&Node>,
+        sender: Option<Node>,
         message_id: u32,
     ) -> InternalResult<ResponsePayload>
     {
         info!(
             self.log,
             "Received request";
-            "sender" =>
-                sender.map(|n| n.to_string()).unwrap_or_else(|| "none".into()));
+            "sender" => sender.clone()
+                .map(|n| n.to_string()).unwrap_or("none".into()));
 
-        if sender.is_some() {
-            self.neighbours_store
-                .consider_candidate(&sender.unwrap(), true);
+        if let Some(n) = sender {
+            self.neighbours_store.consider_candidate(&n, true);
         }
 
         match *payload {
@@ -246,17 +258,19 @@ impl PayloadHandler for GraphPayloadHandler {
 
                 Ok(ResponsePayload::QueryResponse(nodes))
             }
-            RequestPayload::SearchRequest(ref key) => {
+            RequestPayload::SearchRequest(ref key, ref mode) => {
                 trace!(
                     self.log,
                     "Received search request";
                     "key" => %key);
                 Ok(ResponsePayload::SearchResponse(self.search(
                     &key,
+                    &mode,
                     self.log.new(o!(
-                            "message_id" => message_id,
-                            "search_request" => true
-                        )),
+                        "message_id" => message_id,
+                        "search_request" => true,
+                        "search_mode" => mode.to_string(),
+                    )),
                 )?))
             }
             RequestPayload::ConnectRequest(ref node) => {

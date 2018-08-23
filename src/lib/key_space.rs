@@ -14,10 +14,14 @@ pub const DEFAULT_KEY_SPACE_SIZE: &str = "2";
 /// A key space value with a set of coordinates
 #[derive(Clone, PartialEq)]
 pub struct KeySpace {
-    coords: Vec<i32>,
+    /// Coordinates in key space
+    pub coords: Vec<i32>,
 }
 
 impl KeySpace {
+    #[allow(missing_docs)]
+    pub fn new(coords: Vec<i32>) -> Self { KeySpace { coords } }
+
     #[allow(missing_docs)]
     pub fn get_size(&self) -> usize { self.coords.len() }
 }

@@ -20,7 +20,7 @@ pub trait PayloadHandler: Send + Sync {
     fn receive(
         &self,
         payload: &RequestPayload,
-        sender: Option<&Node>,
+        sender: Option<Node>,
         message_id: u32,
     ) -> InternalResult<ResponsePayload>;
 }

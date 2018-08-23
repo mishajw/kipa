@@ -7,7 +7,7 @@ extern crate slog;
 extern crate slog_async;
 extern crate slog_term;
 
-use kipa_lib::api::{RequestPayload, ResponsePayload};
+use kipa_lib::api::{MessageMode, RequestPayload, ResponsePayload};
 use kipa_lib::creators::*;
 use kipa_lib::data_transformer::DataTransformer;
 use kipa_lib::error::*;
@@ -45,6 +45,18 @@ fn main() -> ApiResult<()> {
                         .help("The key to search for")
                         .takes_value(true)
                         .required(true),
+                )
+                .arg(
+                    clap::Arg::with_name("mode")
+                        .long("mode")
+                        .short("m")
+                        .help(
+                            "Search mode to use, see \
+                             ./docs/design.md#messaging-protocol",
+                        )
+                        .takes_value(true)
+                        .possible_values(&vec!["private", "fast"])
+                        .default_value("fast"),
                 ),
         )
         .subcommand(
@@ -125,8 +137,13 @@ fn message_daemon(
         let search_key = gpg_key_handler.get_user_key(String::from(
             search_args.value_of("key_id").unwrap(),
         ))?;
+        let search_mode = match search_args.value_of("mode").unwrap() {
+            "private" => MessageMode::Private(),
+            "fast" => MessageMode::Fast(),
+            _ => panic!("Unexpected search mode"),
+        };
         let response = message_handler_local_client
-            .send(RequestPayload::SearchRequest(search_key))?;
+            .send(RequestPayload::SearchRequest(search_key, search_mode))?;
 
         match response {
             ResponsePayload::SearchResponse(Some(ref node)) => {

@@ -17,9 +17,9 @@ use node::Node;
 
 use std::fmt;
 
-/// Wraps a message with security guarantees: secrecy and authenticity
-pub struct SecureMessage {
-    /// The sender of the message
+/// Request with authenticity and secrecy
+pub struct PrivateRequest {
+    /// The request sender's key
     pub sender: Node,
     /// Signature of the decrypted body, signed by sender's private key
     pub body_signature: Vec<u8>,
@@ -27,7 +27,7 @@ pub struct SecureMessage {
     pub encrypted_body: Vec<u8>,
 }
 
-impl SecureMessage {
+impl PrivateRequest {
     #[allow(missing_docs)]
     pub fn new(
         sender: Node,
@@ -35,12 +35,79 @@ impl SecureMessage {
         encrypted_body: Vec<u8>,
     ) -> Self
     {
-        SecureMessage {
+        PrivateRequest {
             sender,
             body_signature,
             encrypted_body,
         }
     }
+}
+
+/// Response with authenticity and secrecy
+pub struct PrivateResponse {
+    /// Signature of the decrypted body, signed by sender's private key
+    pub body_signature: Vec<u8>,
+    /// The contents of the body encrypted with the recipient's public key
+    pub encrypted_body: Vec<u8>,
+}
+
+impl PrivateResponse {
+    #[allow(missing_docs)]
+    pub fn new(body_signature: Vec<u8>, encrypted_body: Vec<u8>) -> Self {
+        PrivateResponse {
+            body_signature,
+            encrypted_body,
+        }
+    }
+}
+
+/// Request with no authenticity or secrecy
+pub struct FastRequest {
+    /// Encoded data of the body
+    pub body: Vec<u8>,
+    /// Address of the sender
+    pub sender: Node,
+}
+
+impl FastRequest {
+    #[allow(missing_docs)]
+    pub fn new(body: Vec<u8>, sender: Node) -> Self {
+        FastRequest { body, sender }
+    }
+}
+
+/// Response with authenticity but no secrecy
+pub struct FastResponse {
+    /// Encoded data of the body
+    pub body: Vec<u8>,
+    /// Signature of the body, signed with the sender's private key
+    pub body_signature: Vec<u8>,
+}
+
+impl FastResponse {
+    #[allow(missing_docs)]
+    pub fn new(body: Vec<u8>, body_signature: Vec<u8>) -> Self {
+        FastResponse {
+            body,
+            body_signature,
+        }
+    }
+}
+
+/// Request message in either mode
+pub enum RequestMessage {
+    #[allow(missing_docs)]
+    Private(PrivateRequest),
+    #[allow(missing_docs)]
+    Fast(FastRequest),
+}
+
+/// Request message in either mode
+pub enum ResponseMessage {
+    #[allow(missing_docs)]
+    Private(PrivateResponse),
+    #[allow(missing_docs)]
+    Fast(FastResponse),
 }
 
 /// Message passed between nodes, with a generic payload
@@ -78,7 +145,7 @@ pub enum RequestPayload {
     ///
     /// This prompts the node to perform a search in the KIPA network it is
     /// connected to, looking for the [`Node`] that owns the [`Key`] provided.
-    SearchRequest(Key),
+    SearchRequest(Key, MessageMode),
     /// Query for the closest known nodes to some key (in key space)
     ///
     /// This returns the [`Node`]s that the local node is connected to, that
@@ -121,7 +188,7 @@ impl RequestPayload {
     /// Check if the request is visible in a API visibility
     pub fn is_visible(&self, visibility: &ApiVisibility) -> bool {
         match *self {
-            RequestPayload::SearchRequest(_) => {
+            RequestPayload::SearchRequest(..) => {
                 visibility == &ApiVisibility::Local()
             }
             RequestPayload::QueryRequest(_) => {
@@ -192,3 +259,25 @@ pub enum ApiVisibility {
     Global(),
 }
 impl Eq for ApiVisibility {}
+
+/// Different modes of search
+///
+/// See the [design document] for details.
+///
+/// [design document]: https://github.com/mishajw/kipa/blob/master/docs/design.md#messaging-protocol
+#[derive(Clone)]
+pub enum MessageMode {
+    /// Fast mode, with no encryption
+    Fast(),
+    /// Private mode, with encryption
+    Private(),
+}
+
+impl fmt::Display for MessageMode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            MessageMode::Fast() => write!(f, "MessageMode::Fast"),
+            MessageMode::Private() => write!(f, "MessageMode::Private"),
+        }
+    }
+}

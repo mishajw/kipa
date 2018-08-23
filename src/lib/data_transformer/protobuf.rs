@@ -10,8 +10,9 @@
 
 use address::Address;
 use api::{
-    ApiError, ApiErrorType, ApiResult, RequestBody, RequestPayload,
-    ResponseBody, ResponsePayload, SecureMessage,
+    ApiError, ApiErrorType, ApiResult, FastRequest, FastResponse, MessageMode,
+    PrivateRequest, PrivateResponse, RequestBody, RequestMessage,
+    RequestPayload, ResponseBody, ResponseMessage, ResponsePayload,
 };
 use data_transformer::{proto_api, DataTransformer};
 use error::*;
@@ -26,29 +27,99 @@ use std::convert::{From, Into};
 pub struct ProtobufDataTransformer {}
 
 impl DataTransformer for ProtobufDataTransformer {
-    fn encode_secure_message(&self, message: SecureMessage) -> Result<Vec<u8>> {
-        let mut proto_message = proto_api::SecureMessage::new();
-        proto_message.set_sender(message.sender.clone().into());
-        proto_message.set_body_signature(message.body_signature);
-        proto_message.set_encrypted_body(message.encrypted_body);
-        proto_message
+    fn encode_request_message(
+        &self,
+        request: RequestMessage,
+    ) -> Result<Vec<u8>>
+    {
+        let proto_request = match request {
+            RequestMessage::Fast(fast) => {
+                let mut proto_request = proto_api::RequestMessage::new();
+                proto_request.set_fast(encode_fast_request(fast));
+                proto_request
+            }
+            RequestMessage::Private(private) => {
+                let mut proto_request = proto_api::RequestMessage::new();
+                proto_request.set_private(encode_private_request(private));
+                proto_request
+            }
+        };
+        proto_request
             .write_to_bytes()
-            .chain_err(|| "Error on write secure message to bytes")
+            .chain_err(|| "Error on write request message to bytes")
     }
 
-    fn decode_secure_message(
+    fn decode_request_message(
         &self,
         data: &[u8],
         sender: Address,
-    ) -> Result<SecureMessage>
+    ) -> Result<RequestMessage>
     {
-        let proto_message: proto_api::SecureMessage = parse_from_bytes(data)
-            .chain_err(|| "Error on parsing secure message")?;
-        Ok(SecureMessage::new(
-            sender_node_to_node(proto_message.get_sender(), sender),
-            proto_message.get_body_signature().to_vec(),
-            proto_message.get_encrypted_body().to_vec(),
-        ))
+        let proto_message: proto_api::RequestMessage = parse_from_bytes(data)
+            .chain_err(|| "Error on parsing request message")?;
+
+        let message = if proto_message.has_fast() {
+            RequestMessage::Fast(decode_fast_request(
+                proto_message.get_fast().clone(),
+                sender,
+            ))
+        } else if proto_message.has_private() {
+            RequestMessage::Private(decode_private_request(
+                proto_message.get_private().clone(),
+                sender,
+            ))
+        } else {
+            unimplemented!();
+        };
+
+        Ok(message)
+    }
+
+    fn encode_response_message(
+        &self,
+        response: ResponseMessage,
+    ) -> Result<Vec<u8>>
+    {
+        let proto_response = match response {
+            ResponseMessage::Fast(fast) => {
+                let mut proto_response = proto_api::ResponseMessage::new();
+                proto_response.set_fast(encode_fast_response(fast));
+                proto_response
+            }
+            ResponseMessage::Private(private) => {
+                let mut proto_response = proto_api::ResponseMessage::new();
+                proto_response.set_private(encode_private_response(private));
+                proto_response
+            }
+        };
+        proto_response
+            .write_to_bytes()
+            .chain_err(|| "Error on write response message to bytes")
+    }
+
+    fn decode_response_message(
+        &self,
+        data: &[u8],
+        // TOOD: Consider removing argument
+        _sender: Address,
+    ) -> Result<ResponseMessage>
+    {
+        let proto_message: proto_api::ResponseMessage = parse_from_bytes(data)
+            .chain_err(|| "Error on parsing response message")?;
+
+        let message = if proto_message.has_fast() {
+            ResponseMessage::Fast(decode_fast_response(
+                proto_message.get_fast().clone(),
+            ))
+        } else if proto_message.has_private() {
+            ResponseMessage::Private(decode_private_response(
+                proto_message.get_private().clone(),
+            ))
+        } else {
+            unimplemented!();
+        };
+
+        Ok(message)
     }
 
     fn encode_request_body(&self, body: RequestBody) -> Result<Vec<u8>> {
@@ -78,6 +149,80 @@ impl DataTransformer for ProtobufDataTransformer {
     }
 }
 
+fn encode_private_request(
+    request: PrivateRequest,
+) -> proto_api::PrivateRequest {
+    let mut proto_request = proto_api::PrivateRequest::new();
+    proto_request.set_sender(request.sender.into());
+    proto_request.set_body_signature(request.body_signature);
+    proto_request.set_encrypted_body(request.encrypted_body);
+    proto_request
+}
+
+fn decode_private_request(
+    proto_request: proto_api::PrivateRequest,
+    sender: Address,
+) -> PrivateRequest
+{
+    PrivateRequest::new(
+        sender_node_to_node(proto_request.get_sender(), sender),
+        proto_request.get_body_signature().to_vec(),
+        proto_request.get_encrypted_body().to_vec(),
+    )
+}
+
+fn encode_private_response(
+    response: PrivateResponse,
+) -> proto_api::PrivateResponse {
+    let mut proto_response = proto_api::PrivateResponse::new();
+    proto_response.set_body_signature(response.body_signature);
+    proto_response.set_encrypted_body(response.encrypted_body);
+    proto_response
+}
+
+fn decode_private_response(
+    proto_response: proto_api::PrivateResponse,
+) -> PrivateResponse {
+    PrivateResponse::new(
+        proto_response.get_body_signature().to_vec(),
+        proto_response.get_encrypted_body().to_vec(),
+    )
+}
+
+fn encode_fast_request(request: FastRequest) -> proto_api::FastRequest {
+    let mut proto_request = proto_api::FastRequest::new();
+    proto_request.set_sender(request.sender.into());
+    proto_request.set_body(request.body);
+    proto_request
+}
+
+fn decode_fast_request(
+    proto_request: proto_api::FastRequest,
+    sender: Address,
+) -> FastRequest
+{
+    FastRequest::new(
+        proto_request.get_body().to_vec(),
+        sender_node_to_node(proto_request.get_sender(), sender),
+    )
+}
+
+fn encode_fast_response(response: FastResponse) -> proto_api::FastResponse {
+    let mut proto_response = proto_api::FastResponse::new();
+    proto_response.set_body(response.body);
+    proto_response.set_body_signature(response.body_signature);
+    proto_response
+}
+
+fn decode_fast_response(
+    proto_response: proto_api::FastResponse,
+) -> FastResponse {
+    FastResponse::new(
+        proto_response.get_body().to_vec(),
+        proto_response.get_body_signature().to_vec(),
+    )
+}
+
 // TODO: Try to remove clones from the `Into<>` impls
 
 impl Into<proto_api::RequestBody> for RequestBody {
@@ -90,9 +235,10 @@ impl Into<proto_api::RequestBody> for RequestBody {
                 query.set_key(key.clone().into());
                 proto_body.set_query_request(query);
             }
-            RequestPayload::SearchRequest(ref key) => {
+            RequestPayload::SearchRequest(ref key, ref mode) => {
                 let mut search = proto_api::SearchRequest::new();
                 search.set_key(key.clone().into());
+                search.set_mode(mode.clone().into());
                 proto_body.set_search_request(search);
             }
             RequestPayload::ConnectRequest(ref node) => {
@@ -123,7 +269,8 @@ impl Into<Result<RequestBody>> for proto_api::RequestBody {
             RequestPayload::QueryRequest(key)
         } else if self.has_search_request() {
             let key = self.get_search_request().get_key().clone().into();
-            RequestPayload::SearchRequest(key)
+            let mode = self.get_search_request().get_mode().clone().into();
+            RequestPayload::SearchRequest(key, mode)
         } else if self.has_connect_request() {
             RequestPayload::ConnectRequest(
                 self.get_connect_request().get_node().clone().into(),
@@ -309,6 +456,24 @@ fn sender_node_to_node(
         Address::new(address.ip_data, sender_node.get_port() as u16),
         key,
     )
+}
+
+impl Into<proto_api::MessageMode> for MessageMode {
+    fn into(self) -> proto_api::MessageMode {
+        match self {
+            MessageMode::Fast() => proto_api::MessageMode::Fast,
+            MessageMode::Private() => proto_api::MessageMode::Private,
+        }
+    }
+}
+
+impl Into<MessageMode> for proto_api::MessageMode {
+    fn into(self) -> MessageMode {
+        match self {
+            proto_api::MessageMode::Fast => MessageMode::Fast(),
+            proto_api::MessageMode::Private => MessageMode::Private(),
+        }
+    }
 }
 
 impl Into<ApiErrorType> for proto_api::ApiErrorType {

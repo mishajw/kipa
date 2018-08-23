@@ -2,7 +2,7 @@
 //! wire
 
 use address::Address;
-use api::{RequestBody, ResponseBody, SecureMessage};
+use api::{RequestBody, RequestMessage, ResponseBody, ResponseMessage};
 use error::*;
 
 #[cfg(feature = "use-protobuf")]
@@ -13,14 +13,29 @@ pub mod protobuf;
 /// Implementors must be able to convert `Request`s and `Response`s to and from
 /// bytes
 pub trait DataTransformer: Send + Sync {
-    /// Encode a secure message into bytes
-    fn encode_secure_message(&self, message: SecureMessage) -> Result<Vec<u8>>;
-    /// Decode a secure message from bytes
-    fn decode_secure_message(
+    /// Encode a request message into bytes
+    fn encode_request_message(
+        &self,
+        request: RequestMessage,
+    ) -> Result<Vec<u8>>;
+    /// Decode a request message from bytes
+    fn decode_request_message(
         &self,
         data: &[u8],
         sender: Address,
-    ) -> Result<SecureMessage>;
+    ) -> Result<RequestMessage>;
+
+    /// Encode a response message into bytes
+    fn encode_response_message(
+        &self,
+        response: ResponseMessage,
+    ) -> Result<Vec<u8>>;
+    /// Decode a response message from bytes
+    fn decode_response_message(
+        &self,
+        data: &[u8],
+        sender: Address,
+    ) -> Result<ResponseMessage>;
 
     /// Encode a request body into bytes
     fn encode_request_body(&self, body: RequestBody) -> Result<Vec<u8>>;

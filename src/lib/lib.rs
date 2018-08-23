@@ -35,6 +35,7 @@ pub mod creators;
 pub mod data_transformer;
 pub mod error;
 pub mod gpg_key;
+pub mod key_space;
 pub mod message_handler;
 pub mod payload_handler;
 pub mod server;
@@ -49,6 +50,3 @@ pub use key::Key;
 
 mod node;
 pub use node::Node;
-
-mod key_space;
-pub use key_space::KeySpace;

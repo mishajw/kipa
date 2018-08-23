@@ -10,6 +10,7 @@ use kipa_lib::creators::*;
 use kipa_lib::data_transformer::DataTransformer;
 use kipa_lib::error::*;
 use kipa_lib::gpg_key::GpgKeyHandler;
+use kipa_lib::key_space::KeySpaceManager;
 use kipa_lib::message_handler::{MessageHandlerClient, MessageHandlerServer};
 use kipa_lib::payload_handler::PayloadHandler;
 use kipa_lib::server::{Client, LocalServer, Server};
@@ -33,6 +34,7 @@ fn main() -> ApiResult<()> {
     creator_args.append(&mut Server::get_clap_args());
     creator_args.append(&mut LocalServer::get_clap_args());
     creator_args.append(&mut GpgKeyHandler::get_clap_args());
+    creator_args.append(&mut KeySpaceManager::get_clap_args());
 
     let args = clap::App::new("kipa_daemon")
         .arg(
@@ -104,6 +106,13 @@ fn run_servers(
     let client: Arc<Client> =
         Client::create((), args, log.new(o!("client" => true)))?.into();
 
+    // Set up how to handle key spaces
+    let key_space_manager: Arc<KeySpaceManager> = KeySpaceManager::create(
+        local_node.clone(),
+        args,
+        log.new(o!("key_space_manager" => true)),
+    )?.into();
+
     let message_handler_client: Arc<MessageHandlerClient> =
         MessageHandlerClient::create(
             (
@@ -118,7 +127,11 @@ fn run_servers(
 
     // Set up request handler
     let payload_handler: Arc<PayloadHandler> = PayloadHandler::create(
-        (local_node.clone(), message_handler_client),
+        (
+            local_node.clone(),
+            message_handler_client,
+            key_space_manager,
+        ),
         args,
         log.new(o!("request_handler" => true)),
     )?.into();
