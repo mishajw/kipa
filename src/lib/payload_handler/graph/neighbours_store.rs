@@ -7,7 +7,7 @@ use payload_handler::graph::key_space::{KeySpace, KeySpaceManager};
 
 use slog::Logger;
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 /// The default size of the neighbours store
 pub const DEFAULT_MAX_NUM_NEIGHBOURS: &str = "3";
@@ -26,7 +26,7 @@ pub struct NeighboursStore {
     max_num_neighbours: usize,
     distance_weighting: f32,
     angle_weighting: f32,
-    neighbours: Vec<(Node, KeySpace)>,
+    neighbours: Mutex<Vec<(Node, KeySpace)>>,
     log: Logger,
 }
 
@@ -55,14 +55,14 @@ impl NeighboursStore {
             max_num_neighbours,
             distance_weighting,
             angle_weighting,
-            neighbours: Vec::new(),
+            neighbours: Mutex::new(Vec::new()),
             log,
         }
     }
 
     /// Get the `n` closest neighbours to some key
     pub fn get_n_closest(&self, key: &Key, n: usize) -> Vec<Node> {
-        let mut neighbours = self.neighbours.clone();
+        let mut neighbours = self.neighbours.lock().unwrap().clone();
         self.key_space_manager.sort_key_relative(
             &mut neighbours,
             &|&(_, ref ks)| ks.clone(),
@@ -78,13 +78,15 @@ impl NeighboursStore {
     /// Get all neightbours
     pub fn get_all(&self) -> Vec<Node> {
         self.neighbours
+            .lock()
+            .unwrap()
             .iter()
             .map(|&(ref n, _)| n.clone())
             .collect()
     }
 
     /// Given a node, consider keeping it as a neighbour
-    pub fn consider_candidate(&mut self, node: &Node, trusted: bool) {
+    pub fn consider_candidate(&self, node: &Node, trusted: bool) {
         let key_space = self.key_space_manager.create_from_key(&node.key);
 
         // Don't add ourselves
@@ -103,8 +105,8 @@ impl NeighboursStore {
         // Check if there is an existing neighbour with the same key - if there
         // is, check if the address needs updating. If we find any matching
         // nodes, exit the function
-        if let Some((n, _)) = self
-            .neighbours
+        let mut neighbours_locked = self.neighbours.lock().unwrap();
+        if let Some((n, _)) = neighbours_locked
             .iter()
             .filter(|(n, _)| n.key == node.key)
             .next()
@@ -119,11 +121,11 @@ impl NeighboursStore {
                     self.log, "Updating neighbour with new address";
                     "new_node" => %node,
                     "old_node" => %n);
-                self.neighbours.iter_mut().for_each(|(n, _)| {
+                neighbours_locked.iter_mut().for_each(|(n, _)| {
                     if n.key == node.key {
                         n.address = node.address.clone()
                     }
-                })
+                });
             }
 
             debug!(
@@ -133,14 +135,15 @@ impl NeighboursStore {
             // If we've already got the node as a neighbour, we can exit
             return;
         }
+        drop(neighbours_locked);
 
         // If we have space for the new node, add it and return
-        if self.neighbours.len() < self.max_num_neighbours {
+        if self.neighbours.lock().unwrap().len() < self.max_num_neighbours {
             self.add_neighbour(node.clone(), key_space, trusted);
             return;
         }
 
-        let mut potential_neighbours = self.neighbours.clone();
+        let mut potential_neighbours = self.neighbours.lock().unwrap().clone();
         potential_neighbours.push((node.clone(), key_space.clone()));
         let scores = self.get_neighbour_scores(&potential_neighbours);
         let (min_key_id, _) = scores
@@ -157,6 +160,8 @@ impl NeighboursStore {
         if min_key_id != &node.key.key_id {
             if self.add_neighbour(node.clone(), key_space, trusted) {
                 self.neighbours
+                    .lock()
+                    .unwrap()
                     .retain(|(node, _)| &node.key.key_id != min_key_id);
             }
         } else {
@@ -165,18 +170,23 @@ impl NeighboursStore {
                 "node" => %node);
         }
 
-        debug_assert!(self.neighbours.len() <= self.max_num_neighbours);
+        debug_assert!(
+            self.neighbours.lock().unwrap().len() <= self.max_num_neighbours
+        );
     }
 
     /// Remove a neighbour by its key
-    pub fn remove_by_key(&mut self, key: &Key) {
-        self.neighbours.retain(|(n, _)| &n.key != key);
+    pub fn remove_by_key(&self, key: &Key) {
+        self.neighbours
+            .lock()
+            .unwrap()
+            .retain(|(n, _)| &n.key != key);
     }
 
     /// Add a neighbour to the list, first verifying it exists. Returns true if
     /// adding succeeded
     fn add_neighbour(
-        &mut self,
+        &self,
         neighbour: Node,
         key_space: KeySpace,
         trusted: bool,
@@ -188,8 +198,8 @@ impl NeighboursStore {
                 self.log, "Adding new neighbour";
                 "neighbour" => %neighbour,
                 "trusted" => trusted,
-                "num_neighbours" => self.neighbours.len() + 1);
-            self.neighbours.push((neighbour, key_space));
+                "num_neighbours" => self.neighbours.lock().unwrap().len() + 1);
+            self.neighbours.lock().unwrap().push((neighbour, key_space));
         }
         verified
     }
@@ -218,7 +228,7 @@ impl NeighboursStore {
     /// - How "unique" the angle between the local node and the neighbour node
     ///   is, i.e. does adding this neighbour add a link in a new direction?
     fn get_neighbour_scores(
-        &mut self,
+        &self,
         neighbours: &Vec<(Node, KeySpace)>,
     ) -> HashMap<String, f32>
     {
@@ -310,7 +320,7 @@ mod test {
             Key::new("00000007".to_string(), vec![7]),
         ];
 
-        let mut ns = NeighboursStore::new(
+        let ns = NeighboursStore::new(
             &keys[keys.len() - 1],
             3,
             1.0,
@@ -346,7 +356,7 @@ mod test {
             Key::new("00000004".to_string(), vec![0, 0, 0, 6]),
         ];
 
-        let mut ns = NeighboursStore::new(
+        let ns = NeighboursStore::new(
             &keys[2],
             2,
             0.5,

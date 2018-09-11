@@ -26,7 +26,7 @@ pub const DEFAULT_RETRY_FREQUENCY_SEC: &str = "10";
 /// We check every `frequency`, and if a neighbour does not respond, we retry
 /// `num_retries` times before removing the neighbour.
 pub fn start_gc(
-    store: Arc<Mutex<NeighboursStore>>,
+    store: Arc<NeighboursStore>,
     message_handler_client: Arc<MessageHandlerClient>,
     frequency: Duration,
     num_retries: u32,
@@ -38,7 +38,7 @@ pub fn start_gc(
 
     let check_all_planner = planner.clone();
     let check_all_neighbours_fn = move || {
-        let neighbours = store.lock().unwrap().get_all();
+        let neighbours = store.get_all();
         info!(
             log, "Checking all neighbours for liveness";
             "num_neighburs" => neighbours.len());
@@ -67,7 +67,7 @@ fn check_neighbour_fn(
     neighbour: Node,
     num_retires_left: u32,
     message_handler_client: Arc<MessageHandlerClient>,
-    store: Arc<Mutex<NeighboursStore>>,
+    store: Arc<NeighboursStore>,
     retry_frequency: Duration,
     planner: Arc<Mutex<periodic::Planner>>,
     log: Logger,
@@ -92,7 +92,7 @@ fn check_neighbour_fn(
                 "Failed to verify neighbour, no retries left, removing \
                  neighbour";
                 "neighbour" => %neighbour);
-            store.lock().unwrap().remove_by_key(&neighbour.key);
+            store.remove_by_key(&neighbour.key);
         } else {
             // ...but if we have retries left, spawn a new planned thread to
             // check again in after `retry_frequency` has elapsed

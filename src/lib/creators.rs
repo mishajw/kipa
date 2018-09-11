@@ -519,7 +519,7 @@ impl Creator for PayloadHandler {
             log.new(o!("key_space_manager" => true)),
         )?.into();
 
-        let neighbours_store = Arc::new(Mutex::new(
+        let neighbours_store = Arc::new(
             *(NeighboursStore::create(
                 (
                     local_node.key.clone(),
@@ -529,7 +529,7 @@ impl Creator for PayloadHandler {
                 args,
                 log.new(o!("neighbours_store" => true)),
             )?),
-        ));
+        );
 
         neighbour_gc::start_gc(
             neighbours_store.clone(),

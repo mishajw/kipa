@@ -25,7 +25,7 @@ use payload_handler::graph::search::{
 use payload_handler::{InternalResult, PayloadHandler};
 
 use slog::Logger;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::Duration;
 
 /// The default breadth to use when searching
@@ -48,7 +48,7 @@ pub struct GraphPayloadHandler {
     max_num_search_threads: usize,
     search_timeout_sec: usize,
     message_handler_client: Arc<MessageHandlerClient>,
-    neighbours_store: Arc<Mutex<NeighboursStore>>,
+    neighbours_store: Arc<NeighboursStore>,
     graph_search: Arc<GraphSearch>,
     log: Logger,
 }
@@ -67,7 +67,7 @@ impl GraphPayloadHandler {
         search_timeout_sec: usize,
         message_handler_client: Arc<MessageHandlerClient>,
         key_space_manager: Arc<KeySpaceManager>,
-        neighbours_store: Arc<Mutex<NeighboursStore>>,
+        neighbours_store: Arc<NeighboursStore>,
         log: Logger,
     ) -> Self
     {
@@ -153,10 +153,7 @@ impl GraphPayloadHandler {
                 "Found node when connecting";
                 "node" => %n);
             // Consider the connected node as a candidate
-            found_neighbours_store
-                .lock()
-                .expect("Failed to lock found_neighbours_store")
-                .consider_candidate(n, false);
+            found_neighbours_store.consider_candidate(n, false);
             Ok(SearchCallbackReturn::Continue())
         };
 
@@ -192,7 +189,7 @@ impl GraphPayloadHandler {
         let message_handler_client = self.message_handler_client.clone();
         Arc::new(move |n, k: &Key| {
             if n.key == key {
-                return Ok(neighbours_store.lock().unwrap().get_all());
+                return Ok(neighbours_store.get_all());
             }
 
             let response = message_handler_client.send(
@@ -230,8 +227,6 @@ impl PayloadHandler for GraphPayloadHandler {
 
         if sender.is_some() {
             self.neighbours_store
-                .lock()
-                .unwrap()
                 .consider_candidate(&sender.unwrap(), true);
         }
 
@@ -241,8 +236,7 @@ impl PayloadHandler for GraphPayloadHandler {
                     self.log,
                     "Received query request";
                     "key" => %key);
-                let nodes =
-                    self.neighbours_store.lock().unwrap().get_n_closest(key, 3);
+                let nodes = self.neighbours_store.get_n_closest(key, 3);
                 trace!(
                     self.log,
                     "Replying";
@@ -284,8 +278,7 @@ impl PayloadHandler for GraphPayloadHandler {
             }
             RequestPayload::ListNeighboursRequest() => {
                 trace!(self.log, "Replying recieved list neigbours request");
-                let neighbours =
-                    self.neighbours_store.lock().unwrap().get_all();
+                let neighbours = self.neighbours_store.get_all();
                 trace!(
                     self.log,
                     "Replying to list neighbours request";
