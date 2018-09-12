@@ -68,6 +68,7 @@ impl LocalServer for UnixSocketLocalServer {
         let arc_self = Arc::new(self.clone());
         let join_handle = thread::spawn(move || {
             listener.incoming().for_each(move |socket| {
+                remotery_scope!("unix_socket_connection");
                 let spawn_self = arc_self.clone();
                 arc_self.thread_manager.spawn(move || {
                     spawn_self.handle_socket_result(

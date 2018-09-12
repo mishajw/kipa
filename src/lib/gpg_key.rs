@@ -117,6 +117,8 @@ impl GpgKeyHandler {
         is_secret: bool,
     ) -> InternalResult<()>
     {
+        remotery_scope!("gpg_copy_user_key");
+
         info!(
             self.log, "Copying user's key into owned GPG directory";
             "key_id" => key_id,
@@ -158,6 +160,8 @@ impl GpgKeyHandler {
         is_secret: bool,
     ) -> InternalResult<Vec<u8>>
     {
+        remotery_scope!("gpg_get_user_key_data");
+
         info!(
             self.log, "Spawning GPG command to export key data";
             "key_id" => key_id,
@@ -260,6 +264,8 @@ impl GpgKeyHandler {
     /// Get the key for a key ID string. The string must be eight characters
     /// long
     pub fn get_user_key(&self, key_id: String) -> InternalResult<Key> {
+        remotery_scope!("gpg_get_user_key");
+
         trace!(self.log, "Requested key ID"; "key_id" => &key_id);
 
         // Copy the key into the owned directory
@@ -288,6 +294,8 @@ impl GpgKeyHandler {
 
     /// Encrypt data for a recipient, using the recipient's public key
     pub fn encrypt(&self, data: &[u8], recipient: &Key) -> Result<Vec<u8>> {
+        remotery_scope!("gpg_encrypt");
+
         debug!(
             self.log, "Encrypting data";
             "length" => data.len(), "recipient" => %recipient);
@@ -307,6 +315,8 @@ impl GpgKeyHandler {
     ///
     /// We can only decrypt with keys in the user's GPG directory.
     pub fn decrypt(&self, data: &[u8], recipient: &Key) -> Result<Vec<u8>> {
+        remotery_scope!("gpg_decrypt");
+
         debug!(
             self.log, "Decrypting data";
             "length" => data.len(), "recipient" => %recipient);
@@ -321,6 +331,8 @@ impl GpgKeyHandler {
     ///
     /// We can only sign with keys in the user's GPG directory.
     pub fn sign(&self, data: &[u8], sender: &Key) -> Result<Vec<u8>> {
+        remotery_scope!("gpg_sign");
+
         debug!(
             self.log, "Signing data";
             "length" => data.len(), "sender" => %sender);
@@ -350,6 +362,8 @@ impl GpgKeyHandler {
         sender: &Key,
     ) -> Result<()>
     {
+        remotery_scope!("gpg_verify");
+
         debug!(
             self.log, "Verifying data";
             "length" => data.len(), "sender" => %sender);
@@ -400,6 +414,8 @@ impl GpgKeyHandler {
     }
 
     fn ensure_key_in_gpg(&self, key: &Key) -> Result<gpgme::Key> {
+        remotery_scope!("gpg_ensure_key_in_gpg");
+
         match with_context(|mut c| c.get_key(&key.key_id)) {
             Ok(key) => Ok(key),
             Err(_) => {
@@ -409,10 +425,16 @@ impl GpgKeyHandler {
                 let mut key_data = gpgme::Data::from_bytes(&key.data)
                     .chain_err(|| "Error on reading key bytes")?;
                 with_context(|mut c| {
-                    c.import(&mut key_data)
-                        .chain_err(|| "Error on importing key")?;
-                    c.get_key(&key.key_id)
-                        .chain_err(|| "Error on getting newly imported key")
+                    {
+                        remotery_scope!("gpg_import_key");
+                        c.import(&mut key_data)
+                            .chain_err(|| "Error on importing key")?;
+                    }
+                    {
+                        remotery_scope!("gpg_check_key_imported");
+                        c.get_key(&key.key_id)
+                            .chain_err(|| "Error on getting newly imported key")
+                    }
                 })
             }
         }

@@ -31,6 +31,11 @@ extern crate num_cpus;
 extern crate periodic;
 extern crate rand;
 extern crate threadpool;
+#[cfg(feature = "use-remotery")]
+extern crate remotery;
+
+// TODO: Find way to make this module private
+pub mod remotery_util;
 
 pub mod api;
 pub mod creators;

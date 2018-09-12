@@ -38,6 +38,7 @@ pub fn start_gc(
 
     let check_all_planner = planner.clone();
     let check_all_neighbours_fn = move || {
+        remotery_scope!("gc_check_all_neighbours");
         let neighbours = store.get_all();
         info!(
             log, "Checking all neighbours for liveness";
@@ -73,6 +74,8 @@ fn check_neighbour_fn(
     log: Logger,
 )
 {
+    remotery_scope!("gc_check_neighbour");
+
     debug!(
         log, "Checking liveness of neighbour";
         "neighbour" => %neighbour, "num_retires_left" => num_retires_left);

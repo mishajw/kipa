@@ -61,6 +61,8 @@ impl MessageHandlerServer {
         address: Option<Address>,
     ) -> Result<Vec<u8>>
     {
+        remotery_scope!("message_handler_receive_bytes");
+
         debug!(self.log, "Received bytes"; "from_cli" => address.is_none());
 
         match address {
@@ -87,6 +89,8 @@ impl MessageHandlerServer {
         secure_request: RequestMessage,
     ) -> Result<ResponseMessage>
     {
+        remotery_scope!("message_handler_receive_request_message");
+
         Ok(match secure_request {
             RequestMessage::Private(private) => {
                 ResponseMessage::Private(self.receive_private_message(private)?)
@@ -102,6 +106,8 @@ impl MessageHandlerServer {
         private_request: PrivateRequest,
     ) -> Result<PrivateResponse>
     {
+        remotery_scope!("message_handler_receive_private_message");
+
         debug!(self.log, "Received secure message");
 
         let decrypted_body_data = self
@@ -131,6 +137,8 @@ impl MessageHandlerServer {
         fast_request: FastRequest,
     ) -> Result<FastResponse>
     {
+        remotery_scope!("message_handler_receive_fast_message");
+
         debug!(self.log, "Received secure message");
 
         let body = self
@@ -156,6 +164,8 @@ impl MessageHandlerServer {
         sender: Option<Node>,
     ) -> Result<ResponseBody>
     {
+        remotery_scope!("message_handler_receive_body");
+
         debug!(self.log, "Received request body");
 
         // Check the visibility of the request is correct
@@ -224,6 +234,8 @@ impl MessageHandlerClient {
         mode: &MessageMode,
     ) -> ResponseResult<ResponsePayload>
     {
+        remotery_scope!("message_handler_client_send_message");
+
         match mode {
             MessageMode::Fast() => {
                 self.send_fast_message(node, payload, timeout)
@@ -242,6 +254,8 @@ impl MessageHandlerClient {
         timeout: Duration,
     ) -> ResponseResult<ResponsePayload>
     {
+        remotery_scope!("message_handler_client_send_private_message");
+
         let message_id: u32 = thread_rng().gen();
         debug!(
             self.log, "Sending private request"; "message_id" => message_id);
@@ -342,6 +356,8 @@ impl MessageHandlerClient {
         timeout: Duration,
     ) -> ResponseResult<ResponsePayload>
     {
+        remotery_scope!("message_handler_client_send_fast_message");
+
         let message_id: u32 = thread_rng().gen();
         debug!(
             self.log, "Sending fast request"; "message_id" => message_id);
@@ -443,6 +459,8 @@ impl MessageHandlerLocalClient {
         payload: RequestPayload,
     ) -> ResponseResult<ResponsePayload>
     {
+        remotery_scope!("message_handler_local_client_send");
+
         let message_id: u32 = thread_rng().gen();
         debug!(
             self.log, "Created message identifier"; "message_id" => message_id);

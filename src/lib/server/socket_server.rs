@@ -45,6 +45,8 @@ pub trait SocketHandler {
         deadline: Option<Instant>,
     ) -> Result<()>
     {
+        remotery_scope!("socket_send_data");
+
         let mut len_data = vec![];
         len_data
             .write_u32::<NetworkEndian>(data.len() as u32)
@@ -70,6 +72,8 @@ pub trait SocketHandler {
         deadline: Option<Instant>,
     ) -> Result<Vec<u8>>
     {
+        remotery_scope!("socket_receive_data");
+
         const SIZE_OF_LEN: usize = size_of::<u32>();
         let mut len_data: [u8; SIZE_OF_LEN] = [0; SIZE_OF_LEN];
 
@@ -124,6 +128,8 @@ pub trait SocketServer: SocketHandler + Send + Sync {
         message_handler_server: Arc<MessageHandlerServer>,
     ) -> Result<()>
     {
+        remotery_scope!("handle_socket");
+
         let log = self.get_log();
         let address = self.get_socket_peer_address(&socket);
 
@@ -163,6 +169,8 @@ pub trait SocketClient: SocketHandler {
         timeout: Duration,
     ) -> Result<Vec<u8>>
     {
+        remotery_scope!("socket_client_send");
+
         let deadline = Instant::now() + timeout;
         trace!(
             self.get_log(),

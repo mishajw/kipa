@@ -95,6 +95,8 @@ impl GraphPayloadHandler {
         log: Logger,
     ) -> InternalResult<Option<Node>>
     {
+        remotery_scope!("graph_search");
+
         let callback_key = key.clone();
         let found_log = self.log.new(o!());
         let found_message_handler_server = self.message_handler_client.clone();
@@ -157,6 +159,8 @@ impl GraphPayloadHandler {
     }
 
     fn connect(&self, node: &Node, log: Logger) -> InternalResult<()> {
+        remotery_scope!("graph_connect");
+
         let found_neighbours_store = self.neighbours_store.clone();
         let found_log = self.log.new(o!());
         let found_callback = move |n: &Node| {
@@ -236,6 +240,8 @@ impl PayloadHandler for GraphPayloadHandler {
         message_id: u32,
     ) -> InternalResult<ResponsePayload>
     {
+        remotery_scope!("graph_receive");
+
         info!(
             self.log,
             "Received request";
@@ -243,11 +249,13 @@ impl PayloadHandler for GraphPayloadHandler {
                 .map(|n| n.to_string()).unwrap_or("none".into()));
 
         if let Some(n) = sender {
+            remotery_scope!("consider_sender_for_neighbour");
             self.neighbours_store.consider_candidate(&n, true);
         }
 
         match *payload {
             RequestPayload::QueryRequest(ref key) => {
+                remotery_scope!("graph_query_request");
                 trace!(
                     self.log,
                     "Received query request";
@@ -266,6 +274,7 @@ impl PayloadHandler for GraphPayloadHandler {
                 Ok(ResponsePayload::QueryResponse(nodes))
             }
             RequestPayload::SearchRequest(ref key, ref mode) => {
+                remotery_scope!("graph_search_request");
                 trace!(
                     self.log,
                     "Received search request";
@@ -281,6 +290,7 @@ impl PayloadHandler for GraphPayloadHandler {
                 )?))
             }
             RequestPayload::ConnectRequest(ref node) => {
+                remotery_scope!("graph_connect_request");
                 trace!(
                     self.log,
                     "Received connect request";
@@ -295,6 +305,7 @@ impl PayloadHandler for GraphPayloadHandler {
                 Ok(ResponsePayload::ConnectResponse())
             }
             RequestPayload::ListNeighboursRequest() => {
+                remotery_scope!("graph_list_neighbours_request");
                 trace!(self.log, "Replying recieved list neigbours request");
                 let neighbours = self.neighbours_store.get_all();
                 trace!(
@@ -315,6 +326,8 @@ impl PayloadHandler for GraphPayloadHandler {
                 Ok(ResponsePayload::ListNeighboursResponse(neighbours))
             }
             RequestPayload::VerifyRequest() => {
+                remotery_scope!("graph_verify_request");
+                trace!(self.log, "Received verify request");
                 Ok(ResponsePayload::VerifyResponse())
             }
         }

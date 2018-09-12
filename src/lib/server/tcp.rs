@@ -58,6 +58,7 @@ impl Server for TcpServer {
         let arc_self = Arc::new(self.clone());
         let join_handle = thread::spawn(move || {
             listener.incoming().for_each(move |socket| {
+                remotery_scope!("tcp_connection");
                 let spawn_self = arc_self.clone();
                 arc_self.thread_manager.spawn(move || {
                     spawn_self.handle_socket_result(

@@ -13,6 +13,7 @@ use kipa_lib::gpg_key::GpgKeyHandler;
 use kipa_lib::key_space::KeySpaceManager;
 use kipa_lib::message_handler::{MessageHandlerClient, MessageHandlerServer};
 use kipa_lib::payload_handler::PayloadHandler;
+use kipa_lib::remotery_util;
 use kipa_lib::server::{Client, LocalServer, Server};
 use kipa_lib::thread_manager::ThreadManager;
 use kipa_lib::{Address, LocalAddressParams, Node};
@@ -25,6 +26,8 @@ fn main() -> ApiResult<()> {
     info!(
         log, "Starting daemon";
         "args" => ::std::env::args().skip(1).collect::<Vec<_>>().join(" "));
+
+    let _remotery = remotery_util::initialize_remotery(&log);
 
     let mut creator_args = vec![];
     creator_args.append(&mut LocalAddressParams::get_clap_args());

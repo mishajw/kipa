@@ -117,6 +117,8 @@ impl GraphSearch {
         log: Logger,
     ) -> Result<Option<T>>
     {
+        remotery_scope!("graph_search_logic");
+
         info!(log, "Starting graph search"; "key" => %key);
 
         let key_space = self.key_space_manager.create_from_key(key);
@@ -151,6 +153,8 @@ impl GraphSearch {
         let wait_explored_channel_tx = explored_channel_tx.clone();
         let wait_for_threads =
             |rx: &Receiver<(Node, ResponseResult<Vec<Node>>)>| -> Result<()> {
+                remotery_scope!("wait_for_threads");
+
                 // Wait for `recv` to resolve
                 let recv = rx
                     .recv_timeout(timeout)
@@ -173,11 +177,15 @@ impl GraphSearch {
         }
 
         loop {
+            remotery_scope!("search_loop");
+
             // Pop everything we can off the channel and into `found` and
             // `to_explore`
             while let Ok((explored_node, found_nodes)) =
                 explored_channel_rx.try_recv()
             {
+                remotery_scope!("processing_explored_channel");
+
                 // If we pop something off the channel, a thread has finished
                 num_active_threads -= 1;
 
@@ -266,6 +274,8 @@ impl GraphSearch {
             let spawn_get_neighbours_fn = get_neighbours_fn.clone();
             let spawn_log = log.new(o!());
             self.thread_manager.spawn(move || {
+                remotery_scope!("exploring_node");
+
                 trace!(
                     spawn_log, "Getting neighbours";
                     "making_request" => true,
@@ -313,6 +323,8 @@ impl GraphSearch {
         log: Logger,
     ) -> Result<Option<T>>
     {
+        remotery_scope!("graph_search_with_breadth_logic");
+
         // Continue the graph search looking for a key, until the `n`
         // closest nodes have also been explored
 
@@ -326,6 +338,8 @@ impl GraphSearch {
         let found_n_closest = n_closest.clone();
         let found_key_space_manager = self.key_space_manager.clone();
         let wrapped_found_node_callback = move |n: &Node| {
+            remotery_scope!("breadth_found_callback");
+
             // Add the new node to `n_closest`, sort it, and remove the last
             let mut n_closest_local = found_n_closest
                 .lock()
@@ -347,6 +361,8 @@ impl GraphSearch {
         let explored_n_closest = n_closest.clone();
         let explored_log = log.clone();
         let wrapped_explored_node_callback = move |n: &Node| {
+            remotery_scope!("breadth_explored_callback");
+
             // Set the `n_closest` value to explored
             let mut n_closest_local = explored_n_closest
                 .lock()
