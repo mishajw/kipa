@@ -122,8 +122,9 @@ fn message_daemon(
     )?;
 
     if let Some(search_args) = args.subcommand_matches("search") {
-        let search_key = gpg_key_handler
-            .get_key(String::from(search_args.value_of("key_id").unwrap()))?;
+        let search_key = gpg_key_handler.get_user_key(String::from(
+            search_args.value_of("key_id").unwrap(),
+        ))?;
         let response = message_handler_local_client
             .send(RequestPayload::SearchRequest(search_key))?;
 
@@ -142,8 +143,9 @@ fn message_daemon(
         }
     } else if let Some(connect_args) = args.subcommand_matches("connect") {
         // Get node from arguments
-        let node_key = gpg_key_handler
-            .get_key(String::from(connect_args.value_of("key_id").unwrap()))?;
+        let node_key = gpg_key_handler.get_user_key(String::from(
+            connect_args.value_of("key_id").unwrap(),
+        ))?;
         let node_address =
             Address::from_string(connect_args.value_of("address").unwrap())?;
         let node = Node::new(node_address, node_key);

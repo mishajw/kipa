@@ -255,3 +255,41 @@ mining resources).
 KIPA does not have this problem: In order for an individual to use the system,
 it is required that they become a node in the network. As every node is equal,
 there will be as many active nodes as there are active users.
+
+## Issues with GPG key storage
+
+When performing GPG operations, both the **user's** private key and **other
+node's** private key need to exist in the same `.gnupg` directory. This is for
+two reasons:
+
+1. If we have two switch between two different `.gnupg` directories, GPG
+   operations have to lock the `$GNUPGHOME` environment variable. This
+   essentially serialises all GPG operations, introducing a significant
+   bottleneck.
+2. If keys are found in two different directories, the `sign` and `encrypt`
+   operations (or `decrypt` and `verify`) have to be done in two separate
+   steps. If they are in the same directory, this can be done in one
+   `sign_and_encrypt` operation (or `decrypt_and_verify`). Despite this
+   operation doing more, `sign`, `encrypt`, and `sign_and_encrypt` all have
+   similar run times.
+
+Therefore, there are significant speed benefits to having all keys in one
+directory. We can do this in two ways:
+
+1. Import all used keys into the user's default `.gnupg` directory. This polutes
+   the user's imported keys, and can import potentially hundreds of useless keys
+   into their day-to-day GPG installation.
+2. Copy the user's private key into a KIPA owned and maintained `.gnupg`
+   directory. This can leave their private GPG key exposed in plaintext in a
+   KIPA-owned directory.
+
+In KIPA, we opt for solution 2. This is not ideal, but prompts for this
+happening are explicit and obvious. The user is also advised to make a secondary
+key for KIPA usage.
+
+This solution is intended to be a stepping stone for key management, until
+maturity of crates such as [sequoia](https://sequoia-pgp.org/) and
+[ring](https://github.com/briansmith/ring), which allow us to deal with storing
+keys in separate locations. Until then, this solution will persist unless
+someone can come up with a
+[better idea](https://github.com/mishajw/kipa/issues/7).

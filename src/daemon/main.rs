@@ -74,12 +74,13 @@ fn run_servers(
     log: &slog::Logger,
 ) -> InternalResult<()>
 {
+    let key_id: String = args.value_of("key_id").unwrap().into();
     let gpg_key_handler: Arc<GpgKeyHandler> =
         GpgKeyHandler::create((), args, log.new(o!("gpg" => true)))?.into();
+    gpg_key_handler.copy_user_key(&key_id, true)?;
 
     // Create local node
-    let local_key =
-        gpg_key_handler.get_key(args.value_of("key_id").unwrap().into())?;
+    let local_key = gpg_key_handler.get_user_key(key_id)?;
     let local_node = Node::new(
         Address::get_local(
             *LocalAddressParams::create(
