@@ -139,9 +139,8 @@ def sample_test_searches(
     if num_searches is None:
         num_searches = 500
     key_pairs = list(itertools.permutations(network.get_search_keys(), 2))
-    num_searches = min(len(key_pairs), num_searches)
     results = SearchResult.empty()
-    for k1, k2 in random.sample(key_pairs, num_searches):
+    for k1, k2 in [random.choice(key_pairs) for _ in range(num_searches)]:
         success, message_id, num_requests, search_time_sec = \
             test_search(network, k1, k2)
         results.add_result(
