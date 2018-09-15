@@ -122,6 +122,10 @@ impl SocketHandler for TcpGlobalClient {
         timeout: Option<Duration>,
     ) -> Result<()>
     {
+        debug!(
+            self.log, "Setting timeout";
+            "timeout" => timeout
+                .map(|t| t.as_secs().to_string()).unwrap_or("none".into()));
         socket
             .set_read_timeout(timeout)
             .chain_err(|| "Error on setting read timeout on TCP socket")?;
