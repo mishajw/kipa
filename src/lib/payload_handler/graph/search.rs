@@ -240,7 +240,9 @@ impl GraphSearch {
                     .map(|k| k.key_id.clone())
                     .collect::<Vec<String>>()
                     .join(", "),
-                "left_to_explore" => to_explore.len());
+                "left_to_explore" => to_explore.len(),
+                "num_active_threads" => num_active_threads,
+                "max_num_active_threads" => max_num_active_threads);
 
             // Spawn a new thread to get the neighbours of `current_node`
             trace!(

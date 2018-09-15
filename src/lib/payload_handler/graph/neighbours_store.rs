@@ -100,7 +100,8 @@ impl NeighboursStore {
             "node" => %node,
             "distance" => self.key_space_manager.distance(
                 &key_space, &self.local_key_space),
-            "trusted" => trusted);
+            "trusted" => trusted,
+            "num_neighbours" => self.neighbours.lock().unwrap().len());
 
         // Check if there is an existing neighbour with the same key - if there
         // is, check if the address needs updating. If we find any matching
