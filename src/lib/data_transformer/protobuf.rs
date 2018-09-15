@@ -349,6 +349,7 @@ impl Into<proto_api::ApiError> for ApiError {
     fn into(self) -> proto_api::ApiError {
         let mut api_error = proto_api::ApiError::new();
         api_error.set_msg(self.message);
+        api_error.set_error_type(self.error_type.into());
         api_error
     }
 }
