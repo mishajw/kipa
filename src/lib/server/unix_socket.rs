@@ -6,6 +6,7 @@ use error::*;
 use message_handler::MessageHandlerServer;
 use server::socket_server::{SocketHandler, SocketServer};
 use server::{LocalClient, LocalServer};
+use thread_manager::ThreadManager;
 
 use std::fs;
 use std::os::unix::net::{UnixListener, UnixStream};
@@ -23,6 +24,7 @@ pub const DEFAULT_UNIX_SOCKET_PATH: &str = "/tmp/kipa";
 pub struct UnixSocketLocalServer {
     message_handler_server: Arc<MessageHandlerServer>,
     socket_path: String,
+    thread_manager: Arc<ThreadManager>,
     log: Logger,
 }
 
@@ -32,12 +34,14 @@ impl UnixSocketLocalServer {
     pub fn new(
         message_handler_server: Arc<MessageHandlerServer>,
         socket_path: String,
+        thread_manager: Arc<ThreadManager>,
         log: Logger,
     ) -> Result<Self>
     {
         Ok(UnixSocketLocalServer {
             message_handler_server,
             socket_path,
+            thread_manager,
             log,
         })
     }
@@ -65,7 +69,7 @@ impl LocalServer for UnixSocketLocalServer {
         let join_handle = thread::spawn(move || {
             listener.incoming().for_each(move |socket| {
                 let spawn_self = arc_self.clone();
-                thread::spawn(move || {
+                arc_self.thread_manager.spawn(move || {
                     spawn_self.handle_socket_result(
                         socket.chain_err(|| "Failed to create socket"),
                         spawn_self.message_handler_server.clone(),

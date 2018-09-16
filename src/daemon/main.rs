@@ -14,6 +14,7 @@ use kipa_lib::key_space::KeySpaceManager;
 use kipa_lib::message_handler::{MessageHandlerClient, MessageHandlerServer};
 use kipa_lib::payload_handler::PayloadHandler;
 use kipa_lib::server::{Client, LocalServer, Server};
+use kipa_lib::thread_manager::ThreadManager;
 use kipa_lib::{Address, LocalAddressParams, Node};
 
 use error_chain::ChainedError;
@@ -44,6 +45,13 @@ fn main() -> ApiResult<()> {
                 .help("Key read from GPG")
                 .takes_value(true)
                 .required(true),
+        )
+        .arg(
+            clap::Arg::with_name("max_num_threads")
+                .long("max-num-threads")
+                .short("j")
+                .help("Maximum number of active threads")
+                .takes_value(true),
         )
         .args(&creator_args)
         .get_matches();
@@ -76,6 +84,17 @@ fn run_servers(
     log: &slog::Logger,
 ) -> InternalResult<()>
 {
+    let request_thread_manager = match args
+        .value_of("max_num_threads")
+        .and_then(|s| s.parse::<usize>().ok())
+    {
+        Some(max_num_threads) => {
+            ThreadManager::from_size("requests".into(), max_num_threads)
+        }
+        None => ThreadManager::with_default_size("requests".into()),
+    };
+    let request_thread_manager = Arc::new(request_thread_manager);
+
     let key_id: String = args.value_of("key_id").unwrap().into();
     let gpg_key_handler: Arc<GpgKeyHandler> =
         GpgKeyHandler::create((), args, log.new(o!("gpg" => true)))?.into();
@@ -150,14 +169,18 @@ fn run_servers(
 
     // Set up listening for connections
     let server = Server::create(
-        (message_handler_server.clone(), local_node.clone()),
+        (
+            message_handler_server.clone(),
+            local_node.clone(),
+            request_thread_manager.clone(),
+        ),
         args,
         log.new(o!("server" => true)),
     )?;
 
     // Set up local listening for requests
     let local_server = LocalServer::create(
-        message_handler_server.clone(),
+        (message_handler_server.clone(), request_thread_manager),
         args,
         log.new(o!("local_server" => true)),
     )?;

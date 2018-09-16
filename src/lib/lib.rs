@@ -27,8 +27,10 @@ extern crate spectral;
 extern crate regex;
 #[macro_use]
 extern crate lazy_static;
+extern crate num_cpus;
 extern crate periodic;
 extern crate rand;
+extern crate threadpool;
 
 pub mod api;
 pub mod creators;
@@ -39,6 +41,7 @@ pub mod key_space;
 pub mod message_handler;
 pub mod payload_handler;
 pub mod server;
+pub mod thread_manager;
 mod versioning;
 
 mod address;

@@ -37,6 +37,9 @@ pub const DEFAULT_MAX_NUM_SEARCH_THREADS: &str = "3";
 /// The default timeout for queries when performing a search
 pub const DEFAULT_SEARCH_TIMEOUT_SEC: &str = "2";
 
+/// Default size of thread pool for conducting searches
+pub const DEFAULT_SEARCH_THREAD_POOL_SIZE: &str = "10";
+
 /// Contains graph search information
 pub struct GraphPayloadHandler {
     key: Key,
@@ -65,6 +68,7 @@ impl GraphPayloadHandler {
         message_handler_client: Arc<MessageHandlerClient>,
         key_space_manager: Arc<KeySpaceManager>,
         neighbours_store: Arc<NeighboursStore>,
+        search_thread_pool_size: usize,
         log: Logger,
     ) -> Self
     {
@@ -75,7 +79,10 @@ impl GraphPayloadHandler {
             max_num_search_threads,
             search_timeout_sec,
             message_handler_client,
-            graph_search: Arc::new(GraphSearch::new(key_space_manager)),
+            graph_search: Arc::new(GraphSearch::new(
+                key_space_manager,
+                search_thread_pool_size,
+            )),
             neighbours_store,
             log,
         }

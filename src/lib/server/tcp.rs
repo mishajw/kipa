@@ -6,6 +6,7 @@ use message_handler::MessageHandlerServer;
 use node::Node;
 use server::socket_server::{SocketClient, SocketHandler, SocketServer};
 use server::{Client, Server};
+use thread_manager::ThreadManager;
 
 use std::net::{IpAddr, Ipv6Addr, SocketAddr, TcpListener, TcpStream};
 use std::sync::Arc;
@@ -19,6 +20,7 @@ use slog::Logger;
 pub struct TcpServer {
     message_handler_server: Arc<MessageHandlerServer>,
     local_node: Node,
+    thread_manager: Arc<ThreadManager>,
     log: Logger,
 }
 
@@ -27,12 +29,14 @@ impl TcpServer {
     pub fn new(
         message_handler_server: Arc<MessageHandlerServer>,
         local_node: Node,
+        thread_manager: Arc<ThreadManager>,
         log: Logger,
     ) -> Self
     {
         TcpServer {
             message_handler_server,
             local_node,
+            thread_manager,
             log,
         }
     }
@@ -55,7 +59,7 @@ impl Server for TcpServer {
         let join_handle = thread::spawn(move || {
             listener.incoming().for_each(move |socket| {
                 let spawn_self = arc_self.clone();
-                thread::spawn(move || {
+                arc_self.thread_manager.spawn(move || {
                     spawn_self.handle_socket_result(
                         socket.chain_err(|| "Failed to create socket"),
                         spawn_self.message_handler_server.clone(),

@@ -15,6 +15,7 @@ use node::Node;
 use payload_handler::PayloadHandler;
 #[allow(unused)]
 use server::{Client, LocalClient, LocalServer, Server};
+use thread_manager::ThreadManager;
 use versioning;
 
 use clap;
@@ -205,7 +206,7 @@ impl Creator for Client {
 }
 
 impl Creator for Server {
-    type Parameters = (Arc<MessageHandlerServer>, Node);
+    type Parameters = (Arc<MessageHandlerServer>, Node, Arc<ThreadManager>);
     #[cfg(feature = "use-tcp")]
     fn create(
         parameters: Self::Parameters,
@@ -214,17 +215,18 @@ impl Creator for Server {
     ) -> InternalResult<Box<Self>>
     {
         use server::tcp::TcpServer;
-        let (message_handler_server, local_node) = parameters;
+        let (message_handler_server, local_node, thread_manager) = parameters;
         Ok(Box::new(TcpServer::new(
             message_handler_server,
             local_node,
+            thread_manager,
             log,
         )))
     }
 }
 
 impl Creator for LocalServer {
-    type Parameters = Arc<MessageHandlerServer>;
+    type Parameters = (Arc<MessageHandlerServer>, Arc<ThreadManager>);
 
     #[cfg(feature = "use-unix-socket")]
     fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
@@ -247,11 +249,12 @@ impl Creator for LocalServer {
     ) -> InternalResult<Box<Self>>
     {
         use server::unix_socket::UnixSocketLocalServer;
-        let message_handler_server = parameters;
+        let (message_handler_server, thread_manager) = parameters;
         let socket_path = args.value_of("socket_path").unwrap();
         let server = to_internal_result(UnixSocketLocalServer::new(
             message_handler_server,
             String::from(socket_path),
+            thread_manager,
             log,
         ))?;
         Ok(Box::new(server))
@@ -439,7 +442,8 @@ impl Creator for PayloadHandler {
         };
         use payload_handler::graph::{
             DEFAULT_CONNECT_SEARCH_BREADTH, DEFAULT_MAX_NUM_SEARCH_THREADS,
-            DEFAULT_SEARCH_BREADTH, DEFAULT_SEARCH_TIMEOUT_SEC,
+            DEFAULT_SEARCH_BREADTH, DEFAULT_SEARCH_THREAD_POOL_SIZE,
+            DEFAULT_SEARCH_TIMEOUT_SEC,
         };
 
         let mut args = vec![
@@ -484,6 +488,14 @@ impl Creator for PayloadHandler {
                 .help("Time to wait between checking if a neighbour is alive")
                 .takes_value(true)
                 .default_value(DEFAULT_RETRY_FREQUENCY_SEC),
+            clap::Arg::with_name("search_thread_pool_size")
+                .long("search-thread-pool-size")
+                .help(
+                    "Thread pool size shared between search operations for \
+                     spawning querying threads",
+                )
+                .takes_value(true)
+                .default_value(DEFAULT_SEARCH_THREAD_POOL_SIZE),
         ];
 
         args.append(&mut NeighboursStore::get_clap_args());
@@ -510,6 +522,7 @@ impl Creator for PayloadHandler {
         parse_with_err!(neighbour_gc_frequency_sec, u64, args);
         parse_with_err!(neighbour_gc_num_retries, u32, args);
         parse_with_err!(neighbour_gc_retry_frequency_sec, u64, args);
+        parse_with_err!(search_thread_pool_size, usize, args);
 
         let neighbours_store = Arc::new(
             *(NeighboursStore::create(
@@ -541,6 +554,7 @@ impl Creator for PayloadHandler {
             message_handler_client,
             key_space_manager,
             neighbours_store,
+            search_thread_pool_size,
             log,
         )))
     }

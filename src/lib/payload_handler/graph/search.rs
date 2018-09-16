@@ -4,13 +4,13 @@ use error::*;
 use key::Key;
 use key_space::KeySpaceManager;
 use node::Node;
+use thread_manager::ThreadManager;
 
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashSet};
 use std::sync::{
     mpsc::{channel, Receiver}, Arc, Mutex,
 };
-use std::thread;
 use std::time::Duration;
 
 use slog::Logger;
@@ -42,6 +42,7 @@ macro_rules! return_callback {
 /// Contains data for graph search
 pub struct GraphSearch {
     key_space_manager: Arc<KeySpaceManager>,
+    thread_manager: Arc<ThreadManager>,
 }
 
 #[derive(Clone)]
@@ -71,8 +72,18 @@ impl PartialOrd for SearchNode {
 impl GraphSearch {
     /// Create a new graph search with a function for retrieving the neighbours
     /// of the node
-    pub fn new(key_space_manager: Arc<KeySpaceManager>) -> Self {
-        GraphSearch { key_space_manager }
+    pub fn new(
+        key_space_manager: Arc<KeySpaceManager>,
+        thread_pool_size: usize,
+    ) -> Self
+    {
+        GraphSearch {
+            key_space_manager,
+            thread_manager: Arc::new(ThreadManager::from_size(
+                "graph_search".into(),
+                thread_pool_size,
+            )),
+        }
     }
 
     /// Search for a key through looking up the neighbours of nodes in the KIPA
@@ -254,7 +265,7 @@ impl GraphSearch {
             let spawn_explored_channel_tx = explored_channel_tx.clone();
             let spawn_get_neighbours_fn = get_neighbours_fn.clone();
             let spawn_log = log.new(o!());
-            thread::spawn(move || {
+            self.thread_manager.spawn(move || {
                 trace!(
                     spawn_log, "Getting neighbours";
                     "making_request" => true,
@@ -400,7 +411,7 @@ mod test {
             .collect::<Vec<_>>();
         let nodes = Arc::new(nodes);
 
-        let search = GraphSearch::new(Arc::new(KeySpaceManager::new(1)));
+        let search = GraphSearch::new(Arc::new(KeySpaceManager::new(1)), 1);
         let explored_nodes = Arc::new(Mutex::new(vec![]));
 
         let search_nodes = nodes.clone();
