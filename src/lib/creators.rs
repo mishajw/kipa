@@ -368,13 +368,13 @@ impl Creator for KeySpaceManager {
 }
 
 #[cfg(feature = "use-graph")]
-use payload_handler::graph::NeighboursStore;
+use graph::NeighboursStore;
 #[cfg(feature = "use-graph")]
 impl Creator for NeighboursStore {
     type Parameters =
         (::api::Key, Arc<KeySpaceManager>, Arc<MessageHandlerClient>);
     fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
-        use payload_handler::graph::{
+        use graph::{
             DEFAULT_ANGLE_WEIGHTING, DEFAULT_DISTANCE_WEIGHTING,
             DEFAULT_MAX_NUM_NEIGHBOURS,
         };
@@ -436,11 +436,11 @@ impl Creator for PayloadHandler {
 
     #[cfg(feature = "use-graph")]
     fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
-        use payload_handler::graph::neighbour_gc::{
+        use graph::neighbour_gc::{
             DEFAULT_FREQUENCY_SEC, DEFAULT_NUM_RETRIES,
             DEFAULT_RETRY_FREQUENCY_SEC,
         };
-        use payload_handler::graph::{
+        use graph::{
             DEFAULT_CONNECT_SEARCH_BREADTH, DEFAULT_MAX_NUM_SEARCH_THREADS,
             DEFAULT_SEARCH_BREADTH, DEFAULT_SEARCH_THREAD_POOL_SIZE,
             DEFAULT_SEARCH_TIMEOUT_SEC,
@@ -509,7 +509,7 @@ impl Creator for PayloadHandler {
         log: Logger,
     ) -> InternalResult<Box<Self>>
     {
-        use payload_handler::graph::{neighbour_gc, GraphPayloadHandler};
+        use graph::{neighbour_gc, GraphPayloadHandler};
         use std::time::Duration;
 
         let (local_node, message_handler_client, key_space_manager) =

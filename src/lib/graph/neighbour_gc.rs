@@ -7,8 +7,8 @@ use std::time::Duration;
 
 use api::Node;
 use api::RequestPayload;
+use graph::NeighboursStore;
 use message_handler::MessageHandlerClient;
-use payload_handler::graph::NeighboursStore;
 use slog::Logger;
 
 /// Default frequency for checking "dead" neighbours

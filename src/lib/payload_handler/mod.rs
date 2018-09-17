@@ -4,9 +4,6 @@
 use api::{Node, RequestPayload, ResponsePayload};
 use error::*;
 
-#[cfg(feature = "use-graph")]
-pub mod graph;
-
 #[cfg(feature = "use-black-hole")]
 pub mod black_hole;
 

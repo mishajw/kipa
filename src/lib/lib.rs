@@ -48,6 +48,10 @@ pub mod message_handler;
 pub mod payload_handler;
 pub mod server;
 
+// Code for graph maintenance and searches
+#[cfg(feature = "use-graph")]
+mod graph;
+
 // Utilities
 pub mod creators;
 pub mod local_address_params;

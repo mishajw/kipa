@@ -4,7 +4,7 @@ pub mod neighbour_gc;
 mod neighbours_store;
 mod search;
 
-pub use payload_handler::graph::neighbours_store::{
+pub use graph::neighbours_store::{
     NeighboursStore, DEFAULT_ANGLE_WEIGHTING, DEFAULT_DISTANCE_WEIGHTING,
     DEFAULT_MAX_NUM_NEIGHBOURS,
 };
@@ -13,11 +13,9 @@ use api::request::MessageMode;
 use api::{Address, Key, Node};
 use api::{RequestPayload, ResponsePayload};
 use error::*;
+use graph::search::{GetNeighboursFn, GraphSearch, SearchCallbackReturn};
 use key_space_manager::KeySpaceManager;
 use message_handler::MessageHandlerClient;
-use payload_handler::graph::search::{
-    GetNeighboursFn, GraphSearch, SearchCallbackReturn,
-};
 use payload_handler::PayloadHandler;
 
 use slog::Logger;
