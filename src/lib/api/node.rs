@@ -1,7 +1,6 @@
 //! Holds information on another KIPA node
 
-use address::Address;
-use key::Key;
+use api::{Address, Key};
 
 use std::fmt;
 

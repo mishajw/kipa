@@ -8,16 +8,15 @@
 //! 3) `src/lib/data_transformer/proto_api.rs` is where the generated protobuf
 //! files are placed.
 
-use address::Address;
-use api::{
-    ApiError, ApiErrorType, ApiResult, FastRequest, FastResponse, MessageMode,
-    PrivateRequest, PrivateResponse, RequestBody, RequestMessage,
-    RequestPayload, ResponseBody, ResponseMessage, ResponsePayload,
+use api::error::{ApiError, ApiErrorType, ApiResult};
+use api::request::{
+    FastRequest, FastResponse, MessageMode, PrivateRequest, PrivateResponse,
+    RequestMessage, ResponseMessage,
 };
+use api::{Address, Key, Node};
+use api::{RequestBody, RequestPayload, ResponseBody, ResponsePayload};
 use data_transformer::{proto_api, DataTransformer};
 use error::*;
-use key::Key;
-use node::Node;
 
 use protobuf::*;
 use std::convert::{From, Into};

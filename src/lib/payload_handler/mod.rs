@@ -1,9 +1,8 @@
 //! Handle creating responses for requests and performing any required
 //! operations
 
-use api::{RequestPayload, ResponsePayload};
+use api::{Node, RequestPayload, ResponsePayload};
 use error::*;
-use node::Node;
 
 #[cfg(feature = "use-graph")]
 pub mod graph;

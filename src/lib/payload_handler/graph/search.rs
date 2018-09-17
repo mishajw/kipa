@@ -1,9 +1,8 @@
 //! Performs a graph search on a network of KIPA nodes
 
+use api::{Key, Node};
 use error::*;
-use key::Key;
-use key_space::KeySpaceManager;
-use node::Node;
+use key_space_manager::KeySpaceManager;
 use thread_manager::ThreadManager;
 
 use std::cmp::Ordering;
@@ -404,8 +403,7 @@ impl GraphSearch {
 #[cfg(test)]
 mod test {
     use super::*;
-    use address::Address;
-    use key::Key;
+    use api::{Address, Key};
 
     use slog;
     use spectral::assert_that;

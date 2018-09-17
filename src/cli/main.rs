@@ -7,14 +7,15 @@ extern crate slog;
 extern crate slog_async;
 extern crate slog_term;
 
-use kipa_lib::api::{MessageMode, RequestPayload, ResponsePayload};
+use kipa_lib::api::request::MessageMode;
+use kipa_lib::api::{Address, Node};
+use kipa_lib::api::{RequestPayload, ResponsePayload};
 use kipa_lib::creators::*;
 use kipa_lib::data_transformer::DataTransformer;
 use kipa_lib::error::*;
 use kipa_lib::gpg_key::GpgKeyHandler;
 use kipa_lib::message_handler::MessageHandlerLocalClient;
 use kipa_lib::server::{LocalClient, LocalServer};
-use kipa_lib::{Address, Node};
 
 use error_chain::ChainedError;
 use std::sync::Arc;

@@ -1,8 +1,9 @@
 //! Serialize and deserialize requests and responses for API messages over the
 //! wire
 
-use address::Address;
-use api::{RequestBody, RequestMessage, ResponseBody, ResponseMessage};
+use api::request::{RequestMessage, ResponseMessage};
+use api::Address;
+use api::{RequestBody, ResponseBody};
 use error::*;
 
 #[cfg(feature = "use-protobuf")]

@@ -1,7 +1,7 @@
 //! Handles GPG operations using the GPGME library
 
+use api::Key;
 use error::*;
-use key::Key;
 
 use gpgme;
 use slog::Logger;

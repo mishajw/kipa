@@ -1,9 +1,8 @@
 //! Implementation of servers using TCP sockets
 
-use address::Address;
+use api::{Address, Node};
 use error::*;
 use message_handler::MessageHandlerServer;
-use node::Node;
 use server::socket_server::{SocketClient, SocketHandler, SocketServer};
 use server::{Client, Server};
 use thread_manager::ThreadManager;

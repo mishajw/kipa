@@ -6,17 +6,18 @@ extern crate slog;
 extern crate slog_async;
 extern crate slog_term;
 
+use kipa_lib::api::Node;
 use kipa_lib::creators::*;
 use kipa_lib::data_transformer::DataTransformer;
 use kipa_lib::error::*;
 use kipa_lib::gpg_key::GpgKeyHandler;
-use kipa_lib::key_space::KeySpaceManager;
+use kipa_lib::key_space_manager::KeySpaceManager;
+use kipa_lib::local_address_params::LocalAddressParams;
 use kipa_lib::message_handler::{MessageHandlerClient, MessageHandlerServer};
 use kipa_lib::payload_handler::PayloadHandler;
 use kipa_lib::remotery_util;
 use kipa_lib::server::{Client, LocalServer, Server};
 use kipa_lib::thread_manager::ThreadManager;
-use kipa_lib::{Address, LocalAddressParams, Node};
 
 use error_chain::ChainedError;
 use std::sync::Arc;
@@ -106,14 +107,11 @@ fn run_servers(
     // Create local node
     let local_key = gpg_key_handler.get_user_key(key_id)?;
     let local_node = Node::new(
-        Address::get_local(
-            *LocalAddressParams::create(
-                (),
-                args,
-                log.new(o!("local_address_params" => true)),
-            )?,
-            log.new(o!("address_creation" => true)),
-        )?,
+        LocalAddressParams::create(
+            (),
+            args,
+            log.new(o!("local_address_params" => true)),
+        )?.create_address(log.new(o!("address_creation" => true)))?,
         local_key,
     );
 

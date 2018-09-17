@@ -9,13 +9,12 @@ pub use payload_handler::graph::neighbours_store::{
     DEFAULT_MAX_NUM_NEIGHBOURS,
 };
 
-use address::Address;
-use api::{MessageMode, RequestPayload, ResponsePayload};
+use api::request::MessageMode;
+use api::{Address, Key, Node};
+use api::{RequestPayload, ResponsePayload};
 use error::*;
-use key::Key;
-use key_space::KeySpaceManager;
+use key_space_manager::KeySpaceManager;
 use message_handler::MessageHandlerClient;
-use node::Node;
 use payload_handler::graph::search::{
     GetNeighboursFn, GraphSearch, SearchCallbackReturn,
 };

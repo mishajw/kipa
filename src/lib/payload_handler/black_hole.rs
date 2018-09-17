@@ -1,8 +1,8 @@
 //! Implement `PayloadHandler` but never return anything. Used for testing
 
+use api::Node;
 use api::{RequestPayload, ResponsePayload};
 use error::*;
-use node::Node;
 use payload_handler::PayloadHandler;
 
 use slog::Logger;

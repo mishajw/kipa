@@ -1,15 +1,17 @@
 //! Handle messages sent to a daemon
 
-use address::Address;
+use api::error::ApiErrorType;
+use api::request::{
+    FastRequest, FastResponse, MessageMode, PrivateRequest, PrivateResponse,
+    RequestMessage, ResponseMessage,
+};
+use api::{Address, Node};
 use api::{
-    ApiVisibility, FastRequest, FastResponse, MessageMode, PrivateRequest,
-    PrivateResponse, RequestBody, RequestMessage, RequestPayload, ResponseBody,
-    ResponseMessage, ResponsePayload,
+    ApiVisibility, RequestBody, RequestPayload, ResponseBody, ResponsePayload,
 };
 use data_transformer::DataTransformer;
 use error::*;
 use gpg_key::GpgKeyHandler;
-use node::Node;
 use payload_handler::PayloadHandler;
 use server::{Client, LocalClient};
 use versioning;

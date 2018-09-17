@@ -1,7 +1,7 @@
 //! Handles sending and receiving requests on a unix pipe for local processes,
 //! such as the CLI
 
-use address::Address;
+use api::Address;
 use error::*;
 use message_handler::MessageHandlerServer;
 use server::socket_server::{SocketHandler, SocketServer};

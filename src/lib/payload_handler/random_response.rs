@@ -1,10 +1,8 @@
 //! Implement `PayloadHandler` but return random results. Used for testing
 
-use address::Address;
+use api::{Address, Key, Node};
 use api::{RequestPayload, ResponsePayload};
 use error::*;
-use key::Key;
-use node::Node;
 use payload_handler::PayloadHandler;
 use rand::{thread_rng, Rng};
 

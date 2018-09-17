@@ -5,9 +5,9 @@ use periodic;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use api::Node;
 use api::RequestPayload;
 use message_handler::MessageHandlerClient;
-use node::Node;
 use payload_handler::graph::NeighboursStore;
 use slog::Logger;
 

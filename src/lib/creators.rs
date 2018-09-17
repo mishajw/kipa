@@ -3,15 +3,15 @@
 //! These depend on features and conditional compilation in order to bring in
 //! the correct implementations.
 
-use address::LocalAddressParams;
+use api::Node;
 use data_transformer::DataTransformer;
 use error::*;
 use gpg_key::GpgKeyHandler;
-use key_space::KeySpaceManager;
+use key_space_manager::KeySpaceManager;
+use local_address_params::LocalAddressParams;
 use message_handler::{
     MessageHandlerClient, MessageHandlerLocalClient, MessageHandlerServer,
 };
-use node::Node;
 use payload_handler::PayloadHandler;
 #[allow(unused)]
 use server::{Client, LocalClient, LocalServer, Server};
@@ -95,7 +95,7 @@ impl Creator for LocalAddressParams {
     type Parameters = ();
 
     fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
-        use address::DEFAULT_PORT;
+        use local_address_params::DEFAULT_PORT;
         vec![
             clap::Arg::with_name("port")
                 .long("port")
@@ -346,7 +346,7 @@ impl Creator for MessageHandlerLocalClient {
 impl Creator for KeySpaceManager {
     type Parameters = Node;
     fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
-        use key_space::DEFAULT_KEY_SPACE_SIZE;
+        use key_space_manager::DEFAULT_KEY_SPACE_SIZE;
         vec![
             clap::Arg::with_name("key_space_size")
                 .long("key-space-size")
@@ -372,7 +372,7 @@ use payload_handler::graph::NeighboursStore;
 #[cfg(feature = "use-graph")]
 impl Creator for NeighboursStore {
     type Parameters =
-        (::key::Key, Arc<KeySpaceManager>, Arc<MessageHandlerClient>);
+        (::api::Key, Arc<KeySpaceManager>, Arc<MessageHandlerClient>);
     fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
         use payload_handler::graph::{
             DEFAULT_ANGLE_WEIGHTING, DEFAULT_DISTANCE_WEIGHTING,

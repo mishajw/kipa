@@ -4,10 +4,9 @@
 //! sockets, and use `DataTransformer` types to convert these into `Request`s
 //! and `Response`s.
 
-use address::Address;
+use api::{Address, Node};
 use error::*;
 use message_handler::MessageHandlerServer;
-use node::Node;
 
 use byteorder::{NetworkEndian, ReadBytesExt, WriteBytesExt};
 use error_chain::ChainedError;

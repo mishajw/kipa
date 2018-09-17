@@ -1,46 +1,17 @@
-//! Projects a key into an n-dimenional space in order to perform graph search
+//! Manage how to create and compare points in `KeySpace`
 
-use key::Key;
+use api::{Key, KeySpace};
 
-use byteorder::{BigEndian, ReadBytesExt};
-use std::fmt;
 use std::io::Cursor;
 use std::mem::size_of;
 use std::ops::{BitXor, Deref};
 
+use byteorder::{BigEndian, ReadBytesExt};
+
 /// The default dimension size for key space
 pub const DEFAULT_KEY_SPACE_SIZE: &str = "2";
 
-/// A key space value with a set of coordinates
-#[derive(Clone, PartialEq)]
-pub struct KeySpace {
-    /// Coordinates in key space
-    pub coords: Vec<i32>,
-}
-
-impl KeySpace {
-    #[allow(missing_docs)]
-    pub fn new(coords: Vec<i32>) -> Self { KeySpace { coords } }
-
-    #[allow(missing_docs)]
-    pub fn get_size(&self) -> usize { self.coords.len() }
-}
-
-impl fmt::Display for KeySpace {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "KeySpace({})",
-            self.coords
-                .iter()
-                .map(|i| i.to_string())
-                .collect::<Vec<String>>()
-                .join(", ")
-        )
-    }
-}
-
-/// Manage how to create and compare points in `KeySpace`
+/// Key space management structure
 pub struct KeySpaceManager {
     num_key_space_dims: usize,
 }

@@ -19,7 +19,7 @@
 //!    either a public error that has been received from the other node, or an
 //!    error that occurred when receiving this response.
 
-pub use api::{ApiError, ApiErrorType, ApiResult};
+pub use api::error::{ApiError, ApiErrorType, ApiResult};
 
 use error_chain;
 use error_chain::ChainedError;

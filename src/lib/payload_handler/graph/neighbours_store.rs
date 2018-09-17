@@ -1,9 +1,8 @@
 //! Stores the neighbours of a node, managing what nodes to keep as neighbours
 
+use api::{Key, KeySpace, Node};
 use error::*;
-use key::Key;
-use key_space::{KeySpace, KeySpaceManager};
-use node::Node;
+use key_space_manager::KeySpaceManager;
 
 use slog::Logger;
 use std::collections::HashMap;
@@ -301,8 +300,7 @@ impl NeighboursStore {
 #[cfg(test)]
 mod test {
     use super::*;
-    use address::Address;
-    use key::Key;
+    use api::{Address, Key};
 
     use slog;
     use spectral::assert_that;

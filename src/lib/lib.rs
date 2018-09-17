@@ -30,31 +30,28 @@ extern crate lazy_static;
 extern crate num_cpus;
 extern crate periodic;
 extern crate rand;
-extern crate threadpool;
 #[cfg(feature = "use-remotery")]
 extern crate remotery;
+extern crate threadpool;
 
-// TODO: Find way to make this module private
+// Defines globally used macros, must be first
 pub mod remotery_util;
 
+// Main API and building blocks
 pub mod api;
-pub mod creators;
+
+// Code for sending/receiving messages
 pub mod data_transformer;
-pub mod error;
 pub mod gpg_key;
-pub mod key_space;
+pub mod key_space_manager;
 pub mod message_handler;
 pub mod payload_handler;
 pub mod server;
+
+// Utilities
+pub mod creators;
+pub mod local_address_params;
 pub mod thread_manager;
 mod versioning;
 
-mod address;
-pub use address::Address;
-pub use address::LocalAddressParams;
-
-mod key;
-pub use key::Key;
-
-mod node;
-pub use node::Node;
+pub mod error;
