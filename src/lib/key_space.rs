@@ -74,14 +74,21 @@ impl KeySpaceManager {
 
     /// Gets the euclidean distance between points in key space
     pub fn distance(&self, a_ks: &KeySpace, b_ks: &KeySpace) -> f32 {
-        assert!(a_ks.coords.len() == b_ks.coords.len());
+        use std::cmp::min;
+        static I32_RANGE: i64 =
+            (::std::i32::MAX as i64) - (::std::i32::MIN as i64);
+
+        assert_eq!(a_ks.coords.len(), b_ks.coords.len());
 
         let total: i64 = a_ks.coords
             .iter()
             .zip(&b_ks.coords)
-            // Map to `i64` so we have enough space to subtrace `i32`s
+            // Map to `i64` so we have enough space to subtract `i32`s
             .map(|(a, b)| (i64::from(*a), i64::from(*b)))
-            .map(|(a, b)| (a - b).abs())
+            .map(|(a, b)| {
+                let diff = (a - b).abs();
+                min(diff, I32_RANGE - diff)
+            })
             .sum();
 
         let result = (total as f32).powf(1f32 / a_ks.coords.len() as f32);
