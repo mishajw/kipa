@@ -29,7 +29,7 @@ use-unix-socket = []
 use-graph = []
 use-black-hole = []
 use-random-response = []
-use-remotery = []
+use-remotery = ["remotery"]
 
 [dependencies]
 error-chain = "0.12.0"
@@ -48,7 +48,8 @@ lazy_static = "1.0"
 periodic = "0.1.0"
 threadpool = "1.7.1"
 num_cpus = "1.8.0"
-remotery = "0.1.2"
+
+remotery = { version = "0.1.2", optional = true }
 
 [dependencies.slog]
 version = "2.2.3"
