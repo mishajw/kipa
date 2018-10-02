@@ -109,10 +109,16 @@ def __draw_neighbours(
 def __get_nodes(network_logs: Dict[str, List[dict]]) -> Iterator[GraphNode]:
     for key in network_logs:
         ns_logs = filter(
-            lambda l: "neighbours_store" in l and l["neighbours_store"],
+            lambda l:
+                "neighbours_store" in l
+                and l["neighbours_store"]
+                and "local_key_space" in l,
             network_logs[key])
-        key_space_logs = map(operator.itemgetter("local_key_space"), ns_logs)
-        groups = re.match(r"KeySpace\(([-0-9, ]+)\)", next(key_space_logs))
+        key_space_logs = list(map(
+            operator.itemgetter("local_key_space"), ns_logs))
+        if len(key_space_logs) == 0:
+            continue
+        groups = re.match(r"KeySpace\(([-0-9, ]+)\)", key_space_logs[0])
         key_space = list(map(int, groups.group(1).split(", ")))
 
         yield GraphNode(key, key_space)

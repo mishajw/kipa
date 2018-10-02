@@ -56,12 +56,13 @@ class Network:
             container_logs = self.__key_dict[key_id].container.logs().decode()
             log.error(
                 f"Error on {key_id} when performing command {command}, "
-                f"logs: {container_logs}")
-            raise e
+                f"logs: {container_logs}. Returning empty string")
+            return ""
         output = output.decode()
-        assert exit_code == 0, \
-            f"Bad return code when executing command: {command}. " \
-            f"Output was: {output}"
+        if exit_code != 0:
+            log.error(
+                f"Bad return code when executing command: {command}. " \
+                f"Output was: {output}")
         return output
 
     def stop_networking(self, key_id: str):
