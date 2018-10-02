@@ -1,3 +1,4 @@
-from simulation.benchmarks.reliability import run_reliability_benchmark
-from simulation.benchmarks.resilience import run_resilience_benchmark
-from simulation.benchmarks.speed import run_speed_benchmark
+from simulation.benchmarks.benchmark import Benchmark, SuccessSpeedBenchmark
+from simulation.benchmarks.reliability import ReliabilityBenchmark
+from simulation.benchmarks.resilience import ResilienceBenchmark
+from simulation.benchmarks.speed import SpeedBenchmark

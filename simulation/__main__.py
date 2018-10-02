@@ -48,16 +48,14 @@ def main():
 
     if args.benchmark is not None:
         if args.benchmark == "reliability":
-            benchmarks.run_reliability_benchmark(
-                network_config, output_directory)
+            benchmark = benchmarks.ReliabilityBenchmark(output_directory)
         elif args.benchmark == "resilience":
-            benchmarks.run_speed_benchmark(
-                network_config, output_directory)
+            benchmark = benchmarks.ResilienceBenchmark(output_directory)
         elif args.benchmark == "speed":
-            benchmarks.run_speed_benchmark(
-                network_config, output_directory)
+            benchmark = benchmarks.SpeedBenchmark(output_directory)
         else:
             raise ValueError(f"Unrecognized benchmark type: {args.benchmark}")
+        benchmark.create(network_config)
         return
 
     configuration = networks.configuration.Configuration.from_yaml(
