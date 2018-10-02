@@ -66,6 +66,7 @@ class Network:
         return output
 
     def stop_networking(self, key_id: str):
+        self.__key_dict[key_id].test_search = False
         self.__network.disconnect(self.__key_dict[key_id].container)
 
     def get_logs(self, key_id: str) -> List[dict]:

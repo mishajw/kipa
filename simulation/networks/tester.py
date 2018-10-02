@@ -124,7 +124,7 @@ def test_search(
 
 
 def test_all_searches(network: Network) -> SearchResult:
-    keys = network.get_all_keys()
+    keys = network.get_search_keys()
     results = SearchResult.empty()
     for k1, k2 in itertools.permutations(keys, 2):
         success, message_id, num_requests, search_time_sec = \
