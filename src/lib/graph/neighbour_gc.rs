@@ -2,8 +2,10 @@
 //! and if they are not, then remove them from our neighbours.
 
 use periodic;
+use rand::{thread_rng, Rng};
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use api::Node;
 use api::RequestPayload;
@@ -17,110 +19,175 @@ pub const DEFAULT_FREQUENCY_SEC: &str = "30";
 /// Default number of retries to carry out when a failed check happens
 pub const DEFAULT_NUM_RETRIES: &str = "3";
 
-/// Default time gap between retries
-pub const DEFAULT_RETRY_FREQUENCY_SEC: &str = "10";
-
-/// Start the "garbage collector" for "dead" neighbours
-///
-/// By "dead", we mean neighbours that are no longer responding to requests.
-/// We check every `frequency`, and if a neighbour does not respond, we retry
-/// `num_retries` times before removing the neighbour.
-pub fn start_gc(
-    store: Arc<NeighboursStore>,
-    message_handler_client: Arc<MessageHandlerClient>,
-    frequency: Duration,
-    num_retries: u32,
-    retry_frequency: Duration,
-    log: Logger,
-)
-{
-    let planner = Arc::new(Mutex::new(periodic::Planner::new()));
-
-    let check_all_planner = planner.clone();
-    let check_all_neighbours_fn = move || {
-        remotery_scope!("gc_check_all_neighbours");
-        let neighbours = store.get_all();
-        info!(
-            log, "Checking all neighbours for liveness";
-            "num_neighburs" => neighbours.len());
-        for n in neighbours {
-            check_neighbour_fn(
-                n,
-                num_retries,
-                message_handler_client.clone(),
-                store.clone(),
-                retry_frequency,
-                check_all_planner.clone(),
-                log.clone(),
-            );
-        }
-    };
-
-    planner
-        .lock()
-        .unwrap()
-        .add(check_all_neighbours_fn, periodic::Every::new(frequency));
-
-    planner.lock().unwrap().start();
+/// The connection status of a neighbour
+struct NeighbourStatus {
+    /// How many more retries we can have before discarding the neighbour
+    consecutive_failed: u32,
+    /// How many iterations to wait before retrying
+    retry_cooloff: u32,
 }
 
-fn check_neighbour_fn(
-    neighbour: Node,
-    num_retires_left: u32,
-    message_handler_client: Arc<MessageHandlerClient>,
+impl NeighbourStatus {
+    pub fn new() -> Self {
+        NeighbourStatus {
+            consecutive_failed: 0,
+            retry_cooloff: 0,
+        }
+    }
+}
+
+pub struct NeighbourGc {
+    /// Map from key ID to neighbour status
+    neighbour_statuses: HashMap<String, NeighbourStatus>,
     store: Arc<NeighboursStore>,
-    retry_frequency: Duration,
-    planner: Arc<Mutex<periodic::Planner>>,
+    message_handler_client: Arc<MessageHandlerClient>,
+    num_retries: u32,
     log: Logger,
-)
-{
-    remotery_scope!("gc_check_neighbour");
+}
 
-    debug!(
-        log, "Checking liveness of neighbour";
-        "neighbour" => %neighbour, "num_retires_left" => num_retires_left);
-
-    let response = message_handler_client.send_private_message(
-        &neighbour,
-        RequestPayload::VerifyRequest(),
-        Duration::from_secs(3),
-    );
-
-    // If the response was unsucessful...
-    if response.is_err() {
-        if num_retires_left == 0 {
-            // ...and if we have no more retries, remove the key as a neighbour
-            info!(
-                log,
-                "Failed to verify neighbour, no retries left, removing \
-                 neighbour";
-                "neighbour" => %neighbour);
-            store.remove_by_key(&neighbour.key);
-        } else {
-            // ...but if we have retries left, spawn a new planned thread to
-            // check again in after `retry_frequency` has elapsed
-            info!(
-                log,
-                "Failed to verify neighbour, retrying";
-                "neighbour" => %neighbour,
-                "num_retires_left" => num_retires_left);
-            let planner_clone = planner.clone();
-            planner.lock().unwrap().add(
-                move || {
-                    check_neighbour_fn(
-                        neighbour.clone(),
-                        num_retires_left - 1,
-                        message_handler_client.clone(),
-                        store.clone(),
-                        retry_frequency,
-                        planner_clone.clone(),
-                        log.clone(),
-                    )
-                },
-                periodic::After::new(retry_frequency),
-            );
+impl NeighbourGc {
+    pub fn new(
+        store: Arc<NeighboursStore>,
+        message_handler_client: Arc<MessageHandlerClient>,
+        num_retries: u32,
+        log: Logger,
+    ) -> Self
+    {
+        NeighbourGc {
+            neighbour_statuses: HashMap::new(),
+            store,
+            message_handler_client,
+            num_retries,
+            log,
         }
     }
 
-    // If the response was successful, exit the function without doing anything
+    pub fn start(self, frequency: Duration) {
+        remotery_scope!("neighbour_gc_start");
+        let mutex_self = Arc::new(Mutex::new(self));
+        let mut planner = periodic::Planner::new();
+        planner.add(
+            move || mutex_self.lock().unwrap().check_all_neighbours(),
+            RandomDurationIter::new(frequency),
+        );
+        planner.start();
+    }
+
+    fn check_all_neighbours(&mut self) {
+        remotery_scope!("neighbour_gc_check_all_neighbours");
+        info!(self.log, "Checking all neighbours for liveness");
+
+        // Update the statuses of all neighbours
+        let mut key_ids = HashSet::new();
+        for neighbour in self.store.get_all() {
+            key_ids.insert(neighbour.key.key_id.clone());
+            let message_handler_client = self.message_handler_client.clone();
+            let log = self.log.clone();
+            let status = self
+                .neighbour_statuses
+                .entry(neighbour.key.key_id.clone())
+                .or_insert_with(|| NeighbourStatus::new());
+            Self::update_neighbour_status(
+                &neighbour,
+                status,
+                message_handler_client,
+                log,
+            )
+        }
+
+        // Remove unresponsive neighbours and clean up unused statuses
+        let num_retries = self.num_retries;
+        let store = self.store.clone();
+        self.neighbour_statuses.retain(|key_id, status| {
+            // If the status has too many consecutive failures, remove it from
+            // status and neigbours
+            if status.consecutive_failed >= num_retries {
+                store.remove_by_key_id(key_id);
+                return false;
+            }
+            // If the status isn't in the neighbours list, remove it from
+            // statuses
+            key_ids.contains(key_id)
+        });
+    }
+
+    fn update_neighbour_status(
+        neighbour: &Node,
+        status: &mut NeighbourStatus,
+        message_handler_client: Arc<MessageHandlerClient>,
+        log: Logger,
+    )
+    {
+        remotery_scope!("neighbour_gc_check_neighbour");
+
+        debug!(
+            log, "Checking liveness of neighbour";
+            "neighbour" => %neighbour,
+            "consecutive_failed" => status.consecutive_failed,
+            "retry_cooloff" => status.retry_cooloff);
+
+        // If retry cooloff is still effective, do nothing but decrement the
+        // cooloff
+        if status.retry_cooloff > 0 {
+            status.retry_cooloff -= 1;
+            return;
+        }
+
+        // Try to connect to the neighbour
+        let response = message_handler_client.send_private_message(
+            &neighbour,
+            RequestPayload::VerifyRequest(),
+            Duration::from_secs(3),
+        );
+
+        // If the request was successful, reset its status
+        if response.is_ok() {
+            status.consecutive_failed = 0;
+            status.retry_cooloff = 0;
+            return;
+        }
+
+        // If the request was unsucessful, increment the consecutive fails, and
+        // set the cooloff proportionately
+        status.consecutive_failed += 1;
+        status.retry_cooloff = status.consecutive_failed;
+        info!(
+            log, "Failed to verify neighbour, updated status";
+            "neighbour" => %neighbour,
+            "consecutive_failed" => status.consecutive_failed,
+            "retry_cooloff" => status.retry_cooloff);
+    }
+}
+
+struct RandomDurationIter {
+    now: Instant,
+    average_duration_millis: u64,
+}
+
+impl RandomDurationIter {
+    fn new(average_duration: Duration) -> Self {
+        RandomDurationIter {
+            now: Instant::now(),
+            average_duration_millis: average_duration.as_secs() * 1000
+                + average_duration.subsec_millis() as u64,
+        }
+    }
+}
+
+impl Iterator for RandomDurationIter {
+    type Item = Instant;
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut rng = thread_rng();
+        let duration_multiplier: f32 = rng.gen_range(0.5, 2.0);
+        let duration_millis: u64 = ((self.average_duration_millis as f32)
+            * duration_multiplier) as u64;
+        let duration = Duration::from_millis(duration_millis);
+        self.now += duration;
+        Some(self.now)
+    }
+}
+
+impl periodic::IntoInstantIter for RandomDurationIter {
+    type IterType = Self;
+    fn into_instant_iter(self) -> Self::IterType { self }
 }

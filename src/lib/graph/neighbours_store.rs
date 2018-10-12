@@ -175,12 +175,12 @@ impl NeighboursStore {
         );
     }
 
-    /// Remove a neighbour by its key
-    pub fn remove_by_key(&self, key: &Key) {
+    /// Remove a neighbour by its key ID
+    pub fn remove_by_key_id(&self, key_id: &str) {
         self.neighbours
             .lock()
             .unwrap()
-            .retain(|(n, _)| &n.key != key);
+            .retain(|(n, _)| &n.key.key_id != key_id);
     }
 
     /// Add a neighbour to the list, first verifying it exists. Returns true if
