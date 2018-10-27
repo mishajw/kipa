@@ -81,7 +81,8 @@ class GroupConfiguration:
             if "ipv6" in d else False,
             d["additional_features"] if "additional_features" in d else [],
             d["clear_default_features"]
-            if "clear_default_features" in d else False)
+            if "clear_default_features" in d else False,
+            d["test_searches"] if "test_searches" in d else True)
 
     def get_daemon_args_str(self) -> str:
         args_str = " ".join(
