@@ -104,7 +104,8 @@ class Configuration:
             num_search_tests: int = None,
             debug: bool = True,
             original_parameters: dict = None,
-            disconnect_probability: float = 0.0):
+            disconnect_probability: float = 0.0,
+            keep_alive: bool = False):
         if original_parameters is None:
             original_parameters = {}
         self.groups = groups
@@ -113,6 +114,7 @@ class Configuration:
         self.num_search_tests = num_search_tests
         self.debug = debug
         self.original_parameters = original_parameters
+        self.keep_alive = keep_alive
 
         self.disconnect_probability = disconnect_probability
         """
@@ -136,6 +138,8 @@ class Configuration:
             if "num_search_tests" in parameters else None,
             parameters["debug"]
             if "debug" in parameters else True,
+            keep_alive=parameters["keep_alive"]
+            if "keep_alive" in parameters else False,
             original_parameters=parameters)
 
     def run(self, output_directory: str) -> dict:
@@ -283,6 +287,7 @@ class Configuration:
         with open(os.path.join(output_directory, "details.yaml"), "w") as f:
             yaml.dump(results_dict, f, default_flow_style=False)
 
-        networks.creator.delete_old_containers()
+        if not self.keep_alive:
+            networks.creator.delete_old_containers()
 
         return results_dict
