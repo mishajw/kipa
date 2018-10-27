@@ -32,19 +32,20 @@ use std::sync::{Arc, Mutex};
 /// Macro to parse a `clap` argument with appropriate errors
 macro_rules! parse_with_err {
     ($value_name:ident, $value_type:ty, $args:ident) => {
-        let $value_name = $args
-            .value_of(stringify!($value_name))
-            .expect(&format!(
+        let value_string =
+            $args.value_of(stringify!($value_name)).expect(&format!(
                 "Error on getting {} argument",
                 stringify!($value_name)
-            ))
-            .parse::<$value_type>()
-            .map_err(|err| {
+            ));
+
+        let $value_name =
+            value_string.parse::<$value_type>().map_err(|err| {
                 InternalError::public_with_error(
                     &format!(
-                        "Error on parsing {} as {}",
+                        "Error on parsing parameter {} as {} with value {}",
                         stringify!($value_name),
-                        stringify!($value_type)
+                        stringify!($value_type),
+                        value_string,
                     ),
                     ApiErrorType::Parse,
                     err,
