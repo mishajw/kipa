@@ -131,7 +131,7 @@ def __get_neighbours(
         neighbours_logs = list(filter(
             lambda l: all(map(lambda f: f in l and l[f], flags)),
             network_logs[key]))
-        if len(neighbours_logs) > 0:
+        if len(neighbours_logs) == 0:
             return iter([])
         neighbours = neighbours_logs[-1]["neighbour_keys"]
 
