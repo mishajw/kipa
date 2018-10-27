@@ -436,7 +436,9 @@ impl Creator for PayloadHandler {
 
     #[cfg(feature = "use-graph")]
     fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
-        use graph::neighbour_gc::{DEFAULT_FREQUENCY_SEC, DEFAULT_NUM_RETRIES};
+        use graph::neighbour_gc::{
+            DEFAULT_ENABLED, DEFAULT_FREQUENCY_SEC, DEFAULT_NUM_RETRIES,
+        };
         use graph::{
             DEFAULT_CONNECT_SEARCH_BREADTH, DEFAULT_MAX_NUM_SEARCH_THREADS,
             DEFAULT_SEARCH_BREADTH, DEFAULT_SEARCH_THREAD_POOL_SIZE,
@@ -480,6 +482,11 @@ impl Creator for PayloadHandler {
                 )
                 .takes_value(true)
                 .default_value(DEFAULT_NUM_RETRIES),
+            clap::Arg::with_name("neighbour_gc_enabled")
+                .long("neighbour-gc-enabled")
+                .help("Enable garbage collection of unresponsive neighbours")
+                .takes_value(true)
+                .default_value(DEFAULT_ENABLED),
             clap::Arg::with_name("search_thread_pool_size")
                 .long("search-thread-pool-size")
                 .help(
@@ -514,6 +521,7 @@ impl Creator for PayloadHandler {
         parse_with_err!(search_timeout_sec, usize, args);
         parse_with_err!(neighbour_gc_frequency_sec, u64, args);
         parse_with_err!(neighbour_gc_num_retries, u32, args);
+        parse_with_err!(neighbour_gc_enabled, bool, args);
         parse_with_err!(search_thread_pool_size, usize, args);
 
         let neighbours_store = Arc::new(
@@ -528,13 +536,14 @@ impl Creator for PayloadHandler {
             )?),
         );
 
-        let neighbour_gc = NeighbourGc::new(
-            neighbours_store.clone(),
-            message_handler_client.clone(),
-            neighbour_gc_num_retries,
-            log.new(o!("neighbour_gc" => true)),
-        );
-        neighbour_gc.start(Duration::from_secs(neighbour_gc_frequency_sec));
+        if neighbour_gc_enabled {
+            NeighbourGc::new(
+                neighbours_store.clone(),
+                message_handler_client.clone(),
+                neighbour_gc_num_retries,
+                log.new(o!("neighbour_gc" => true)),
+            ).start(Duration::from_secs(neighbour_gc_frequency_sec));
+        }
 
         Ok(Box::new(GraphPayloadHandler::new(
             &local_node.key,

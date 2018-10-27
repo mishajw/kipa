@@ -19,6 +19,9 @@ pub const DEFAULT_FREQUENCY_SEC: &str = "30";
 /// Default number of retries to carry out when a failed check happens
 pub const DEFAULT_NUM_RETRIES: &str = "3";
 
+/// Default enabled flag for garbage collection
+pub const DEFAULT_ENABLED: &str = "true";
+
 /// The connection status of a neighbour
 struct NeighbourStatus {
     /// How many more retries we can have before discarding the neighbour
