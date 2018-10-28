@@ -23,14 +23,8 @@ use error_chain::ChainedError;
 use std::sync::Arc;
 
 fn main() -> ApiResult<()> {
-    let log = create_logger("daemon");
-    info!(
-        log, "Starting daemon";
-        "args" => ::std::env::args().skip(1).collect::<Vec<_>>().join(" "));
-
-    let _remotery = remotery_util::initialize_remotery(&log);
-
     let mut creator_args = vec![];
+    creator_args.append(&mut slog::Logger::get_clap_args());
     creator_args.append(&mut LocalAddressParams::get_clap_args());
     creator_args.append(&mut DataTransformer::get_clap_args());
     creator_args.append(&mut PayloadHandler::get_clap_args());
@@ -59,6 +53,12 @@ fn main() -> ApiResult<()> {
         )
         .args(&creator_args)
         .get_matches();
+
+    let log: slog::Logger = get_logger("daemon", &args);
+    info!(
+        log, "Starting daemon";
+        "args" => ::std::env::args().skip(1).collect::<Vec<_>>().join(" "));
+    let _remotery = remotery_util::initialize_remotery(&log);
 
     match run_servers(&args, &log) {
         Ok(()) => Ok(()),

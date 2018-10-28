@@ -24,12 +24,8 @@ use std::sync::Arc;
 // `ApiErrorType` - should be possible with `std::process::Termination`, but
 // this is only available in nightly. Keep an eye on issue #43301
 fn main() -> ApiResult<()> {
-    let log = create_logger("cli");
-    info!(
-        log, "Starting CLI";
-        "args" => ::std::env::args().skip(1).collect::<Vec<_>>().join(" "));
-
     let mut creator_args = vec![];
+    creator_args.append(&mut slog::Logger::get_clap_args());
     creator_args.append(&mut DataTransformer::get_clap_args());
     creator_args.append(&mut LocalServer::get_clap_args());
     creator_args.append(&mut LocalClient::get_clap_args());
@@ -86,6 +82,11 @@ fn main() -> ApiResult<()> {
         )
         .args(&creator_args)
         .get_matches();
+
+    let log: slog::Logger = get_logger("cli", &args);
+    info!(
+        log, "Starting daemon";
+        "args" => ::std::env::args().skip(1).collect::<Vec<_>>().join(" "));
 
     match message_daemon(&args, &log) {
         Ok(()) => Ok(()),

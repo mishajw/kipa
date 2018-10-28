@@ -21,11 +21,12 @@ use versioning;
 use clap;
 use slog;
 use slog::Drain;
-use slog::Logger;
+use slog::{Level, LevelFilter, Logger};
 use slog_async;
 use slog_json;
 use slog_term;
 use std::fs;
+use std::path::Path;
 #[allow(unused)]
 use std::sync::{Arc, Mutex};
 
@@ -54,20 +55,23 @@ macro_rules! parse_with_err {
     };
 }
 
-/// Create the root logger for the project
-pub fn create_logger(name: &'static str) -> Logger {
-    let log_file = fs::File::create(format!("log-{}.json", name))
-        .expect("Error on creating log file");
-
-    let decorator = slog_term::TermDecorator::new().build();
-    let json_drain = slog_json::Json::new(log_file).add_default_keys().build();
-    let drain = slog_term::CompactFormat::new(decorator).build().fuse();
-    let drain = slog::Duplicate(json_drain, drain).fuse();
-    let drain = slog_async::Async::new(drain).build().fuse();
-    slog::Logger::root(
-        Arc::new(drain),
-        o!("name" => name, "version" => versioning::get_version()),
-    )
+/// Create a logger, print to `stderr` if creation failed
+pub fn get_logger(name: &str, args: &clap::ArgMatches) -> Logger {
+    match slog::Logger::create(
+        name.into(),
+        &args,
+        slog::Logger::root(&slog::Discard, o!()),
+    ) {
+        Ok(log) => *log,
+        Err(InternalError::PublicError(err, _)) => {
+            eprintln!("Error when initializing logging: {}", err.message);
+            panic!();
+        }
+        Err(InternalError::PrivateError(_)) => {
+            eprintln!("Error when initializing logging");
+            panic!();
+        }
+    }
 }
 
 /// Implementors can be constructed from `clap` arguments
@@ -89,6 +93,68 @@ pub trait Creator {
             "Unselected feature",
             ApiErrorType::Configuration,
         ))
+    }
+}
+
+impl Creator for Logger {
+    type Parameters = String;
+
+    fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
+        vec![
+            clap::Arg::with_name("log_directory")
+                .long("log-directory")
+                .help("Directory to write logs to")
+                .default_value("logs")
+                .takes_value(true),
+            clap::Arg::with_name("verbose")
+                .long("verbose")
+                .short("v")
+                .help("Verbose logging (0=errors, 1=warnings, 2=info, 3=debug")
+                .multiple(true),
+        ]
+    }
+
+    fn create(
+        name: Self::Parameters,
+        args: &clap::ArgMatches,
+        _log: Logger,
+    ) -> InternalResult<Box<Self>>
+    {
+        parse_with_err!(log_directory, String, args);
+        fs::create_dir_all(&log_directory).map_err(|err| {
+            InternalError::public_with_error(
+                "Failed to create log directory",
+                ApiErrorType::External,
+                err,
+            )
+        })?;
+
+        let verbose_level = args.occurrences_of("verbose");
+        let filter_level = match verbose_level {
+            0 => Level::Error,
+            1 => Level::Warning,
+            2 => Level::Info,
+            _ => Level::Debug,
+        };
+
+        // Create log file
+        let file_name = &format!("log-{}.json", name);
+        let file_directory = Path::new(&log_directory);
+        let log_file = fs::File::create(file_directory.join(file_name))
+            .expect("Error on creating log file");
+
+        // Set up log output
+        let stdout = slog_term::TermDecorator::new().build();
+        let stdout_drain = slog_term::CompactFormat::new(stdout).build().fuse();
+        let stdout_drain = LevelFilter::new(stdout_drain, filter_level);
+        let file_drain =
+            slog_json::Json::new(log_file).add_default_keys().build();
+        let drain = slog::Duplicate(file_drain, stdout_drain).fuse();
+        let drain = slog_async::Async::new(drain).build().fuse();
+        Ok(Box::new(slog::Logger::root(
+            Arc::new(drain),
+            o!("name" => name, "version" => versioning::get_version()),
+        )))
     }
 }
 

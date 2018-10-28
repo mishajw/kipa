@@ -11,5 +11,5 @@
   print port, print both.
 
 ## Improvements
-- [ ] Add levels of verbose modes: warning logs, info logs, all logs
 - [ ] Add configuration file.
+- [x] Add levels of verbose modes: warning logs, info logs, all logs
