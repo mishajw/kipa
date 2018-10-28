@@ -14,7 +14,7 @@ use message_handler::MessageHandlerClient;
 use slog::Logger;
 
 /// Default frequency for checking "dead" neighbours
-pub const DEFAULT_FREQUENCY_SEC: &str = "30";
+pub const DEFAULT_FREQUENCY_SEC: &str = "1200";
 
 /// Default number of retries to carry out when a failed check happens
 pub const DEFAULT_NUM_RETRIES: &str = "3";
