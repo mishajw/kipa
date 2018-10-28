@@ -7,7 +7,7 @@
 - [ ] Allow different methods for passing private key passphrases, e.g. via
   `STDIN`. Currently we only support via file.
 - [ ] Add UDP support for faster search times.
-- [ ] Add configurable output for search commands, e.g. only print IP, only
+- [x] Add configurable output for search commands, e.g. only print IP, only
   print port, print both.
 
 ## Improvements

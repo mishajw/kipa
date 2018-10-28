@@ -54,6 +54,15 @@ fn main() -> ApiResult<()> {
                         .takes_value(true)
                         .possible_values(&vec!["private", "fast"])
                         .default_value("fast"),
+                )
+                .arg(
+                    clap::Arg::with_name("print")
+                        .long("print")
+                        .short("p")
+                        .help("What results to print")
+                        .takes_value(true)
+                        .possible_values(&vec!["ip", "port", "all"])
+                        .default_value("all"),
                 ),
         )
         .subcommand(
@@ -149,7 +158,18 @@ fn message_daemon(
 
         match response {
             ResponsePayload::SearchResponse(Some(ref node)) => {
-                println!("Search success: {}.", node);
+                match search_args.value_of("print").unwrap() {
+                    "all" => println!("{}", node.address),
+                    "ip" => println!(
+                        "{}",
+                        node.address
+                            .to_socket_addr()
+                            .map_err(InternalError::private)?
+                            .ip()
+                    ),
+                    "port" => println!("{}", node.address.port),
+                    _ => panic!("Impossible print value"),
+                };
                 Ok(())
             }
             ResponsePayload::SearchResponse(None) => {

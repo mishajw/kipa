@@ -97,7 +97,7 @@ def test_search(
         search_end_time = time.time()
         search_time_sec = search_end_time - search_start_time
 
-        success = "Search success" in output
+        success = not "Search unsuccessful" in output
 
         message_id = set([
             l["message_id"]

@@ -66,7 +66,7 @@ computers when IP addresses are not known, but public keys are:
 # Run on receiver
 nc -l -p 8080 > file.txt
 # Run on sender
-cat file.txt > nc $(kipa_cli search --key-id $RECEIVER_KEY_ID) 8080
+cat file.txt > nc $(kipa_cli search --key-id $RECEIVER_KEY_ID --print ip) 8080
 ```
 
 Any use of KIPA requires that keys are already known in the system - it does

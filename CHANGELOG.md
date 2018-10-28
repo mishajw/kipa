@@ -19,6 +19,7 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 - Add remotery profiling
 - Add log verbose levels
 - Add customizable log location
+- Add print options for searches
 
 ### Refactor
 - Move `src/lib/socket_server/mod.rs` to `src/lib/server/socket_server.rs`
