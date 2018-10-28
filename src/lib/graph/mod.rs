@@ -303,7 +303,7 @@ impl PayloadHandler for GraphPayloadHandler {
             }
             RequestPayload::ListNeighboursRequest() => {
                 remotery_scope!("graph_list_neighbours_request");
-                trace!(self.log, "Replying recieved list neigbours request");
+                trace!(self.log, "Recieved list neigbours request");
                 let neighbours = self.neighbours_store.get_all();
                 trace!(
                     self.log,

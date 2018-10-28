@@ -177,6 +177,7 @@ impl NeighboursStore {
 
     /// Remove a neighbour by its key ID
     pub fn remove_by_key_id(&self, key_id: &str) {
+        info!(self.log, "Removing neighbour"; "key_id" => key_id);
         self.neighbours
             .lock()
             .unwrap()

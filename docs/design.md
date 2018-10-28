@@ -344,7 +344,7 @@ When performing GPG operations, both the **user's** private key and **other
 node's** private key need to exist in the same `.gnupg` directory. This is for
 two reasons:
 
-1. If we have two switch between two different `.gnupg` directories, GPG
+1. If we have to switch between two different `.gnupg` directories, GPG
    operations have to lock the `$GNUPGHOME` environment variable. This
    essentially serialises all GPG operations, introducing a significant
    bottleneck.

@@ -427,7 +427,7 @@ impl Creator for NeighboursStore {
                     )
                     .map(|_| ())
             }),
-            log.new(o!("neighbours_store" => true)),
+            log,
         )))
     }
 }

@@ -21,6 +21,11 @@ network is still secure and reliable (backed up by
 
 It is **fast**, with look-ups taking (TODO add figures) (backed up by
 [benchmarks](./docs/benchmarks.md#speed)).
+
+KIPA is still a work in progress, and should not be used for any serious cases.
+It is recommended that you generate a new key to try out KIPA. For a list of
+unimplemented planned features, see [here](./docs/todo.md).
+
 ## How does it work?
 
 When a node joins the KIPA network, its public key is mapped to an

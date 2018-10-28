@@ -16,6 +16,7 @@ Versioning](http://semver.org/spec/v2.0.0.html).
   returning valid responses to validation requests
 - Add use of verification message when adding a new neighbour, in order to
   verify their address
+- Add remotery profiling
 
 ### Refactor
 - Move `src/lib/socket_server/mod.rs` to `src/lib/server/socket_server.rs`
