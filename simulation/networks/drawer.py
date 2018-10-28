@@ -203,7 +203,8 @@ def __verify_graph_and_neighbours(
         graph: List[GraphNode], neighbours: List[Tuple[str, str]]):
     neighbour_key_ids = set(n for ns in neighbours for n in ns)
 
-    assert neighbour_key_ids.issubset(node.key_id for node in graph), \
-        f"Found neighbours that were not in the graph: " \
-        f"found {neighbour_key_ids}, " \
-        f"graph was {[node.key_id for node in graph]}"
+    if not neighbour_key_ids.issubset(node.key_id for node in graph):
+        log.error(
+            f"Found neighbours that were not in the graph: " \
+            f"found {neighbour_key_ids}, " \
+            f"graph was {[node.key_id for node in graph]}")

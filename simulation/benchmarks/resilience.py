@@ -59,6 +59,7 @@ class ResilienceBenchmark(SuccessSpeedBenchmark):
                     ["use-random-response", "use-protobuf", "use-tcp",
                      "use-unix-socket"])
                 malicious_group.test_searches = False
+                malicious_group.daemon_args = {}
 
                 split_groups.extend([group, malicious_group])
 
