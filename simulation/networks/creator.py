@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 DOCKER_PREFIX = "kipa_simulation"
 IMAGE_NAME = DOCKER_PREFIX
 NETWORK_NAME = f"{DOCKER_PREFIX}_network"
-IPV4_PREFIX = "192.168.123"
+IPV4_PREFIX = "172.16"
 IPV6_PREFIX = "fd92:bd99:d235:d1c5::"
 
 
@@ -31,7 +31,7 @@ def create_docker_network(ipv6: bool = False):
     if not ipv6:
         log.debug("Using IPv4")
         ipam_pool = docker.types.IPAMPool(
-            subnet=f"{IPV4_PREFIX}.0/24", gateway=f"{IPV4_PREFIX}.123")
+            subnet=f"{IPV4_PREFIX}.0.0/16", gateway=f"{IPV4_PREFIX}.0.123")
     else:
         log.debug("Using IPv6")
         ipam_pool = docker.types.IPAMPool(
@@ -179,8 +179,6 @@ def __create_nodes(
         ipv6: bool,
         network: docker.models.networks.Network,
         test_searches: bool) -> Iterator[Node]:
-    assert len(key_ids) < 256, "No support for more than 256 nodes"
-
     # Used to get a container's IP address
     api_client = docker.APIClient()
 
