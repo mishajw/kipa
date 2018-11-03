@@ -21,7 +21,7 @@ def draw_main_graph(
         network_logs: Dict[str, List[dict]], save_location: str) -> None:
     graph = list(__get_nodes(network_logs))
     neighbours = list(__get_neighbours(network_logs))
-    __verify_graph_and_neighbours(graph, neighbours)
+    neighbours = __remove_fake_neighbours(graph, neighbours)
     location_dict = __get_location_dict(graph, IMAGE_DIMS)
     image = Image.new("RGBA", tuple(IMAGE_DIMS), color="white")
     draw = ImageDraw.Draw(image)
@@ -39,7 +39,8 @@ def draw_query_graph(
     graph = list(__get_nodes(network_logs))
     message_neighbours = list(__get_message_neighbours(
         network_logs[from_key_id], message_id))
-    __verify_graph_and_neighbours(graph, message_neighbours)
+    message_neighbours = __remove_fake_neighbours(
+        graph, message_neighbours)
     location_dict = __get_location_dict(graph, IMAGE_DIMS)
     image = Image.new("RGBA", tuple(IMAGE_DIMS), color="white")
     draw = ImageDraw.Draw(image)
@@ -199,12 +200,17 @@ def __get_key_id_from_string(s: str) -> str:
     return key_id
 
 
-def __verify_graph_and_neighbours(
+def __remove_fake_neighbours(
         graph: List[GraphNode], neighbours: List[Tuple[str, str]]):
     neighbour_key_ids = set(n for ns in neighbours for n in ns)
+    graph_key_ids = [node.key_id for node in graph]
 
-    if not neighbour_key_ids.issubset(node.key_id for node in graph):
+    if not neighbour_key_ids.issubset(graph_key_ids):
         log.error(
             f"Found neighbours that were not in the graph: " \
             f"found {neighbour_key_ids}, " \
             f"graph was {[node.key_id for node in graph]}")
+
+    return [
+        (a, b) for a, b in neighbours
+        if a in graph_key_ids and b in graph_key_ids]
