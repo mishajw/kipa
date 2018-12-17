@@ -85,9 +85,15 @@ class GroupConfiguration:
             d["test_searches"] if "test_searches" in d else True)
 
     def get_daemon_args_str(self) -> str:
+        args = self.daemon_args
+        # Ensure that "False" is given as "false"
+        for key in args:
+            if type(args[key]) != bool:
+                continue
+            args[key] = str(args[key]).lower()
         args_str = " ".join(
-            [f"--{arg.replace('_', '-')} {self.daemon_args[arg]}"
-             for arg in self.daemon_args])
+            [f"--{arg.replace('_', '-')} {args[arg]}"
+             for arg in args])
 
         if self.ipv6:
             args_str += " --force-ipv6=true"
