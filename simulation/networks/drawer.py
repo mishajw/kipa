@@ -46,8 +46,16 @@ def draw_query_graph(
     draw = ImageDraw.Draw(image)
     __draw_neighbours(message_neighbours, location_dict, draw)
     __draw_nodes(graph, location_dict, draw)
-    __draw_node_circle(location_dict[from_key_id], draw, color="blue")
-    __draw_node_circle(location_dict[to_key_id], draw, color="red")
+
+    if from_key_id in location_dict:
+        __draw_node_circle(location_dict[from_key_id], draw, color="blue")
+    else:
+        log.warning("from_key_id not in location_dict")
+    if to_key_id in location_dict:
+        __draw_node_circle(location_dict[to_key_id], draw, color="red")
+    else:
+        log.warning("to_key_id not in location_dict")
+
     try:
         image.save(save_location)
     except ValueError as e:
