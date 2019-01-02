@@ -192,8 +192,11 @@ def __get_location_dict(
             ((i - _min) / (_max - _min))
             for i, _max, _min in
             zip(ps, max_points, min_points)]
-        assert len(normalized) == 2, \
-            f"No support for drawing >2 dimensions, found {len(normalized)}"
+        if len(normalized) != 2:
+            log.warning(
+                f"No support for drawing >2 dimensions, "
+                f"found {len(normalized)}")
+            normalized = normalized[:2]
         return tuple(
             float(i * dim) for i, dim in zip(normalized, image_dims))[:2]
 
