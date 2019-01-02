@@ -33,11 +33,9 @@ use std::sync::{Arc, Mutex};
 /// Macro to parse a `clap` argument with appropriate errors
 macro_rules! parse_with_err {
     ($value_name:ident, $value_type:ty, $args:ident) => {
-        let value_string =
-            $args.value_of(stringify!($value_name)).expect(&format!(
-                "Error on getting {} argument",
-                stringify!($value_name)
-            ));
+        let value_string = $args.value_of(stringify!($value_name)).expect(
+            &format!("Error on getting {} argument", stringify!($value_name)),
+        );
 
         let $value_name =
             value_string.parse::<$value_type>().map_err(|err| {
@@ -298,14 +296,12 @@ impl Creator for LocalServer {
     #[cfg(feature = "use-unix-socket")]
     fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
         use server::unix_socket::DEFAULT_UNIX_SOCKET_PATH;
-        vec![
-            clap::Arg::with_name("socket_path")
-                .long("socket-path")
-                .short("s")
-                .help("Socket to listen for local queries from CLI from")
-                .takes_value(true)
-                .default_value(DEFAULT_UNIX_SOCKET_PATH),
-        ]
+        vec![clap::Arg::with_name("socket_path")
+            .long("socket-path")
+            .short("s")
+            .help("Socket to listen for local queries from CLI from")
+            .takes_value(true)
+            .default_value(DEFAULT_UNIX_SOCKET_PATH)]
     }
 
     #[cfg(feature = "use-unix-socket")]
@@ -414,13 +410,11 @@ impl Creator for KeySpaceManager {
     type Parameters = Node;
     fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
         use key_space_manager::DEFAULT_KEY_SPACE_SIZE;
-        vec![
-            clap::Arg::with_name("key_space_size")
-                .long("key-space-size")
-                .help("Number of dimensions to use for key space")
-                .takes_value(true)
-                .default_value(DEFAULT_KEY_SPACE_SIZE),
-        ]
+        vec![clap::Arg::with_name("key_space_size")
+            .long("key-space-size")
+            .help("Number of dimensions to use for key space")
+            .takes_value(true)
+            .default_value(DEFAULT_KEY_SPACE_SIZE)]
     }
 
     fn create(
@@ -609,7 +603,8 @@ impl Creator for PayloadHandler {
                 message_handler_client.clone(),
                 neighbour_gc_num_retries,
                 log.new(o!("neighbour_gc" => true)),
-            ).start(Duration::from_secs(neighbour_gc_frequency_sec));
+            )
+            .start(Duration::from_secs(neighbour_gc_frequency_sec));
         }
 
         Ok(Box::new(GraphPayloadHandler::new(

@@ -132,7 +132,8 @@ fn message_daemon(
         (),
         args,
         log.new(o!("data_transformer" => true)),
-    )?.into();
+    )?
+    .into();
 
     let local_client: Arc<LocalClient> =
         LocalClient::create((), args, log.new(o!("local_client" => true)))?

@@ -8,7 +8,8 @@ use thread_manager::ThreadManager;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashSet};
 use std::sync::{
-    mpsc::{channel, Receiver}, Arc, Mutex,
+    mpsc::{channel, Receiver},
+    Arc, Mutex,
 };
 use std::time::Duration;
 

@@ -111,7 +111,8 @@ fn run_servers(
             (),
             args,
             log.new(o!("local_address_params" => true)),
-        )?.create_address(log.new(o!("address_creation" => true)))?,
+        )?
+        .create_address(log.new(o!("address_creation" => true)))?,
         local_key,
     );
 
@@ -120,7 +121,8 @@ fn run_servers(
         (),
         args,
         log.new(o!("data_transformer" => true)),
-    )?.into();
+    )?
+    .into();
 
     // Set up out communication
     let client: Arc<Client> =
@@ -131,7 +133,8 @@ fn run_servers(
         local_node.clone(),
         args,
         log.new(o!("key_space_manager" => true)),
-    )?.into();
+    )?
+    .into();
 
     let message_handler_client: Arc<MessageHandlerClient> =
         MessageHandlerClient::create(
@@ -143,7 +146,8 @@ fn run_servers(
             ),
             args,
             log.new(o!("message_handler_client" => true)),
-        )?.into();
+        )?
+        .into();
 
     // Set up request handler
     let payload_handler: Arc<PayloadHandler> = PayloadHandler::create(
@@ -154,7 +158,8 @@ fn run_servers(
         ),
         args,
         log.new(o!("request_handler" => true)),
-    )?.into();
+    )?
+    .into();
 
     let message_handler_server: Arc<MessageHandlerServer> =
         MessageHandlerServer::create(
@@ -166,7 +171,8 @@ fn run_servers(
             ),
             args,
             log.new(o!("message_handler_server" => true)),
-        )?.into();
+        )?
+        .into();
 
     // Set up listening for connections
     let server = Server::create(

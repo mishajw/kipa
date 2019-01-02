@@ -46,7 +46,8 @@ impl Server for TcpServer {
         let listener = TcpListener::bind(SocketAddr::new(
             IpAddr::V6(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0)),
             self.local_node.address.port,
-        )).chain_err(|| "Error on bind to TCP socket")?;
+        ))
+        .chain_err(|| "Error on bind to TCP socket")?;
         info!(
             self.log,
             "Started listening for TCP connections";

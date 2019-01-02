@@ -55,9 +55,10 @@ impl LocalServer for UnixSocketLocalServer {
                 .chain_err(|| "Error on removing old KIPA socket file")?;
         }
 
-        let listener = UnixListener::bind(&self.socket_path).chain_err(|| {
-            format!("Error on binding to socket path: {}", self.socket_path)
-        })?;
+        let listener =
+            UnixListener::bind(&self.socket_path).chain_err(|| {
+                format!("Error on binding to socket path: {}", self.socket_path)
+            })?;
         debug!(
             self.log,
             "Started listening on unix socket";

@@ -54,8 +54,9 @@ impl DataTransformer for ProtobufDataTransformer {
         sender: Address,
     ) -> Result<RequestMessage>
     {
-        let proto_message: proto_api::RequestMessage = parse_from_bytes(data)
-            .chain_err(|| "Error on parsing request message")?;
+        let proto_message: proto_api::RequestMessage =
+            parse_from_bytes(data)
+                .chain_err(|| "Error on parsing request message")?;
 
         let message = if proto_message.has_fast() {
             RequestMessage::Fast(decode_fast_request(

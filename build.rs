@@ -11,5 +11,6 @@ fn main() {
         out_dir: output_proto_directory,
         input: &["resources/proto/proto_api.proto"],
         includes: &["resources/proto"],
-    }).expect("Error on protobuf generation");
+    })
+    .expect("Error on protobuf generation");
 }

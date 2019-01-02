@@ -222,7 +222,8 @@ impl GraphPayloadHandler {
                 }
                 Ok(_) => to_internal_result(Err(ErrorKind::ResponseError(
                     "Incorrect response for query request".into(),
-                ).into())),
+                )
+                .into())),
                 Err(err) => Err(err),
             }
         })
@@ -295,9 +296,9 @@ impl PayloadHandler for GraphPayloadHandler {
                 self.connect(
                     node,
                     self.log.new(o!(
-                            "message_id" => message_id,
-                            "connect_request" => true
-                        )),
+                        "message_id" => message_id,
+                        "connect_request" => true
+                    )),
                 )?;
                 Ok(ResponsePayload::ConnectResponse())
             }

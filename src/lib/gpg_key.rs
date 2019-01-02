@@ -198,18 +198,24 @@ impl GpgKeyHandler {
             .map_err(InternalError::private)?;
 
         // Capture stdin/stdout/stderr
-        let mut gpg_stdin = BufWriter::new(gpg_child
-            .stdin
-            .chain_err(|| "Error on get gpg command's stdin")
-            .map_err(InternalError::private)?);
-        let mut gpg_stdout = BufReader::new(gpg_child
-            .stdout
-            .chain_err(|| "Error on get gpg command's stdout")
-            .map_err(InternalError::private)?);
-        let mut gpg_stderr = BufReader::new(gpg_child
-            .stderr
-            .chain_err(|| "Error on get gpg command's stderr")
-            .map_err(InternalError::private)?);
+        let mut gpg_stdin = BufWriter::new(
+            gpg_child
+                .stdin
+                .chain_err(|| "Error on get gpg command's stdin")
+                .map_err(InternalError::private)?,
+        );
+        let mut gpg_stdout = BufReader::new(
+            gpg_child
+                .stdout
+                .chain_err(|| "Error on get gpg command's stdout")
+                .map_err(InternalError::private)?,
+        );
+        let mut gpg_stderr = BufReader::new(
+            gpg_child
+                .stderr
+                .chain_err(|| "Error on get gpg command's stderr")
+                .map_err(InternalError::private)?,
+        );
 
         // Write the passphrase to stdin
         gpg_stdin
@@ -286,8 +292,9 @@ impl GpgKeyHandler {
         let mut buffer = Vec::new();
         with_context(|mut c| {
             c.export_keys(&[key], gpgme::ExportMode::empty(), &mut buffer)
-        }).chain_err(|| "Error on exporting key")
-            .map_err(|err| InternalError::private(err))?;
+        })
+        .chain_err(|| "Error on exporting key")
+        .map_err(|err| InternalError::private(err))?;
 
         Ok(Key::new(key_id, buffer))
     }
@@ -304,7 +311,8 @@ impl GpgKeyHandler {
         let mut encrypted_data = Vec::new();
         with_context(|mut c| {
             c.encrypt(Some(&gpg_key), data, &mut encrypted_data)
-        }).chain_err(|| "Error on encrypt operation")?;
+        })
+        .chain_err(|| "Error on encrypt operation")?;
         debug!(
             self.log, "Encryption successful";
             "encrypted_length" => encrypted_data.len());
@@ -323,7 +331,8 @@ impl GpgKeyHandler {
         let mut decrypted_data = Vec::new();
         with_secret_context(&self.secret, |c| {
             c.decrypt(data, &mut decrypted_data)
-        }).chain_err(|| "Error on decrypt operation")?;
+        })
+        .chain_err(|| "Error on decrypt operation")?;
         Ok(decrypted_data)
     }
 
@@ -407,7 +416,8 @@ impl GpgKeyHandler {
                  {}, found {}",
                 possible_fingerprints.join(", "),
                 fingerprints.join(", ")
-            )).into());
+            ))
+            .into());
         }
 
         Ok(())

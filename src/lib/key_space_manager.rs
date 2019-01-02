@@ -51,7 +51,8 @@ impl KeySpaceManager {
 
         assert_eq!(a_ks.coords.len(), b_ks.coords.len());
 
-        let total: i64 = a_ks.coords
+        let total: i64 = a_ks
+            .coords
             .iter()
             .zip(&b_ks.coords)
             // Map to `i64` so we have enough space to subtract `i32`s
@@ -84,8 +85,9 @@ impl KeySpaceManager {
                 .zip(&relative_to.coords)
                 // Map to `i128` so we have enough space to subtract `i32`s,
                 // mutliply together, and sum results
-                .map(|((i, j), l)|
-                     ((i128::from(*i), i128::from(*j)), i128::from(*l)))
+                .map(|((i, j), l)| {
+                    ((i128::from(*i), i128::from(*j)), i128::from(*l))
+                })
                 .map(|((i, j), l)| (i - l, j - l))
                 .map(|(i, j)| i * j)
                 .sum();

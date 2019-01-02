@@ -84,7 +84,8 @@ impl Address {
             Err(ErrorKind::IpAddressError(format!(
                 "Invalid number of IP octets: {}",
                 self.ip_data.len()
-            )).into())
+            ))
+            .into())
         }
     }
 }

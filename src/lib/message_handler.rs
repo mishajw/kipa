@@ -147,7 +147,8 @@ impl MessageHandlerServer {
             .data_transformer
             .decode_request_body(&fast_request.body)?;
 
-        let response_body = self.receive_body(body, Some(fast_request.sender))?;
+        let response_body =
+            self.receive_body(body, Some(fast_request.sender))?;
         let response_body_data =
             self.data_transformer.encode_response_body(response_body)?;
         let signed_response_body_data = self
@@ -178,7 +179,8 @@ impl MessageHandlerServer {
         if !body.payload.is_visible(&visibility) {
             return Err(ErrorKind::RequestError(
                 "Request is not locally available".into(),
-            ).into());
+            )
+            .into());
         }
 
         let version_verification_result =
@@ -186,9 +188,10 @@ impl MessageHandlerServer {
                 &versioning::get_version(),
                 &body.version,
             ));
-        let response_payload_result = version_verification_result.and_then(
-            |()| self.payload_handler.receive(&body.payload, sender, body.id),
-        );
+        let response_payload_result =
+            version_verification_result.and_then(|()| {
+                self.payload_handler.receive(&body.payload, sender, body.id)
+            });
 
         Ok(ResponseBody::new(
             to_api_result(response_payload_result, &self.log),
@@ -298,7 +301,7 @@ impl MessageHandlerClient {
                 return Err(InternalError::private(ErrorKind::ResponseError(
                     "Expected private mode response, found fast mode response"
                         .into(),
-                )))
+                )));
             }
         };
 
@@ -390,7 +393,7 @@ impl MessageHandlerClient {
                 return Err(InternalError::private(ErrorKind::ResponseError(
                     "Expected fast mode response, found private mode response"
                         .into(),
-                )))
+                )));
             }
         };
 
