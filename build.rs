@@ -3,7 +3,7 @@ extern crate protoc_rust;
 use std::fs;
 
 fn main() {
-    let output_proto_directory = "src/lib/data_transformer";
+    let output_proto_directory = "src/data_transformer";
     fs::create_dir_all(output_proto_directory)
         .expect("Error on creating output directory");
 

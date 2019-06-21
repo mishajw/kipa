@@ -2,5 +2,5 @@
 .gnupg
 __pycache__
 simulation_output
-src/lib/data_transformer/proto_api.rs
+src/data_transformer/proto_api.rs
 target
