@@ -10,11 +10,8 @@ log = logging.getLogger(__name__)
 
 class Node:
     def __init__(
-            self,
-            key_id: str,
-            address: str,
-            container: Container,
-            test_search: bool):
+        self, key_id: str, address: str, container: Container, test_search: bool
+    ):
         self.key_id = key_id
         self.address = address
         self.container = container
@@ -27,7 +24,8 @@ class Network:
         self.__network = network
         self.__key_ids = [n.key_id for n in self.__nodes]
         self.__key_dict: Dict[str, Node] = dict(
-            [(n.key_id, n) for n in self.__nodes])
+            [(n.key_id, n) for n in self.__nodes]
+        )
 
     def __add__(self, other: "Network") -> "Network":
         if self.__network is not None:
@@ -50,19 +48,22 @@ class Network:
 
     def exec_command(self, key_id: str, command: List[str]) -> str:
         try:
-            (exit_code, output) = \
-                self.__key_dict[key_id].container.exec_run(command)
+            (exit_code, output) = self.__key_dict[key_id].container.exec_run(
+                command
+            )
         except docker.errors.APIError as e:
             container_logs = self.__key_dict[key_id].container.logs().decode()
             log.error(
                 f"Error on {key_id} when performing command {command}, "
-                f"logs: {container_logs}. Returning empty string")
+                f"logs: {container_logs}. Returning empty string"
+            )
             return ""
         output = output.decode()
         if exit_code != 0:
             log.error(
-                f"Bad return code when executing command: {command}. " \
-                f"Output was: {output}")
+                f"Bad return code when executing command: {command}. "
+                f"Output was: {output}"
+            )
         return output
 
     def stop_networking(self, key_id: str):
@@ -78,7 +79,7 @@ class Network:
     def __get_logs_from_file(self, key_id: str, file_name: str) -> List[Dict]:
         raw_logs = self.exec_command(key_id, ["cat", file_name])
         logs: List[dict] = []
-        for line in (raw_logs.split("\n")):
+        for line in raw_logs.split("\n"):
             if line.strip() == "":
                 continue
             try:
@@ -92,7 +93,9 @@ class Network:
 
     def get_human_readable_logs(self, key_id: str) -> bytes:
         logs = self.__key_dict[key_id].container.attach(
-            stdout=True, stderr=True, stream=False, logs=True)
-        assert isinstance(logs, bytes), \
-            f"Logs returned from docker was not bytes: {logs}"
+            stdout=True, stderr=True, stream=False, logs=True
+        )
+        assert isinstance(
+            logs, bytes
+        ), f"Logs returned from docker was not bytes: {logs}"
         return logs

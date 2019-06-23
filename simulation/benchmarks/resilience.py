@@ -18,12 +18,14 @@ class ResilienceBenchmark(SuccessSpeedBenchmark):
             "resilience",
             [p * 100 for p in MALICIOUS_PROBABILITIES],
             "Malicious probability (%)",
-            output_directory)
+            output_directory,
+        )
 
     def get_results(self, network_config_path: str) -> Iterator[dict]:
         for malicious_probability in MALICIOUS_PROBABILITIES:
             configuration = networks.configuration.Configuration.from_yaml(
-                network_config_path)
+                network_config_path
+            )
 
             # For each group, split into two: one that has the original
             # configuration, and one has malicious configuration
@@ -31,12 +33,14 @@ class ResilienceBenchmark(SuccessSpeedBenchmark):
             for group in configuration.groups:
                 # Calculate sizes for each group
                 malicious_group_size = int(
-                    math.floor(malicious_probability * group.size))
+                    math.floor(malicious_probability * group.size)
+                )
                 group_size = group.size - malicious_group_size
                 if malicious_group_size <= 0:
                     log.info(
                         f"Not splitting group of size {group_size} with "
-                        f"malicious probability {malicious_probability}")
+                        f"malicious probability {malicious_probability}"
+                    )
                     split_groups.append(group)
                     continue
 
@@ -44,11 +48,13 @@ class ResilienceBenchmark(SuccessSpeedBenchmark):
                     f"Splitting group of size {group.size} into "
                     f"normal group of size {group_size}, "
                     f"and malicious group of size {malicious_group_size}, "
-                    f"malicious probability is {malicious_probability}")
+                    f"malicious probability is {malicious_probability}"
+                )
 
                 # Copy the group and set the correct sizes
-                malicious_group: networks.configuration.GroupConfiguration = \
-                    copy.deepcopy(group)
+                malicious_group: networks.configuration.GroupConfiguration = copy.deepcopy(
+                    group
+                )
                 group.size = group_size
                 malicious_group.size = malicious_group_size
 
@@ -56,8 +62,13 @@ class ResilienceBenchmark(SuccessSpeedBenchmark):
                 # random responses to queries
                 malicious_group.clear_default_features = True
                 malicious_group.additional_features.extend(
-                    ["use-random-response", "use-protobuf", "use-tcp",
-                     "use-unix-socket"])
+                    [
+                        "use-random-response",
+                        "use-protobuf",
+                        "use-tcp",
+                        "use-unix-socket",
+                    ]
+                )
                 malicious_group.test_searches = False
                 malicious_group.daemon_args = {}
 
@@ -66,7 +77,9 @@ class ResilienceBenchmark(SuccessSpeedBenchmark):
             # Update the configuration's groups
             configuration.groups = split_groups
 
-            results = configuration.run(os.path.join(
-                self.output_directory,
-                f"prob_{malicious_probability}"))
+            results = configuration.run(
+                os.path.join(
+                    self.output_directory, f"prob_{malicious_probability}"
+                )
+            )
             yield results["percentage_success"]

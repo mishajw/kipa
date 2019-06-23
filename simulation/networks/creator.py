@@ -31,31 +31,34 @@ def create_docker_network(ipv6: bool = False):
     if not ipv6:
         log.debug("Using IPv4")
         ipam_pool = docker.types.IPAMPool(
-            subnet=f"{IPV4_PREFIX}.0.0/16", gateway=f"{IPV4_PREFIX}.0.123")
+            subnet=f"{IPV4_PREFIX}.0.0/16", gateway=f"{IPV4_PREFIX}.0.123"
+        )
     else:
         log.debug("Using IPv6")
         ipam_pool = docker.types.IPAMPool(
-            subnet=f"{IPV6_PREFIX}/64", gateway=f"{IPV6_PREFIX}123")
+            subnet=f"{IPV6_PREFIX}/64", gateway=f"{IPV6_PREFIX}123"
+        )
 
     return client.networks.create(
         NETWORK_NAME,
         driver="bridge",
-        ipam=docker.types.IPAMConfig(
-            pool_configs=[ipam_pool]),
-        enable_ipv6=ipv6)
+        ipam=docker.types.IPAMConfig(pool_configs=[ipam_pool]),
+        enable_ipv6=ipv6,
+    )
 
 
 def create_containers(
-        size: int,
-        daemon_args: str,
-        group_index: int,
-        key_ids: List[str],
-        network: docker.models.networks.Network,
-        test_searches: bool,
-        additional_features: List[str] = None,
-        clear_default_features: bool = False,
-        ipv6: bool = False,
-        debug: bool = True) -> Network:
+    size: int,
+    daemon_args: str,
+    group_index: int,
+    key_ids: List[str],
+    network: docker.models.networks.Network,
+    test_searches: bool,
+    additional_features: List[str] = None,
+    clear_default_features: bool = False,
+    ipv6: bool = False,
+    debug: bool = True,
+) -> Network:
     """Create a network of the specified size"""
 
     if additional_features is None:
@@ -63,31 +66,33 @@ def create_containers(
 
     log.info(
         f"Creating network of size {size}, "
-        f"with arguments \"{daemon_args}\" and group index {group_index}")
+        f'with arguments "{daemon_args}" and group index {group_index}'
+    )
     client = docker.from_env()
 
     log.info("Creating docker directory")
     docker_directory = __create_docker_directory(
-        debug, additional_features, clear_default_features)
+        debug, additional_features, clear_default_features
+    )
 
     log.info("Building KIPA image (may take a while)")
-    client.images.build(
-        path=docker_directory,
-        tag=IMAGE_NAME,
-        quiet=False)
+    client.images.build(path=docker_directory, tag=IMAGE_NAME, quiet=False)
 
     log.info("Removing docker directory")
     shutil.rmtree(docker_directory)
 
     log.info(f"Creating {len(key_ids)} containers")
-    containers = list(__create_nodes(
-        client,
-        key_ids,
-        group_index,
-        daemon_args,
-        ipv6,
-        network,
-        test_searches))
+    containers = list(
+        __create_nodes(
+            client,
+            key_ids,
+            group_index,
+            daemon_args,
+            ipv6,
+            network,
+            test_searches,
+        )
+    )
     return Network(containers, network)
 
 
@@ -111,9 +116,8 @@ def delete_old_containers() -> None:
 
 
 def __create_docker_directory(
-        debug: bool,
-        additional_features: List[str],
-        clear_default_features: bool) -> str:
+    debug: bool, additional_features: List[str], clear_default_features: bool
+) -> str:
     docker_directory = tempfile.mkdtemp()
 
     log.debug(f"Made docker directory at {docker_directory}")
@@ -139,17 +143,16 @@ def __create_docker_directory(
 
     assert os.path.isfile(daemon_binary_path)
     shutil.copyfile(
-        daemon_binary_path,
-        os.path.join(docker_directory, "kipa_daemon"))
+        daemon_binary_path, os.path.join(docker_directory, "kipa_daemon")
+    )
 
     assert os.path.isfile(cli_binary_path)
-    shutil.copyfile(
-        cli_binary_path,
-        os.path.join(docker_directory, "kipa_cli"))
+    shutil.copyfile(cli_binary_path, os.path.join(docker_directory, "kipa_cli"))
 
     with open(os.path.join(docker_directory, "Dockerfile"), "w") as f:
         # TODO: Base docker image has to use the same `glibc` as host machine
-        f.write(f"""
+        f.write(
+            f"""
             FROM debian:buster-slim
             ENV KIPA_KEY_ID ""
             ENV KIPA_ARGS ""
@@ -166,19 +169,21 @@ def __create_docker_directory(
                 -vvv \\
                 --key-id $KIPA_KEY_ID \\
                 $KIPA_ARGS
-        """)
+        """
+        )
 
     return docker_directory
 
 
 def __create_nodes(
-        client,
-        key_ids: List[str],
-        group_index: int,
-        daemon_args: str,
-        ipv6: bool,
-        network: docker.models.networks.Network,
-        test_searches: bool) -> Iterator[Node]:
+    client,
+    key_ids: List[str],
+    group_index: int,
+    daemon_args: str,
+    ipv6: bool,
+    network: docker.models.networks.Network,
+    test_searches: bool,
+) -> Iterator[Node]:
     # Used to get a container's IP address
     api_client = docker.APIClient()
 
@@ -197,11 +202,15 @@ def __create_nodes(
                     source=GPG_HOME,
                     target="/root/.gnupg",
                     type="bind",
-                    read_only=False)],
-            environment={"KIPA_KEY_ID": key_id, "KIPA_ARGS": daemon_args})
+                    read_only=False,
+                )
+            ],
+            environment={"KIPA_KEY_ID": key_id, "KIPA_ARGS": daemon_args},
+        )
 
-        network_details = api_client.inspect_container(container.name) \
-            ["NetworkSettings"]["Networks"][network.name]
+        network_details = api_client.inspect_container(container.name)[
+            "NetworkSettings"
+        ]["Networks"][network.name]
         if not ipv6:
             ip_address = f"{network_details['IPAddress']}:10842"
         else:

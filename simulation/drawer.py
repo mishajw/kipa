@@ -18,7 +18,8 @@ class GraphNode:
 
 
 def draw_main_graph(
-        network_logs: Dict[str, List[dict]], save_location: str) -> None:
+    network_logs: Dict[str, List[dict]], save_location: str
+) -> None:
     graph = list(__get_nodes(network_logs))
     neighbours = list(__get_neighbours(network_logs))
     neighbours = __remove_fake_neighbours(graph, neighbours)
@@ -31,16 +32,17 @@ def draw_main_graph(
 
 
 def draw_query_graph(
-        network_logs: Dict[str, List[dict]],
-        from_key_id: str,
-        to_key_id: str,
-        message_id: str,
-        save_location: str) -> None:
+    network_logs: Dict[str, List[dict]],
+    from_key_id: str,
+    to_key_id: str,
+    message_id: str,
+    save_location: str,
+) -> None:
     graph = list(__get_nodes(network_logs))
-    message_neighbours = list(__get_message_neighbours(
-        network_logs[from_key_id], message_id))
-    message_neighbours = __remove_fake_neighbours(
-        graph, message_neighbours)
+    message_neighbours = list(
+        __get_message_neighbours(network_logs[from_key_id], message_id)
+    )
+    message_neighbours = __remove_fake_neighbours(graph, message_neighbours)
     location_dict = __get_location_dict(graph, IMAGE_DIMS)
     image = Image.new("RGBA", tuple(IMAGE_DIMS), color="white")
     draw = ImageDraw.Draw(image)
@@ -64,9 +66,10 @@ def draw_query_graph(
 
 
 def __draw_nodes(
-        graph: List[GraphNode],
-        location_dict: Dict[str, Tuple[float, float]],
-        draw: ImageDraw):
+    graph: List[GraphNode],
+    location_dict: Dict[str, Tuple[float, float]],
+    draw: ImageDraw,
+):
     """Draw all nodes as circles"""
 
     for n in graph:
@@ -80,23 +83,20 @@ def __draw_nodes(
 
 
 def __draw_node_circle(
-        centre: Tuple[float, float],
-        draw: ImageDraw,
-        color: str="green"):
+    centre: Tuple[float, float], draw: ImageDraw, color: str = "green"
+):
     x, y = centre
     draw.ellipse(
-        (
-            x - NODE_RADIUS,
-            y - NODE_RADIUS,
-            x + NODE_RADIUS,
-            y + NODE_RADIUS),
-        fill=color)
+        (x - NODE_RADIUS, y - NODE_RADIUS, x + NODE_RADIUS, y + NODE_RADIUS),
+        fill=color,
+    )
 
 
 def __draw_neighbours(
-        neighbours: List[Tuple[str, str]],
-        location_dict: Dict[str, Tuple[float, float]],
-        draw: ImageDraw):
+    neighbours: List[Tuple[str, str]],
+    location_dict: Dict[str, Tuple[float, float]],
+    draw: ImageDraw,
+):
     """Draw all neighbour connections"""
 
     for from_node, to_node in neighbours:
@@ -118,13 +118,14 @@ def __draw_neighbours(
 def __get_nodes(network_logs: Dict[str, List[dict]]) -> Iterator[GraphNode]:
     for key in network_logs:
         ns_logs = filter(
-            lambda l:
-                "neighbours_store" in l
-                and l["neighbours_store"]
-                and "local_key_space" in l,
-            network_logs[key])
-        key_space_logs = list(map(
-            operator.itemgetter("local_key_space"), ns_logs))
+            lambda l: "neighbours_store" in l
+            and l["neighbours_store"]
+            and "local_key_space" in l,
+            network_logs[key],
+        )
+        key_space_logs = list(
+            map(operator.itemgetter("local_key_space"), ns_logs)
+        )
         if len(key_space_logs) == 0:
             continue
         groups = re.match(r"KeySpace\(([-0-9, ]+)\)", key_space_logs[0])
@@ -134,12 +135,16 @@ def __get_nodes(network_logs: Dict[str, List[dict]]) -> Iterator[GraphNode]:
 
 
 def __get_neighbours(
-        network_logs: Dict[str, List[dict]]) -> Iterator[Tuple[str, str]]:
+    network_logs: Dict[str, List[dict]]
+) -> Iterator[Tuple[str, str]]:
     for key in network_logs:
         flags = ["list_neighbours", "reply"]
-        neighbours_logs = list(filter(
-            lambda l: all(map(lambda f: f in l and l[f], flags)),
-            network_logs[key]))
+        neighbours_logs = list(
+            filter(
+                lambda l: all(map(lambda f: f in l and l[f], flags)),
+                network_logs[key],
+            )
+        )
         if len(neighbours_logs) == 0:
             return iter([])
         neighbours = neighbours_logs[-1]["neighbour_keys"]
@@ -152,24 +157,27 @@ def __get_neighbours(
 
 
 def __get_message_neighbours(
-        node_logs: List[dict],
-        message_id: str) -> Iterator[Tuple[str, str]]:
+    node_logs: List[dict], message_id: str
+) -> Iterator[Tuple[str, str]]:
     message_logs = [
-        l for l in node_logs
-        if "message_id" in l and l["message_id"] == message_id]
+        l
+        for l in node_logs
+        if "message_id" in l and l["message_id"] == message_id
+    ]
 
     for l in message_logs:
         if "found" not in l:
             continue
         key_id = __get_key_id_from_string(l["node"])
-        neighbours = l["neighbours"].split(", ") \
-            if l["neighbours"] != "" else []
+        neighbours = (
+            l["neighbours"].split(", ") if l["neighbours"] != "" else []
+        )
         yield from [(key_id, n) for n in neighbours]
 
 
 def __get_location_dict(
-        graph: List[GraphNode],
-        image_dims: List[int]) -> Dict[str, Tuple[float, float]]:
+    graph: List[GraphNode], image_dims: List[int]
+) -> Dict[str, Tuple[float, float]]:
     # Get the points and transpose them for bound calculation
     points = map(lambda n: n.position, graph)
     points_t = list(zip(*points))
@@ -181,24 +189,28 @@ def __get_location_dict(
     # Add a padding of 10% around the bounds
     max_points = [
         _max + (_max - _min) * 0.1
-        for _max, _min in zip(unpadded_max_points, unpadded_min_points)]
+        for _max, _min in zip(unpadded_max_points, unpadded_min_points)
+    ]
     min_points = [
         _min - (_max - _min) * 0.1
-        for _max, _min in zip(unpadded_max_points, unpadded_min_points)]
+        for _max, _min in zip(unpadded_max_points, unpadded_min_points)
+    ]
 
     # Normalize the points within the bounds
     def normalize_point(ps: List[int]) -> Tuple[float, float]:
         normalized = [
             ((i - _min) / (_max - _min))
-            for i, _max, _min in
-            zip(ps, max_points, min_points)]
+            for i, _max, _min in zip(ps, max_points, min_points)
+        ]
         if len(normalized) != 2:
             log.warning(
                 f"No support for drawing >2 dimensions, "
-                f"found {len(normalized)}")
+                f"found {len(normalized)}"
+            )
             normalized = normalized[:2]
-        return tuple(
-            float(i * dim) for i, dim in zip(normalized, image_dims))[:2]
+        return tuple(float(i * dim) for i, dim in zip(normalized, image_dims))[
+            :2
+        ]
 
     return dict((n.key_id, normalize_point(n.position)) for n in graph)
 
@@ -212,16 +224,20 @@ def __get_key_id_from_string(s: str) -> str:
 
 
 def __remove_fake_neighbours(
-        graph: List[GraphNode], neighbours: List[Tuple[str, str]]):
+    graph: List[GraphNode], neighbours: List[Tuple[str, str]]
+):
     neighbour_key_ids = set(n for ns in neighbours for n in ns)
     graph_key_ids = [node.key_id for node in graph]
 
     if not neighbour_key_ids.issubset(graph_key_ids):
         log.error(
-            f"Found neighbours that were not in the graph: " \
-            f"found {neighbour_key_ids}, " \
-            f"graph was {[node.key_id for node in graph]}")
+            f"Found neighbours that were not in the graph: "
+            f"found {neighbour_key_ids}, "
+            f"graph was {[node.key_id for node in graph]}"
+        )
 
     return [
-        (a, b) for a, b in neighbours
-        if a in graph_key_ids and b in graph_key_ids]
+        (a, b)
+        for a, b in neighbours
+        if a in graph_key_ids and b in graph_key_ids
+    ]

@@ -21,17 +21,20 @@ class SpeedBenchmark(SuccessSpeedBenchmark):
             "speed",
             CONNECTION_QUALITIES,
             "Speed quality (0-1 scale)",
-            output_directory)
+            output_directory,
+        )
 
     def get_results(self, network_config_path: str) -> Iterator[dict]:
         for quality_rating in CONNECTION_QUALITIES:
             quality = networks.configuration.ConnectionQuality(
                 loss=quality_rating,
                 delay=quality_rating * 1000,
-                rate=(1 - quality_rating) * 1000)
+                rate=(1 - quality_rating) * 1000,
+            )
 
             configuration = networks.configuration.Configuration.from_yaml(
-                network_config_path)
+                network_config_path
+            )
 
             for group in configuration.groups:
                 group.connection_quality = quality
@@ -39,7 +42,10 @@ class SpeedBenchmark(SuccessSpeedBenchmark):
                 # take too long
                 group.daemon_args["search_timeout_sec"] = 10000
 
-            results = configuration.run(os.path.join(
-                self.output_directory,
-                f"conn_qual_{quality.loss}_{quality.delay}_{quality.rate}"))
+            results = configuration.run(
+                os.path.join(
+                    self.output_directory,
+                    f"conn_qual_{quality.loss}_{quality.delay}_{quality.rate}",
+                )
+            )
             yield results["average_search_time_sec"]

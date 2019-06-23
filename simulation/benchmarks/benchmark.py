@@ -9,7 +9,8 @@ from simulation import utils
 class Benchmark:
     def __init__(self, title: str, output_directory: str) -> None:
         output_directory = os.path.join(
-            output_directory, f"benchmarks/{title}", utils.get_formatted_time())
+            output_directory, f"benchmarks/{title}", utils.get_formatted_time()
+        )
         if not os.path.isdir(output_directory):
             os.makedirs(output_directory)
 
@@ -22,11 +23,12 @@ class Benchmark:
 
 class SuccessSpeedBenchmark(Benchmark):
     def __init__(
-            self,
-            title: str,
-            x_values: List[float],
-            x_title: str,
-            output_directory: str):
+        self,
+        title: str,
+        x_values: List[float],
+        x_title: str,
+        output_directory: str,
+    ):
         super().__init__(title, output_directory)
         self.x_values = x_values
         self.x_title = x_title
@@ -47,14 +49,18 @@ class SuccessSpeedBenchmark(Benchmark):
         success_axes.set_ylabel("Search success (%)")
         success_axes.tick_params("y", colors="r")
         success_axes.plot(
-            self.x_values, [r["percentage_success"] * 100 for r in results], "r-")
+            self.x_values,
+            [r["percentage_success"] * 100 for r in results],
+            "r-",
+        )
 
         # Add speed plot
         speed_axes = success_axes.twinx()
         speed_axes.set_ylabel("Successful search time (seconds)")
         speed_axes.tick_params("y", colors="b")
         speed_axes.plot(
-            self.x_values, [r["average_search_time_sec"] for r in results], "b-")
+            self.x_values, [r["average_search_time_sec"] for r in results], "b-"
+        )
 
         # Save the figure
         figure.savefig(os.path.join(self.output_directory, "results.png"))
