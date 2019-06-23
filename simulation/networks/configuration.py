@@ -8,7 +8,7 @@ from typing import Dict, Any, List
 
 import yaml
 
-from simulation import networks, key_creator
+from simulation import networks, key_creator, drawer
 
 log = logging.getLogger(__name__)
 
@@ -263,7 +263,7 @@ class Configuration:
         if not os.path.isdir(graph_directory):
             os.makedirs(graph_directory)
         main_graph_path = os.path.join(graph_directory, "graph.png")
-        networks.drawer.draw_main_graph(
+        drawer.draw_main_graph(
             network_logs, main_graph_path)
         results_dict["graph"] = "file://" + main_graph_path
 
@@ -275,7 +275,7 @@ class Configuration:
                 search_results[i]
             query_graph_path = os.path.join(
                 graph_directory, f"{message_id}.png")
-            networks.drawer.draw_query_graph(
+            drawer.draw_query_graph(
                 network_logs,
                 from_key_id,
                 to_key_id,

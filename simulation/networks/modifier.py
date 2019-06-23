@@ -46,7 +46,7 @@ def ensure_alive(network: Network) -> None:
                     f"Three failed attempts to list-neighbours on node {k}"
 
                 log.info(
-                    f"Node {k} did not respond to `list-neigbours`, "
+                    f"Node {k} did not respond to `list-neighbours`, "
                     "sleeping for one second and trying again")
                 time.sleep(1)
 
