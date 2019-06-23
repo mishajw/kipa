@@ -1,14 +1,15 @@
-import os
-from typing import Iterator
+import random
+from pathlib import Path
 
-from simulation import networks
 from simulation.benchmarks import SuccessSpeedBenchmark
+from simulation.networks import Network
+from simulation.operations import simulator, TestResult
 
 DISCONNECT_PROBABILITIES = [x / 10 for x in range(10)]
 
 
 class ReliabilityBenchmark(SuccessSpeedBenchmark):
-    def __init__(self, output_directory: str):
+    def __init__(self, output_directory: Path):
         super().__init__(
             "reliability",
             [p * 100 for p in DISCONNECT_PROBABILITIES],
@@ -16,16 +17,15 @@ class ReliabilityBenchmark(SuccessSpeedBenchmark):
             output_directory,
         )
 
-    def get_results(self, network_config_path: str) -> Iterator[dict]:
+    def get_results(self, network: Network) -> TestResult:
         for disconnect_probability in DISCONNECT_PROBABILITIES:
-            configuration = networks.configuration.Configuration.from_yaml(
-                network_config_path
-            )
-            configuration.disconnect_probability = disconnect_probability
-
-            results = configuration.run(
-                os.path.join(
-                    self.output_directory, f"prob_{disconnect_probability}"
+            disconnected_network = network.map_nodes(
+                lambda n: n.replace(
+                    disconnect_before_tests=random.random()
+                    < disconnect_probability
                 )
             )
-            yield results
+            output_directory = (
+                self.output_directory / f"prob_{disconnect_probability}"
+            )
+            yield simulator.simulate(disconnected_network, output_directory)

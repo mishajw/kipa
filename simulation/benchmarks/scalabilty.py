@@ -1,9 +1,12 @@
 import logging
-import os
+import random
 from typing import Iterator
 
-from simulation import networks
+from matplotlib.path import Path
+
 from simulation.benchmarks import SuccessSpeedBenchmark
+from simulation.networks import Network
+from simulation.operations import simulator
 
 log = logging.getLogger(__name__)
 
@@ -11,30 +14,14 @@ NETWORK_SIZES = list(range(20, 201, 20))
 
 
 class ScalabilityBenchmark(SuccessSpeedBenchmark):
-    def __init__(self, output_directory: str):
+    def __init__(self, output_directory: Path):
         super().__init__(
             "scalability", NETWORK_SIZES, "Network size", output_directory
         )
 
-    def get_results(self, network_config_path: str) -> Iterator[dict]:
+    def get_results(self, network: Network) -> Iterator[dict]:
         for network_size in NETWORK_SIZES:
-            configuration = networks.configuration.Configuration.from_yaml(
-                network_config_path
-            )
-            # Adjust network size of every group in the network configuration so
-            # that the sum of all groups is `network_size`
-            configuration_network_size = sum(
-                group.size for group in configuration.groups
-            )
-            network_size_multiplier = network_size / configuration_network_size
-            for group in configuration.groups:
-                group.size = int(group.size * network_size_multiplier)
-            log.debug(
-                f"Running with group sizes: "
-                f"{[group.size for group in configuration.groups]}"
-            )
-
-            results = configuration.run(
-                os.path.join(self.output_directory, f"size_{network_size}")
-            )
-            yield results
+            nodes = [random.sample(network.nodes) for _ in range(network_size)]
+            sized_network = network.replace(nodes=nodes)
+            output_directory = self.output_directory / f"size_{network_size}"
+            yield simulator.simulate(sized_network, output_directory)

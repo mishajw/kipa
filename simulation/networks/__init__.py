@@ -1,2 +1,2 @@
-from simulation.networks.network import Node, Network
-from simulation.networks import creator, tester, modifier, configuration
+from simulation.networks.node import Node, NodeId
+from simulation.networks.network import Network, ConnectionQuality, ConnectType

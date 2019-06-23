@@ -1,23 +1,26 @@
 import os
-from typing import List, Iterator
+from pathlib import Path
+from typing import List
 
 import matplotlib.pyplot as plt
 
 from simulation import utils
+from simulation.networks import Network
+from simulation.operations import TestResult
 
 
 class Benchmark:
-    def __init__(self, title: str, output_directory: str) -> None:
-        output_directory = os.path.join(
-            output_directory, f"benchmarks/{title}", utils.get_formatted_time()
+    def __init__(self, title: str, output_directory: Path) -> None:
+        output_directory = (
+            output_directory / "benchmarks" / title / utils.get_formatted_time()
         )
-        if not os.path.isdir(output_directory):
-            os.makedirs(output_directory)
+        if not output_directory.is_dir():
+            output_directory.mkdir(parents=True)
 
         self.title = title
         self.output_directory = output_directory
 
-    def create(self, network_config_path: str) -> None:
+    def create(self, network: Network) -> None:
         raise NotImplementedError()
 
 
@@ -27,15 +30,15 @@ class SuccessSpeedBenchmark(Benchmark):
         title: str,
         x_values: List[float],
         x_title: str,
-        output_directory: str,
+        output_directory: Path,
     ):
         super().__init__(title, output_directory)
         self.x_values = x_values
         self.x_title = x_title
 
-    def create(self, network_config_path: str):
+    def create(self, network: Network):
         # Get results
-        results = list(self.get_results(network_config_path))
+        results = list(self.get_results(network))
 
         # Create matplotlib figure
         figure = plt.figure()
@@ -50,7 +53,7 @@ class SuccessSpeedBenchmark(Benchmark):
         success_axes.tick_params("y", colors="r")
         success_axes.plot(
             self.x_values,
-            [r["percentage_success"] * 100 for r in results],
+            [result.success_percentage * 100 for result in results],
             "r-",
         )
 
@@ -59,12 +62,14 @@ class SuccessSpeedBenchmark(Benchmark):
         speed_axes.set_ylabel("Successful search time (seconds)")
         speed_axes.tick_params("y", colors="b")
         speed_axes.plot(
-            self.x_values, [r["average_search_time_sec"] for r in results], "b-"
+            self.x_values,
+            [result.average_search_times_sec for result in results],
+            "b-",
         )
 
         # Save the figure
         figure.savefig(os.path.join(self.output_directory, "results.png"))
 
-    def get_results(self, network_config_path: str) -> Iterator[dict]:
+    def get_results(self, network: Network) -> TestResult:
         """Get the results of simulation runs for this benchmark"""
         raise NotImplementedError()

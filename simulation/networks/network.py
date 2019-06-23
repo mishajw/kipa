@@ -1,101 +1,90 @@
-import random
-from typing import List, Dict
-import json
 import logging
-import docker
-from docker.models.containers import Container
+import random
+from enum import Enum
+from typing import List, NamedTuple, Optional, Callable
+
+from simulation.key_creator import KeyCreator
+from simulation.networks import Node, NodeId
 
 log = logging.getLogger(__name__)
 
 
-class Node:
-    def __init__(
-        self, key_id: str, address: str, container: Container, test_search: bool
-    ):
-        self.key_id = key_id
-        self.address = address
-        self.container = container
-        self.test_search = test_search
+class Network(NamedTuple):
+    nodes: List[Node]
+    ipv6: bool
 
+    num_connects: int
+    num_searches: int
+    connect_type: "ConnectType"
+    connection_quality: Optional["ConnectionQuality"]
 
-class Network:
-    def __init__(self, nodes: List[Node], network) -> None:
-        self.__nodes = nodes
-        self.__network = network
-        self.__key_ids = [n.key_id for n in self.__nodes]
-        self.__key_dict: Dict[str, Node] = dict(
-            [(n.key_id, n) for n in self.__nodes]
+    # TODO: Try to not use KeyCreator here
+    @classmethod
+    def from_config(cls, config: dict, key_creator: KeyCreator) -> "Network":
+        nodes = [
+            node
+            for group_config in config["groups"]
+            for node in Node.from_config(group_config, key_creator)
+        ]
+        connection_quality = (
+            ConnectionQuality.from_config(
+                config.get("connection_quality", "cyclical")
+            )
+            if "connection_quality" in config
+            else None
+        )
+        return Network(
+            nodes,
+            config.get("ipv6", False),
+            config.get("num_connects", 1),
+            config.get("num_searches", 50),
+            ConnectType.from_str(config.get("connect_type", "cyclical")),
+            connection_quality,
         )
 
-    def __add__(self, other: "Network") -> "Network":
-        if self.__network is not None:
-            network = self.__network
+    def ids(self) -> List[NodeId]:
+        return [node.id for node in self.nodes]
+
+    def random_ids(self, num: int) -> List[NodeId]:
+        return random.choices(self.ids(), k=num)
+
+    def map_nodes(self, fn: Callable[[Node], Node]) -> "Network":
+        return self._replace(nodes=list(map(fn, self.nodes)))
+
+    def replace(self, *_, **kwargs) -> "Network":
+        return self._replace(**kwargs)
+
+
+class ConnectType(Enum):
+    CYCLICAL = 0
+    ROOTED = 1
+
+    @classmethod
+    def from_str(cls, s: str) -> "ConnectType":
+        if s == "cyclical":
+            return ConnectType.CYCLICAL
+        elif s == "rooted":
+            return ConnectType.ROOTED
         else:
-            network = other.__network
-        return Network(self.__nodes + other.__nodes, network)
+            raise ValueError(f"Unrecognized `ConnectType`: {s}")
 
-    def get_random_keys(self, num: int) -> List[str]:
-        return random.sample(self.__key_ids, num)
+    def to_str(self) -> str:
+        if self == ConnectType.CYCLICAL:
+            return "cyclical"
+        elif self == ConnectType.ROOTED:
+            return "rooted"
+        else:
+            raise ValueError(f"Unhandled `ConnectType`: {self}")
 
-    def get_all_keys(self) -> List[str]:
-        return self.__key_ids
 
-    def get_search_keys(self) -> List[str]:
-        return [n.key_id for n in self.__nodes if n.test_search]
+class ConnectionQuality:
+    def __init__(self, loss: float, delay: float, rate: float) -> None:
+        self.loss = loss
+        self.delay = delay
+        self.rate = rate
 
-    def get_address(self, key_id: str) -> str:
-        return self.__key_dict[key_id].address
-
-    def exec_command(self, key_id: str, command: List[str]) -> str:
-        try:
-            (exit_code, output) = self.__key_dict[key_id].container.exec_run(
-                command
-            )
-        except docker.errors.APIError as e:
-            container_logs = self.__key_dict[key_id].container.logs().decode()
-            log.error(
-                f"Error on {key_id} when performing command {command}, "
-                f"logs: {container_logs}. Returning empty string"
-            )
-            return ""
-        output = output.decode()
-        if exit_code != 0:
-            log.error(
-                f"Bad return code when executing command: {command}. "
-                f"Output was: {output}"
-            )
-        return output
-
-    def stop_networking(self, key_id: str):
-        self.__key_dict[key_id].test_search = False
-        self.__network.disconnect(self.__key_dict[key_id].container)
-
-    def get_logs(self, key_id: str) -> List[dict]:
-        return self.__get_logs_from_file(key_id, "/root/logs/log-daemon.json")
-
-    def get_cli_logs(self, key_id: str) -> List[dict]:
-        return self.__get_logs_from_file(key_id, "/root/logs/log-cli.json")
-
-    def __get_logs_from_file(self, key_id: str, file_name: str) -> List[Dict]:
-        raw_logs = self.exec_command(key_id, ["cat", file_name])
-        logs: List[dict] = []
-        for line in raw_logs.split("\n"):
-            if line.strip() == "":
-                continue
-            try:
-                json_dict = json.loads(line)
-            except json.decoder.JSONDecodeError as e:
-                log.warning(f"Failed to decode JSON string: {line}, error: {e}")
-                continue
-            logs.append(json_dict)
-
-        return logs
-
-    def get_human_readable_logs(self, key_id: str) -> bytes:
-        logs = self.__key_dict[key_id].container.attach(
-            stdout=True, stderr=True, stream=False, logs=True
+    @classmethod
+    def from_config(cls, config: dict) -> "ConnectionQuality":
+        return cls(
+            config.get("loss", 0), config.get("delay", 0), config.get("rate", 0)
         )
-        assert isinstance(
-            logs, bytes
-        ), f"Logs returned from docker was not bytes: {logs}"
-        return logs

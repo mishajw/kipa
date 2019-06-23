@@ -2,9 +2,16 @@
 
 import argparse
 import logging
-import os
+from pathlib import Path
 
-from simulation import networks, utils, comparisons, benchmarks
+import yaml
+
+from simulation import utils, benchmarks
+from simulation.key_creator import KeyCreator
+from simulation.networks import Network
+from simulation.operations.simulator import simulate
+
+log = logging.getLogger(__name__)
 
 
 def main():
@@ -40,15 +47,12 @@ def main():
     )
 
     args = parser.parse_args()
-    network_config = args.network_config
-    output_directory = args.output_directory
+    network_config = Path(args.network_config)
+    output_directory = Path(args.output_directory)
 
-    if args.comparison is not None:
-        if args.comparison == "angle":
-            comparisons.run_angle_comparison(network_config, output_directory)
-        else:
-            raise ValueError(f"Unrecognized comparison type: {args.comparison}")
-        return
+    key_creator = KeyCreator()
+    with open(str(network_config), "r") as file:
+        network = Network.from_config(yaml.load(file), key_creator)
 
     if args.benchmark is not None:
         if args.benchmark == "reliability":
@@ -61,17 +65,12 @@ def main():
             benchmark = benchmarks.ScalabilityBenchmark(output_directory)
         else:
             raise ValueError(f"Unrecognized benchmark type: {args.benchmark}")
-        benchmark.create(network_config)
+        log.info(f"Running {args.benchmark} benchmark")
+        benchmark.create(network)
         return
 
-    configuration = networks.configuration.Configuration.from_yaml(
-        network_config
-    )
-    configuration.run(
-        os.path.join(
-            args.output_directory, "configuration", utils.get_formatted_time()
-        )
-    )
+    log.info("Running configuration")
+    simulate(network, output_directory / "cli" / utils.get_formatted_time())
 
 
 if __name__ == "__main__":
