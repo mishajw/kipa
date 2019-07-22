@@ -1,11 +1,11 @@
 import itertools
 import logging
 import random
-import time
 from typing import List, NamedTuple
 
 from simulation.backends import Backend
-from simulation.networks import Network, NodeId, Node
+from simulation.backends.backend import CliCommand
+from simulation.networks import Network, NodeId
 
 log = logging.getLogger(__name__)
 
@@ -19,34 +19,21 @@ def sample_test_searches(
     if not node_pairs:
         return TestResult([], 0, 0, 0)
     random_node_pairs = [random.choice(node_pairs) for _ in range(num_searches)]
-    results = []
-    for i, (node1, node2) in enumerate(random_node_pairs):
-        log.info(f"Performing search {i + 1}/{num_searches}")
-        results.append(__test_search(backend, node1, node2))
-    return TestResult.from_searches(results)
 
+    commands = [
+        CliCommand(a.id, ["search", "--key-id", b.key_id()])
+        for a, b in random_node_pairs
+    ]
+    command_results = backend.run_commands(commands)
 
-def __test_search(
-    backend: Backend, from_node: Node, to_node: Node
-) -> "SearchResult":
-    try:
-        log.info(f"Testing search between {from_node.id} and {to_node.id}")
-
-        search_start_time = time.time()
-        output = backend.run_command(
-            from_node.id, ["search", "--key-id", to_node.key_id()]
+    search_results: List[SearchResult] = []
+    for (from_node, to_node), result in zip(random_node_pairs, command_results):
+        success = (
+            result.successful() and "Search unsuccessful" not in result.stdout
         )
-        search_end_time = time.time()
-        search_time_sec = search_end_time - search_start_time
-
-        success = output is not None and "Search unsuccessful" not in output
 
         message_id = set(
-            [
-                l["message_id"]
-                for l in backend.get_cli_logs(from_node.id)
-                if "message_id" in l
-            ]
+            [l["message_id"] for l in result.cli_logs if "message_id" in l]
         )
         assert len(message_id) == 1, (
             "Couldn't find exactly one `message_id` when testing search, "
@@ -62,20 +49,18 @@ def __test_search(
             and "making_request" in l
         )
 
-        return SearchResult(
-            from_node.id,
-            to_node.id,
-            success,
-            message_id,
-            num_requests,
-            search_time_sec,
+        search_results.append(
+            SearchResult(
+                from_node.id,
+                to_node.id,
+                success,
+                message_id,
+                num_requests,
+                result.duration_sec,
+            )
         )
-    except AssertionError as e:
-        log.error(
-            "Error thrown when testing search "
-            f"between {from_node.id} and {to_node.id}: {e}"
-        )
-        return SearchResult(from_node.id, to_node.id, False, "", 0, 0)
+
+    return TestResult.from_searches(search_results)
 
 
 class TestResult(NamedTuple):

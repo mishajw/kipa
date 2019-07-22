@@ -2,6 +2,7 @@ import json
 import logging
 import shutil
 import tempfile
+import time
 from pathlib import Path
 from typing import List, Dict, Tuple, Optional
 
@@ -10,6 +11,7 @@ from docker.models.containers import Container
 
 from simulation import Build
 from simulation.backends import Backend
+from simulation.backends.backend import CliCommand, CliCommandResult
 from simulation.key_creator import GPG_HOME
 from simulation.networks import Network, Node, NodeId, ConnectionQuality
 
@@ -58,10 +60,10 @@ class DockerBackend(Backend):
     def get_ip_address(self, node_id: NodeId) -> str:
         return self.__ip_addresses[node_id]
 
-    def run_command(self, node_id: NodeId, arguments: List[str]) -> str:
-        return self.__run_container_command(
-            node_id, ["/root/kipa_cli", *arguments]
-        )
+    def run_commands(
+        self, commands: List["CliCommand"]
+    ) -> List["CliCommandResult"]:
+        return list(map(self.__run_cli_command, commands))
 
     def stop_networking(self, node_id: NodeId):
         self.__network.disconnect(self.__containers[node_id])
@@ -201,6 +203,19 @@ class DockerBackend(Backend):
         log.debug(f"Created container with IP address {ip_address}")
 
         return container, ip_address
+
+    def __run_cli_command(self, command: CliCommand) -> CliCommandResult:
+        start_sec = time.time()
+        output = self.__run_container_command(
+            command.node_id, ["/root/kipa_cli", *command.args]
+        )
+        duration_sec = time.time() - start_sec
+        if output is None:
+            return CliCommandResult.failed(command)
+
+        return CliCommandResult(
+            command, output, self.get_cli_logs(command.node_id), duration_sec
+        )
 
     def __run_container_command(
         self, node_id: NodeId, command: List[str]

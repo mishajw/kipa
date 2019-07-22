@@ -2,28 +2,35 @@ import logging
 import time
 
 from simulation.backends import Backend
-from simulation.networks import Network, NodeId
+from simulation.backends.backend import CliCommand
+from simulation.networks import Network
 
 log = logging.getLogger(__name__)
 
 
 def ensure_all_alive(network: Network, backend: Backend) -> None:
     log.debug("Ensuring all nodes in the network are alive")
-    for node_id in network.ids():
-        __ensure_alive(backend, node_id)
 
+    ids = network.ids()
 
-def __ensure_alive(backend: Backend, node_id: NodeId, attempts=3) -> None:
-    if backend.run_command(node_id, ["list-neighbours"]) is not None:
-        return
+    for attempt in range(3):
+        commands = [CliCommand(node_id, ["list-neighbours"]) for node_id in ids]
+        results = backend.run_commands(commands)
+        ids = [
+            result.command.node_id
+            for result in results
+            if not result.successful()
+        ]
+        if not ids:
+            log.debug("All nodes ensured alive")
+            return
+        log.debug(
+            "At attempt %d, still %d nodes not responding. Sleeping 1s",
+            attempt + 1,
+            len(ids),
+        )
+        time.sleep(1)
 
-    assert (
-        attempts > 1
-    ), f"Three failed attempts to list-neighbours on node {node_id}"
-
-    log.info(
-        f"Node {node_id} did not respond to `list-neighbours`, "
-        "sleeping for one second and trying again"
+    raise AssertionError(
+        f"{len(ids)} nodes still didn't reply after all attempts"
     )
-    time.sleep(1)
-    __ensure_alive(backend, node_id, attempts - 1)
