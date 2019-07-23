@@ -1,4 +1,5 @@
 import os
+from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import List
 
@@ -9,7 +10,7 @@ from simulation.networks import Network
 from simulation.operations import TestResult
 
 
-class Benchmark:
+class Benchmark(ABC):
     def __init__(self, title: str, output_directory: Path) -> None:
         output_directory = (
             output_directory / "benchmarks" / title / utils.get_formatted_time()
@@ -20,11 +21,12 @@ class Benchmark:
         self.title = title
         self.output_directory = output_directory
 
+    @abstractmethod
     def create(self, network: Network) -> None:
         raise NotImplementedError()
 
 
-class SuccessSpeedBenchmark(Benchmark):
+class SuccessSpeedBenchmark(Benchmark, ABC):
     def __init__(
         self,
         title: str,
@@ -68,8 +70,9 @@ class SuccessSpeedBenchmark(Benchmark):
         )
 
         # Save the figure
-        figure.savefig(os.path.join(self.output_directory, "results.png"))
+        figure.savefig(self.output_directory / "results.png")
 
+    @abstractmethod
     def get_results(self, network: Network) -> TestResult:
         """Get the results of simulation runs for this benchmark"""
         raise NotImplementedError()
