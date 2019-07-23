@@ -1,37 +1,46 @@
+from abc import ABC, abstractmethod
 from typing import List, Dict, Optional, NamedTuple
 
 from simulation import Build
 from simulation.networks import Network, NodeId
 
 
-class Backend:
+class Backend(ABC):
+    @abstractmethod
     def initialize_network(
         self, network: Network, node_builds: Dict[NodeId, Build]
     ) -> None:
-        raise NotImplementedError()
+        pass
 
+    @abstractmethod
     def get_ip_address(self, node_id: NodeId) -> str:
-        raise NotImplementedError()
+        pass
 
+    @abstractmethod
     def run_commands(
         self, commands: List["CliCommand"]
     ) -> List["CliCommandResult"]:
-        raise NotImplementedError()
+        pass
 
+    @abstractmethod
     def stop_networking(self, node_id: NodeId):
-        raise NotImplementedError()
+        pass
 
+    @abstractmethod
     def get_logs(self, node_id: NodeId) -> List[dict]:
-        raise NotImplementedError()
+        pass
 
+    @abstractmethod
     def get_cli_logs(self, node_id: NodeId) -> List[dict]:
-        raise NotImplementedError()
+        pass
 
+    @abstractmethod
     def get_human_readable_logs(self, node_id: NodeId) -> bytes:
-        raise NotImplementedError()
+        pass
 
+    @abstractmethod
     def clean(self) -> None:
-        raise NotImplementedError()
+        pass
 
 
 class CliCommand(NamedTuple):
