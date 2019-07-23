@@ -94,7 +94,7 @@ fn main() -> ApiResult<()> {
 
     let log: slog::Logger = get_logger("cli", &args);
     info!(
-        log, "Starting daemon";
+        log, "Starting CLI";
         "args" => ::std::env::args().skip(1).collect::<Vec<_>>().join(" "));
 
     match message_daemon(&args, &log) {
