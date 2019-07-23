@@ -1,4 +1,5 @@
 import logging
+import multiprocessing
 import random
 from enum import Enum
 from typing import List, NamedTuple, Optional, Callable
@@ -17,6 +18,7 @@ class Network(NamedTuple):
     num_searches: int
     connect_type: "ConnectType"
     connection_quality: Optional["ConnectionQuality"]
+    num_threads: int
 
     # TODO: Try to not use KeyCreator here
     @classmethod
@@ -40,6 +42,7 @@ class Network(NamedTuple):
             config.get("num_searches", 50),
             ConnectType.from_str(config.get("connect_type", "cyclical")),
             connection_quality,
+            config.get("num_threads", multiprocessing.cpu_count()),
         )
 
     def ids(self) -> List[NodeId]:

@@ -23,8 +23,7 @@ log = logging.getLogger(__name__)
 
 def simulate(network: Network, output_directory: Path) -> TestResult:
     log.info("Starting backend")
-    # TODO: Make num_threads configurable
-    backend = DockerBackend(multiprocessing.cpu_count())
+    backend = DockerBackend(network.num_threads)
     backend.clean()
 
     log.info("Building and initializing network")
