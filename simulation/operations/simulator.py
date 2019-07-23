@@ -1,4 +1,5 @@
 import logging
+import multiprocessing
 from pathlib import Path
 from typing import Dict, Tuple, Any
 
@@ -22,7 +23,8 @@ log = logging.getLogger(__name__)
 
 def simulate(network: Network, output_directory: Path) -> TestResult:
     log.info("Starting backend")
-    backend = DockerBackend()
+    # TODO: Make num_threads configurable
+    backend = DockerBackend(multiprocessing.cpu_count())
     backend.clean()
 
     log.info("Building and initializing network")

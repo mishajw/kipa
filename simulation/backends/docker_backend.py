@@ -10,8 +10,8 @@ import docker
 from docker.models.containers import Container
 
 from simulation import Build
-from simulation.backends import Backend
-from simulation.backends.backend import CliCommand, CliCommandResult
+from simulation.backends import CliCommand, CliCommandResult
+from simulation.backends import ParallelBackend
 from simulation.key_creator import GPG_HOME
 from simulation.networks import Network, Node, NodeId, ConnectionQuality
 
@@ -24,8 +24,9 @@ IPV4_PREFIX = "172.16"
 IPV6_PREFIX = "fd92:bd99:d235:d1c5::"
 
 
-class DockerBackend(Backend):
-    def __init__(self):
+class DockerBackend(ParallelBackend):
+    def __init__(self, num_threads: int):
+        super().__init__(num_threads)
         self.__containers: Dict[NodeId, Container] = {}
         self.__ip_addresses: Dict[NodeId, str] = {}
 
@@ -60,10 +61,19 @@ class DockerBackend(Backend):
     def get_ip_address(self, node_id: NodeId) -> str:
         return self.__ip_addresses[node_id]
 
-    def run_commands(
-        self, commands: List["CliCommand"]
-    ) -> List["CliCommandResult"]:
-        return list(map(self.__run_cli_command, commands))
+    def run_command(self, command: CliCommand) -> CliCommandResult:
+        start_sec = time.time()
+        output = self.__run_container_command(
+            command.node_id, ["/root/kipa_cli", *command.args]
+        )
+        duration_sec = time.time() - start_sec
+        if output is None:
+            return CliCommandResult.failed(command)
+
+        res = CliCommandResult(
+            command, output, self.get_cli_logs(command.node_id), duration_sec
+        )
+        return res
 
     def stop_networking(self, node_id: NodeId):
         self.__network.disconnect(self.__containers[node_id])
@@ -203,19 +213,6 @@ class DockerBackend(Backend):
         log.debug(f"Created container with IP address {ip_address}")
 
         return container, ip_address
-
-    def __run_cli_command(self, command: CliCommand) -> CliCommandResult:
-        start_sec = time.time()
-        output = self.__run_container_command(
-            command.node_id, ["/root/kipa_cli", *command.args]
-        )
-        duration_sec = time.time() - start_sec
-        if output is None:
-            return CliCommandResult.failed(command)
-
-        return CliCommandResult(
-            command, output, self.get_cli_logs(command.node_id), duration_sec
-        )
 
     def __run_container_command(
         self, node_id: NodeId, command: List[str]
