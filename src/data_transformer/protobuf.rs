@@ -247,12 +247,12 @@ impl Into<proto_api::RequestBody> for RequestBody {
                 proto_body.set_connect_request(connect);
             }
             RequestPayload::ListNeighboursRequest() => {
-                let mut list = proto_api::ListNeighboursRequest::new();
-                proto_body.set_list_neighbours_request(list);
+                proto_body.set_list_neighbours_request(
+                    proto_api::ListNeighboursRequest::new(),
+                );
             }
             RequestPayload::VerifyRequest() => {
-                let mut list = proto_api::VerifyRequest::new();
-                proto_body.set_verify_request(list);
+                proto_body.set_verify_request(proto_api::VerifyRequest::new());
             }
         };
 
