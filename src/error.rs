@@ -26,7 +26,6 @@ use error_chain::ChainedError;
 use slog::Logger;
 use std::fmt;
 
-/// Errors generated using `error_chain` module
 error_chain! {
     errors {
         /// Error in parsing some data
