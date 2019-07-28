@@ -123,8 +123,7 @@ fn main() -> ApiResult<()> {
 fn message_daemon(
     args: &clap::ArgMatches,
     log: &slog::Logger,
-) -> InternalResult<()>
-{
+) -> InternalResult<()> {
     let gpg_key_handler: Arc<GpgKeyHandler> =
         GpgKeyHandler::create((), args, log.new(o!("gpg" => true)))?.into();
 

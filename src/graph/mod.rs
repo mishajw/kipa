@@ -67,8 +67,7 @@ impl GraphPayloadHandler {
         neighbours_store: Arc<NeighboursStore>,
         search_thread_pool_size: usize,
         log: Logger,
-    ) -> Self
-    {
+    ) -> Self {
         GraphPayloadHandler {
             key: key.clone(),
             search_breadth,
@@ -90,8 +89,7 @@ impl GraphPayloadHandler {
         key: &Key,
         mode: &MessageMode,
         log: Logger,
-    ) -> InternalResult<Option<Node>>
-    {
+    ) -> InternalResult<Option<Node>> {
         remotery_scope!("graph_search");
 
         let callback_key = key.clone();
@@ -236,8 +234,7 @@ impl PayloadHandler for GraphPayloadHandler {
         payload: &RequestPayload,
         sender: Option<Node>,
         message_id: u32,
-    ) -> InternalResult<ResponsePayload>
-    {
+    ) -> InternalResult<ResponsePayload> {
         remotery_scope!("graph_receive");
 
         info!(

@@ -38,8 +38,7 @@ fn with_context<T>(callback: impl FnOnce(RefMut<gpgme::Context>) -> T) -> T {
 fn with_secret_context<T>(
     secret: &str,
     callback: impl FnOnce(&mut gpgme::Context) -> T,
-) -> T
-{
+) -> T {
     // Turn the secret into bytes
     let secret: Vec<u8> = secret.as_bytes().to_vec();
 
@@ -70,8 +69,7 @@ impl GpgKeyHandler {
         owned_gpg_home_directory: &str,
         secret_path: &str,
         log: Logger,
-    ) -> InternalResult<Self>
-    {
+    ) -> InternalResult<Self> {
         Self::create_owned_directory(owned_gpg_home_directory)?;
         let secret = Self::get_secret(secret_path)?;
 
@@ -115,8 +113,7 @@ impl GpgKeyHandler {
         &self,
         key_id: &str,
         is_secret: bool,
-    ) -> InternalResult<()>
-    {
+    ) -> InternalResult<()> {
         remotery_scope!("gpg_copy_user_key");
 
         info!(
@@ -158,8 +155,7 @@ impl GpgKeyHandler {
         &self,
         key_id: &str,
         is_secret: bool,
-    ) -> InternalResult<Vec<u8>>
-    {
+    ) -> InternalResult<Vec<u8>> {
         remotery_scope!("gpg_get_user_key_data");
 
         info!(
@@ -369,8 +365,7 @@ impl GpgKeyHandler {
         data: &[u8],
         signature: &[u8],
         sender: &Key,
-    ) -> Result<()>
-    {
+    ) -> Result<()> {
         remotery_scope!("gpg_verify");
 
         debug!(

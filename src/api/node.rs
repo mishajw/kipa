@@ -15,7 +15,9 @@ pub struct Node {
 
 impl Node {
     /// Create a new node with some `Address` and `Key`
-    pub fn new(address: Address, key: Key) -> Self { Node { address, key } }
+    pub fn new(address: Address, key: Key) -> Self {
+        Node { address, key }
+    }
 }
 
 impl fmt::Display for Node {

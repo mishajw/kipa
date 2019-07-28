@@ -20,8 +20,7 @@ impl PrivateRequest {
         sender: Node,
         body_signature: Vec<u8>,
         encrypted_body: Vec<u8>,
-    ) -> Self
-    {
+    ) -> Self {
         PrivateRequest {
             sender,
             body_signature,

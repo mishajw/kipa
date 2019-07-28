@@ -78,15 +78,16 @@ pub trait Creator {
     type Parameters;
 
     /// Add `clap` arguments to the command line options
-    fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> { vec![] }
+    fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
+        vec![]
+    }
 
     /// Create the type, given `clap` arguments and parameters
     fn create(
         _parameters: Self::Parameters,
         _args: &clap::ArgMatches,
         _log: Logger,
-    ) -> InternalResult<Box<Self>>
-    {
+    ) -> InternalResult<Box<Self>> {
         Err(InternalError::public(
             "Unselected feature",
             ApiErrorType::Configuration,
@@ -116,8 +117,7 @@ impl Creator for Logger {
         name: Self::Parameters,
         args: &clap::ArgMatches,
         _log: Logger,
-    ) -> InternalResult<Box<Self>>
-    {
+    ) -> InternalResult<Box<Self>> {
         parse_with_err!(log_directory, String, args);
         fs::create_dir_all(&log_directory).map_err(|err| {
             InternalError::public_with_error(
@@ -186,8 +186,7 @@ impl Creator for LocalAddressParams {
         _parameters: Self::Parameters,
         args: &clap::ArgMatches,
         _log: Logger,
-    ) -> InternalResult<Box<Self>>
-    {
+    ) -> InternalResult<Box<Self>> {
         parse_with_err!(port, u16, args);
         parse_with_err!(interface_name, String, args);
         let interface_name = if interface_name == "none" {
@@ -211,8 +210,7 @@ impl Creator for DataTransformer {
         _parameters: Self::Parameters,
         _args: &clap::ArgMatches,
         _log: Logger,
-    ) -> InternalResult<Box<Self>>
-    {
+    ) -> InternalResult<Box<Self>> {
         use data_transformer::protobuf::ProtobufDataTransformer;
         Ok(Box::new(ProtobufDataTransformer {}))
     }
@@ -243,8 +241,7 @@ impl Creator for GpgKeyHandler {
         _parameters: Self::Parameters,
         args: &clap::ArgMatches,
         log: Logger,
-    ) -> InternalResult<Box<Self>>
-    {
+    ) -> InternalResult<Box<Self>> {
         let owned_gnupg_home_directory =
             args.value_of("owned_gnupg_home_directory").unwrap();
         let secret_path = args.value_of("secret_path").unwrap();
@@ -263,8 +260,7 @@ impl Creator for Client {
         _parameters: Self::Parameters,
         _args: &clap::ArgMatches,
         log: Logger,
-    ) -> InternalResult<Box<Self>>
-    {
+    ) -> InternalResult<Box<Self>> {
         use server::tcp::TcpGlobalClient;
         Ok(Box::new(TcpGlobalClient::new(log)))
     }
@@ -277,8 +273,7 @@ impl Creator for Server {
         parameters: Self::Parameters,
         _args: &clap::ArgMatches,
         log: Logger,
-    ) -> InternalResult<Box<Self>>
-    {
+    ) -> InternalResult<Box<Self>> {
         use server::tcp::TcpServer;
         let (message_handler_server, local_node, thread_manager) = parameters;
         Ok(Box::new(TcpServer::new(
@@ -309,8 +304,7 @@ impl Creator for LocalServer {
         parameters: Self::Parameters,
         args: &clap::ArgMatches,
         log: Logger,
-    ) -> InternalResult<Box<Self>>
-    {
+    ) -> InternalResult<Box<Self>> {
         use server::unix_socket::UnixSocketLocalServer;
         let (message_handler_server, thread_manager) = parameters;
         let socket_path = args.value_of("socket_path").unwrap();
@@ -332,8 +326,7 @@ impl Creator for LocalClient {
         _parameters: Self::Parameters,
         args: &clap::ArgMatches,
         log: Logger,
-    ) -> InternalResult<Box<Self>>
-    {
+    ) -> InternalResult<Box<Self>> {
         use server::unix_socket::UnixSocketLocalClient;
         let socket_path = args.value_of("socket_path").unwrap();
         Ok(Box::new(UnixSocketLocalClient::new(
@@ -354,8 +347,7 @@ impl Creator for MessageHandlerServer {
         parameters: Self::Parameters,
         _args: &clap::ArgMatches,
         log: Logger,
-    ) -> InternalResult<Box<Self>>
-    {
+    ) -> InternalResult<Box<Self>> {
         let (payload_handler, data_transformer, gpg_key_handler, local_node) =
             parameters;
         Ok(Box::new(MessageHandlerServer::new(
@@ -375,8 +367,7 @@ impl Creator for MessageHandlerClient {
         parameters: Self::Parameters,
         _args: &clap::ArgMatches,
         log: Logger,
-    ) -> InternalResult<Box<Self>>
-    {
+    ) -> InternalResult<Box<Self>> {
         let (local_node, client, data_transformer, gpg_key_handler) =
             parameters;
         Ok(Box::new(MessageHandlerClient::new(
@@ -395,8 +386,7 @@ impl Creator for MessageHandlerLocalClient {
         parameters: Self::Parameters,
         _args: &clap::ArgMatches,
         log: Logger,
-    ) -> InternalResult<Box<Self>>
-    {
+    ) -> InternalResult<Box<Self>> {
         let (local_client, data_transformer) = parameters;
         Ok(Box::new(MessageHandlerLocalClient::new(
             local_client,
@@ -421,8 +411,7 @@ impl Creator for KeySpaceManager {
         _parameters: Self::Parameters,
         args: &clap::ArgMatches,
         _log: Logger,
-    ) -> InternalResult<Box<Self>>
-    {
+    ) -> InternalResult<Box<Self>> {
         parse_with_err!(key_space_size, usize, args);
         Ok(Box::new(KeySpaceManager::new(key_space_size)))
     }
@@ -462,8 +451,7 @@ impl Creator for NeighboursStore {
         parameters: Self::Parameters,
         args: &clap::ArgMatches,
         log: Logger,
-    ) -> InternalResult<Box<Self>>
-    {
+    ) -> InternalResult<Box<Self>> {
         use api::RequestPayload;
         use std::time::Duration;
 
@@ -567,8 +555,7 @@ impl Creator for PayloadHandler {
         parameters: Self::Parameters,
         args: &clap::ArgMatches,
         log: Logger,
-    ) -> InternalResult<Box<Self>>
-    {
+    ) -> InternalResult<Box<Self>> {
         use graph::neighbour_gc::NeighbourGc;
         use graph::GraphPayloadHandler;
         use std::time::Duration;
@@ -626,8 +613,7 @@ impl Creator for PayloadHandler {
         _local_node: Self::Parameters,
         _args: &clap::ArgMatches,
         log: Logger,
-    ) -> InternalResult<Box<Self>>
-    {
+    ) -> InternalResult<Box<Self>> {
         use payload_handler::black_hole::BlackHolePayloadHandler;
         Ok(Box::new(BlackHolePayloadHandler::new(log)))
     }
@@ -637,8 +623,7 @@ impl Creator for PayloadHandler {
         _local_node: Self::Parameters,
         _args: &clap::ArgMatches,
         log: Logger,
-    ) -> InternalResult<Box<Self>>
-    {
+    ) -> InternalResult<Box<Self>> {
         use payload_handler::random_response::RandomResponsePayloadHandler;
         Ok(Box::new(RandomResponsePayloadHandler::new(log)))
     }

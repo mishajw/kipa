@@ -138,8 +138,7 @@ pub fn api_to_internal_result<T>(result: ApiResult<T>) -> InternalResult<T> {
 pub fn to_api_result<T>(
     result: InternalResult<T>,
     log: &Logger,
-) -> ApiResult<T>
-{
+) -> ApiResult<T> {
     result.map_err(|err| match err {
         InternalError::PublicError(err, _) => err,
         InternalError::PrivateError(err) => {

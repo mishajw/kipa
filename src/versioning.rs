@@ -3,7 +3,9 @@ use error::*;
 use regex::Regex;
 
 /// Get the version of this binary
-pub fn get_version() -> String { env!("CARGO_PKG_VERSION").to_string() }
+pub fn get_version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
+}
 
 /// Verify that two versions are compatible
 pub fn verify_version(our_version: &str, their_version: &str) -> ApiResult<()> {

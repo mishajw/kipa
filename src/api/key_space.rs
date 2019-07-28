@@ -11,10 +11,14 @@ pub struct KeySpace {
 
 impl KeySpace {
     #[allow(missing_docs)]
-    pub fn new(coords: Vec<i32>) -> Self { KeySpace { coords } }
+    pub fn new(coords: Vec<i32>) -> Self {
+        KeySpace { coords }
+    }
 
     #[allow(missing_docs)]
-    pub fn get_size(&self) -> usize { self.coords.len() }
+    pub fn get_size(&self) -> usize {
+        self.coords.len()
+    }
 }
 
 impl fmt::Display for KeySpace {

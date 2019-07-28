@@ -30,8 +30,7 @@ impl TcpServer {
         local_node: Node,
         thread_manager: Arc<ThreadManager>,
         log: Logger,
-    ) -> Self
-    {
+    ) -> Self {
         TcpServer {
             message_handler_server,
             local_node,
@@ -80,8 +79,7 @@ impl SocketHandler for TcpServer {
         &self,
         socket: &mut TcpStream,
         timeout: Option<Duration>,
-    ) -> Result<()>
-    {
+    ) -> Result<()> {
         socket
             .set_read_timeout(timeout)
             .chain_err(|| "Error on setting read timeout on TCP socket")?;
@@ -94,8 +92,7 @@ impl SocketHandler for TcpServer {
     fn get_socket_peer_address(
         &self,
         socket: &Self::SocketType,
-    ) -> Option<Address>
-    {
+    ) -> Option<Address> {
         socket
             .peer_addr()
             .chain_err(|| "Error on getting peer address")
@@ -105,7 +102,9 @@ impl SocketHandler for TcpServer {
 }
 
 impl SocketServer for TcpServer {
-    fn get_log(&self) -> &Logger { &self.log }
+    fn get_log(&self) -> &Logger {
+        &self.log
+    }
 }
 
 /// Implementation of sending global requests to TCP servers
@@ -115,7 +114,9 @@ pub struct TcpGlobalClient {
 
 impl TcpGlobalClient {
     #[allow(missing_docs)]
-    pub fn new(log: Logger) -> Self { TcpGlobalClient { log } }
+    pub fn new(log: Logger) -> Self {
+        TcpGlobalClient { log }
+    }
 }
 
 impl SocketHandler for TcpGlobalClient {
@@ -125,8 +126,7 @@ impl SocketHandler for TcpGlobalClient {
         &self,
         socket: &mut TcpStream,
         timeout: Option<Duration>,
-    ) -> Result<()>
-    {
+    ) -> Result<()> {
         debug!(
             self.log, "Setting timeout";
             "timeout" => timeout
@@ -143,8 +143,7 @@ impl SocketHandler for TcpGlobalClient {
     fn get_socket_peer_address(
         &self,
         socket: &Self::SocketType,
-    ) -> Option<Address>
-    {
+    ) -> Option<Address> {
         socket
             .peer_addr()
             .chain_err(|| "Error on getting peer address")
@@ -154,14 +153,15 @@ impl SocketHandler for TcpGlobalClient {
 }
 
 impl SocketClient for TcpGlobalClient {
-    fn get_log(&self) -> &Logger { &self.log }
+    fn get_log(&self) -> &Logger {
+        &self.log
+    }
 
     fn create_socket(
         &self,
         node: &Node,
         timeout: Duration,
-    ) -> Result<TcpStream>
-    {
+    ) -> Result<TcpStream> {
         TcpStream::connect_timeout(&node.address.to_socket_addr()?, timeout)
             .chain_err(|| {
                 format!("Error on trying to connect to node {}", node)
@@ -175,8 +175,7 @@ impl Client for TcpGlobalClient {
         node: &Node,
         request_data: &[u8],
         timeout: Duration,
-    ) -> Result<Vec<u8>>
-    {
+    ) -> Result<Vec<u8>> {
         SocketClient::send(self, node, request_data, timeout)
     }
 }

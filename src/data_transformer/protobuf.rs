@@ -29,8 +29,7 @@ impl DataTransformer for ProtobufDataTransformer {
     fn encode_request_message(
         &self,
         request: RequestMessage,
-    ) -> Result<Vec<u8>>
-    {
+    ) -> Result<Vec<u8>> {
         let proto_request = match request {
             RequestMessage::Fast(fast) => {
                 let mut proto_request = proto_api::RequestMessage::new();
@@ -52,8 +51,7 @@ impl DataTransformer for ProtobufDataTransformer {
         &self,
         data: &[u8],
         sender: Address,
-    ) -> Result<RequestMessage>
-    {
+    ) -> Result<RequestMessage> {
         let proto_message: proto_api::RequestMessage =
             parse_from_bytes(data)
                 .chain_err(|| "Error on parsing request message")?;
@@ -78,8 +76,7 @@ impl DataTransformer for ProtobufDataTransformer {
     fn encode_response_message(
         &self,
         response: ResponseMessage,
-    ) -> Result<Vec<u8>>
-    {
+    ) -> Result<Vec<u8>> {
         let proto_response = match response {
             ResponseMessage::Fast(fast) => {
                 let mut proto_response = proto_api::ResponseMessage::new();
@@ -102,8 +99,7 @@ impl DataTransformer for ProtobufDataTransformer {
         data: &[u8],
         // TOOD: Consider removing argument
         _sender: Address,
-    ) -> Result<ResponseMessage>
-    {
+    ) -> Result<ResponseMessage> {
         let proto_message: proto_api::ResponseMessage = parse_from_bytes(data)
             .chain_err(|| "Error on parsing response message")?;
 
@@ -162,8 +158,7 @@ fn encode_private_request(
 fn decode_private_request(
     proto_request: proto_api::PrivateRequest,
     sender: Address,
-) -> PrivateRequest
-{
+) -> PrivateRequest {
     PrivateRequest::new(
         sender_node_to_node(proto_request.get_sender(), sender),
         proto_request.get_body_signature().to_vec(),
@@ -199,8 +194,7 @@ fn encode_fast_request(request: FastRequest) -> proto_api::FastRequest {
 fn decode_fast_request(
     proto_request: proto_api::FastRequest,
     sender: Address,
-) -> FastRequest
-{
+) -> FastRequest {
     FastRequest::new(
         proto_request.get_body().to_vec(),
         sender_node_to_node(proto_request.get_sender(), sender),
@@ -447,8 +441,7 @@ impl Into<proto_api::SenderNode> for Node {
 fn sender_node_to_node(
     sender_node: &proto_api::SenderNode,
     address: Address,
-) -> Node
-{
+) -> Node {
     assert!(sender_node.has_key());
     assert!(sender_node.get_port() > 0 && sender_node.get_port() < 0xFFFF);
     let key = sender_node.get_key().clone().into();

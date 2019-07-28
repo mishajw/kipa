@@ -36,8 +36,7 @@ impl UnixSocketLocalServer {
         socket_path: String,
         thread_manager: Arc<ThreadManager>,
         log: Logger,
-    ) -> Result<Self>
-    {
+    ) -> Result<Self> {
         Ok(UnixSocketLocalServer {
             message_handler_server,
             socket_path,
@@ -91,8 +90,7 @@ impl SocketHandler for UnixSocketLocalServer {
         &self,
         _socket: &mut UnixStream,
         _timeout: Option<Duration>,
-    ) -> Result<()>
-    {
+    ) -> Result<()> {
         // Ignore timeouts on unix sockets, as there should be little to no
         // delay
         Ok(())
@@ -101,14 +99,15 @@ impl SocketHandler for UnixSocketLocalServer {
     fn get_socket_peer_address(
         &self,
         _socket: &Self::SocketType,
-    ) -> Option<Address>
-    {
+    ) -> Option<Address> {
         None
     }
 }
 
 impl SocketServer for UnixSocketLocalServer {
-    fn get_log(&self) -> &Logger { &self.log }
+    fn get_log(&self) -> &Logger {
+        &self.log
+    }
 }
 
 /// Send requests to a local KIPA daemon through a unix socket file
@@ -132,8 +131,7 @@ impl SocketHandler for UnixSocketLocalClient {
         &self,
         _socket: &mut UnixStream,
         _timeout: Option<Duration>,
-    ) -> Result<()>
-    {
+    ) -> Result<()> {
         // Ignore timeouts on unix sockets, as there should be little to no
         // delay
         Ok(())
@@ -142,8 +140,7 @@ impl SocketHandler for UnixSocketLocalClient {
     fn get_socket_peer_address(
         &self,
         _socket: &Self::SocketType,
-    ) -> Option<Address>
-    {
+    ) -> Option<Address> {
         None
     }
 }

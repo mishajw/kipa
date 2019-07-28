@@ -54,8 +54,7 @@ impl NeighbourGc {
         message_handler_client: Arc<MessageHandlerClient>,
         num_retries: u32,
         log: Logger,
-    ) -> Self
-    {
+    ) -> Self {
         NeighbourGc {
             neighbour_statuses: HashMap::new(),
             store,
@@ -119,8 +118,7 @@ impl NeighbourGc {
         status: &mut NeighbourStatus,
         message_handler_client: Arc<MessageHandlerClient>,
         log: Logger,
-    )
-    {
+    ) {
         remotery_scope!("neighbour_gc_check_neighbour");
 
         debug!(
@@ -192,5 +190,7 @@ impl Iterator for RandomDurationIter {
 
 impl periodic::IntoInstantIter for RandomDurationIter {
     type IterType = Self;
-    fn into_instant_iter(self) -> Self::IterType { self }
+    fn into_instant_iter(self) -> Self::IterType {
+        self
+    }
 }

@@ -14,7 +14,9 @@ pub struct BlackHolePayloadHandler {
 
 impl BlackHolePayloadHandler {
     /// Create a new black hole request handler
-    pub fn new(log: Logger) -> Self { BlackHolePayloadHandler { log: log } }
+    pub fn new(log: Logger) -> Self {
+        BlackHolePayloadHandler { log: log }
+    }
 }
 
 impl PayloadHandler for BlackHolePayloadHandler {
@@ -23,8 +25,7 @@ impl PayloadHandler for BlackHolePayloadHandler {
         payload: &RequestPayload,
         _sender: Option<Node>,
         _message_id: u32,
-    ) -> InternalResult<ResponsePayload>
-    {
+    ) -> InternalResult<ResponsePayload> {
         match payload {
             &RequestPayload::QueryRequest(_) => {
                 trace!(self.log, "Received query request");

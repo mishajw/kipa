@@ -52,7 +52,9 @@ struct SearchNode {
 }
 
 impl PartialEq for SearchNode {
-    fn eq(&self, other: &SearchNode) -> bool { self.node.key == other.node.key }
+    fn eq(&self, other: &SearchNode) -> bool {
+        self.node.key == other.node.key
+    }
 }
 
 impl Eq for SearchNode {}
@@ -75,8 +77,7 @@ impl GraphSearch {
     pub fn new(
         key_space_manager: Arc<KeySpaceManager>,
         thread_pool_size: usize,
-    ) -> Self
-    {
+    ) -> Self {
         GraphSearch {
             key_space_manager,
             thread_manager: Arc::new(ThreadManager::from_size(
@@ -115,8 +116,7 @@ impl GraphSearch {
         max_num_active_threads: usize,
         timeout_sec: usize,
         log: Logger,
-    ) -> Result<Option<T>>
-    {
+    ) -> Result<Option<T>> {
         remotery_scope!("graph_search_logic");
 
         info!(log, "Starting graph search"; "key" => %key);
@@ -321,8 +321,7 @@ impl GraphSearch {
         num_active_threads: usize,
         timeout_sec: usize,
         log: Logger,
-    ) -> Result<Option<T>>
-    {
+    ) -> Result<Option<T>> {
         remotery_scope!("graph_search_with_breadth_logic");
 
         // Continue the graph search looking for a key, until the `n`

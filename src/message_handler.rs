@@ -38,8 +38,7 @@ impl MessageHandlerServer {
         data_transformer: Arc<DataTransformer>,
         gpg_key_handler: Arc<GpgKeyHandler>,
         log: Logger,
-    ) -> Self
-    {
+    ) -> Self {
         MessageHandlerServer {
             payload_handler,
             local_node,
@@ -61,8 +60,7 @@ impl MessageHandlerServer {
         &self,
         request_data: &[u8],
         address: Option<Address>,
-    ) -> Result<Vec<u8>>
-    {
+    ) -> Result<Vec<u8>> {
         remotery_scope!("message_handler_receive_bytes");
 
         debug!(self.log, "Received bytes"; "from_cli" => address.is_none());
@@ -89,8 +87,7 @@ impl MessageHandlerServer {
     fn receive_request_message(
         &self,
         secure_request: RequestMessage,
-    ) -> Result<ResponseMessage>
-    {
+    ) -> Result<ResponseMessage> {
         remotery_scope!("message_handler_receive_request_message");
 
         Ok(match secure_request {
@@ -106,8 +103,7 @@ impl MessageHandlerServer {
     fn receive_private_message(
         &self,
         private_request: PrivateRequest,
-    ) -> Result<PrivateResponse>
-    {
+    ) -> Result<PrivateResponse> {
         remotery_scope!("message_handler_receive_private_message");
 
         debug!(self.log, "Received secure message");
@@ -137,8 +133,7 @@ impl MessageHandlerServer {
     fn receive_fast_message(
         &self,
         fast_request: FastRequest,
-    ) -> Result<FastResponse>
-    {
+    ) -> Result<FastResponse> {
         remotery_scope!("message_handler_receive_fast_message");
 
         debug!(self.log, "Received secure message");
@@ -165,8 +160,7 @@ impl MessageHandlerServer {
         &self,
         body: RequestBody,
         sender: Option<Node>,
-    ) -> Result<ResponseBody>
-    {
+    ) -> Result<ResponseBody> {
         remotery_scope!("message_handler_receive_body");
 
         debug!(self.log, "Received request body");
@@ -219,8 +213,7 @@ impl MessageHandlerClient {
         data_transformer: Arc<DataTransformer>,
         gpg_key_handler: Arc<GpgKeyHandler>,
         log: Logger,
-    ) -> MessageHandlerClient
-    {
+    ) -> MessageHandlerClient {
         MessageHandlerClient {
             local_node,
             client,
@@ -237,8 +230,7 @@ impl MessageHandlerClient {
         payload: RequestPayload,
         timeout: Duration,
         mode: &MessageMode,
-    ) -> ResponseResult<ResponsePayload>
-    {
+    ) -> ResponseResult<ResponsePayload> {
         remotery_scope!("message_handler_client_send_message");
 
         match mode {
@@ -257,8 +249,7 @@ impl MessageHandlerClient {
         node: &Node,
         payload: RequestPayload,
         timeout: Duration,
-    ) -> ResponseResult<ResponsePayload>
-    {
+    ) -> ResponseResult<ResponsePayload> {
         remotery_scope!("message_handler_client_send_private_message");
 
         let message_id: u32 = thread_rng().gen();
@@ -359,8 +350,7 @@ impl MessageHandlerClient {
         node: &Node,
         payload: RequestPayload,
         timeout: Duration,
-    ) -> ResponseResult<ResponsePayload>
-    {
+    ) -> ResponseResult<ResponsePayload> {
         remotery_scope!("message_handler_client_send_fast_message");
 
         let message_id: u32 = thread_rng().gen();
@@ -449,8 +439,7 @@ impl MessageHandlerLocalClient {
         local_client: Arc<LocalClient>,
         data_transformer: Arc<DataTransformer>,
         log: Logger,
-    ) -> Self
-    {
+    ) -> Self {
         MessageHandlerLocalClient {
             local_client,
             data_transformer,
@@ -462,8 +451,7 @@ impl MessageHandlerLocalClient {
     pub fn send(
         &self,
         payload: RequestPayload,
-    ) -> ResponseResult<ResponsePayload>
-    {
+    ) -> ResponseResult<ResponsePayload> {
         remotery_scope!("message_handler_local_client_send");
 
         let message_id: u32 = thread_rng().gen();

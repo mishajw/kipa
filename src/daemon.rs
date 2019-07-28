@@ -86,8 +86,7 @@ fn main() -> ApiResult<()> {
 fn run_servers(
     args: &clap::ArgMatches,
     log: &slog::Logger,
-) -> InternalResult<()>
-{
+) -> InternalResult<()> {
     let request_thread_manager = match args
         .value_of("max_num_threads")
         .and_then(|s| s.parse::<usize>().ok())

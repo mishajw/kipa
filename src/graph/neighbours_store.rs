@@ -40,8 +40,7 @@ impl NeighboursStore {
         key_space_manager: Arc<KeySpaceManager>,
         verify_neighbour_fn: Arc<Fn(&Node) -> InternalResult<()> + Send + Sync>,
         log: Logger,
-    ) -> Self
-    {
+    ) -> Self {
         let local_key_space = key_space_manager.create_from_key(local_key);
         info!(
             log,
@@ -191,8 +190,7 @@ impl NeighboursStore {
         neighbour: Node,
         key_space: KeySpace,
         trusted: bool,
-    ) -> bool
-    {
+    ) -> bool {
         let verified = trusted || self.verify_neighbour(&neighbour);
         if verified {
             info!(
@@ -231,8 +229,7 @@ impl NeighboursStore {
     fn get_neighbour_scores(
         &self,
         neighbours: &Vec<(Node, KeySpace)>,
-    ) -> HashMap<String, f32>
-    {
+    ) -> HashMap<String, f32> {
         // Calculate the angle metric
         let min_angles: Vec<f32> = neighbours
             .iter()

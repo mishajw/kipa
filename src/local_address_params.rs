@@ -24,8 +24,7 @@ impl LocalAddressParams {
         port: u16,
         interface_name: Option<String>,
         force_ipv6: bool,
-    ) -> Self
-    {
+    ) -> Self {
         LocalAddressParams {
             port,
             interface_name,

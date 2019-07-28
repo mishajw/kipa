@@ -75,8 +75,7 @@ impl KeySpaceManager {
         relative_to: &KeySpace,
         a: &KeySpace,
         b: &KeySpace,
-    ) -> f32
-    {
+    ) -> f32 {
         let dot = |a2: &KeySpace, b2: &KeySpace| -> f32 {
             let result: i128 = a2
                 .coords
@@ -118,8 +117,7 @@ impl KeySpaceManager {
         v: &mut Vec<T>,
         get_key_space_fn: &Fn(&T) -> KeySpace,
         key_space: &KeySpace,
-    )
-    {
+    ) {
         // TODO: Can we use lifetimes to avoid `get_key_space_fn` returning a
         // value, and instead a reference?
         // Related: https://github.com/rust-lang/rust/issues/22340
@@ -137,8 +135,7 @@ impl KeySpaceManager {
         &self,
         v: &mut Vec<T>,
         get_key_space_fn: &Fn(&T) -> KeySpace,
-    )
-    {
+    ) {
         if v.len() <= 1 {
             return;
         }
