@@ -1,5 +1,6 @@
 extern crate protoc_rust;
 
+use protoc_rust::Customize;
 use std::fs;
 
 fn main() {
@@ -11,6 +12,9 @@ fn main() {
         out_dir: output_proto_directory,
         input: &["resources/proto/proto_api.proto"],
         includes: &["resources/proto"],
+        customize: Customize {
+            ..Default::default()
+        },
     })
     .expect("Error on protobuf generation");
 }

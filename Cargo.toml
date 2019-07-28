@@ -32,30 +32,30 @@ use-random-response = []
 use-remotery = ["remotery"]
 
 [dependencies]
-error-chain = "0.12.0"
-protobuf = "1.5.0"
-gpgme = "0.8.0"
-clap = "2"
-byteorder = "1.2.2"
-pnet = "0.21.0"
-slog-term = "2.4.0"
-slog-async = "2.3.0"
-slog-json = "2.2.0"
-rand = "0.5.0-pre.1"
-spectral = "0.6.0"
-regex = "1.0.1"
-lazy_static = "1.0"
-periodic = "0.1.1"
-threadpool = "1.7.1"
-num_cpus = "1.8.0"
+error-chain = "*"
+protobuf = "*"
+gpgme = "*"
+clap = "*"
+byteorder = "*"
+pnet = "0.22.0"
+slog-term = "*"
+slog-async = "*"
+slog-json = "*"
+rand = "*"
+spectral = "*"
+regex = "*"
+lazy_static = "*"
+periodic = "*"
+threadpool = "*"
+num_cpus = "*"
 
-remotery = { version = "0.1.2", optional = true }
+remotery = { version = "*", optional = true }
 
 [dependencies.slog]
-version = "2.2.3"
+version = "*"
 default-features = false
 features = ["release_max_level_trace", "max_level_trace"]
 
 [build-dependencies]
-protoc-rust = "1.4.0"
+protoc-rust = "*"
 
