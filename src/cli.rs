@@ -13,8 +13,8 @@ use kipa_lib::api::{RequestPayload, ResponsePayload};
 use kipa_lib::creators::*;
 use kipa_lib::data_transformer::DataTransformer;
 use kipa_lib::error::*;
-use kipa_lib::gpg_key::GpgKeyHandler;
 use kipa_lib::message_handler::MessageHandlerLocalClient;
+use kipa_lib::pgp::GnupgKeyLoader;
 use kipa_lib::server::{LocalClient, LocalServer};
 
 use error_chain::ChainedError;
@@ -29,7 +29,6 @@ fn main() -> ApiResult<()> {
     creator_args.append(&mut DataTransformer::get_clap_args());
     creator_args.append(&mut LocalServer::get_clap_args());
     creator_args.append(&mut LocalClient::get_clap_args());
-    creator_args.append(&mut GpgKeyHandler::get_clap_args());
 
     let args = clap::App::new("kipa_cli")
         .subcommand(
@@ -124,8 +123,11 @@ fn message_daemon(
     args: &clap::ArgMatches,
     log: &slog::Logger,
 ) -> InternalResult<()> {
-    let gpg_key_handler: Arc<GpgKeyHandler> =
-        GpgKeyHandler::create((), args, log.new(o!("gpg" => true)))?.into();
+    let gnupg_key_loader: GnupgKeyLoader = *GnupgKeyLoader::create(
+        (),
+        args,
+        log.new(o!("gnupg_key_loader" => true)),
+    )?;
 
     let data_transformer: Arc<DataTransformer> = DataTransformer::create(
         (),
@@ -145,9 +147,9 @@ fn message_daemon(
     )?;
 
     if let Some(search_args) = args.subcommand_matches("search") {
-        let search_key = gpg_key_handler.get_user_key(String::from(
-            search_args.value_of("key_id").unwrap(),
-        ))?;
+        let search_key = gnupg_key_loader.get_recipient_public_key(
+            String::from(search_args.value_of("key_id").unwrap()),
+        )?;
         let search_mode = match search_args.value_of("mode").unwrap() {
             "private" => MessageMode::Private(),
             "fast" => MessageMode::Fast(),
@@ -182,9 +184,9 @@ fn message_daemon(
         }
     } else if let Some(connect_args) = args.subcommand_matches("connect") {
         // Get node from arguments
-        let node_key = gpg_key_handler.get_user_key(String::from(
-            connect_args.value_of("key_id").unwrap(),
-        ))?;
+        let node_key = gnupg_key_loader.get_recipient_public_key(
+            String::from(connect_args.value_of("key_id").unwrap()),
+        )?;
         let node_address =
             Address::from_string(connect_args.value_of("address").unwrap())?;
         let node = Node::new(node_address, node_key);

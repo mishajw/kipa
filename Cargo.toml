@@ -34,7 +34,7 @@ use-remotery = ["remotery"]
 [dependencies]
 error-chain = "*"
 protobuf = "*"
-gpgme = "*"
+sequoia-openpgp = "*"
 clap = "*"
 byteorder = "*"
 pnet = "0.22.0"
@@ -48,6 +48,7 @@ lazy_static = "*"
 periodic = "*"
 threadpool = "*"
 num_cpus = "*"
+failure = "*"
 
 remotery = { version = "*", optional = true }
 
@@ -55,6 +56,11 @@ remotery = { version = "*", optional = true }
 version = "*"
 default-features = false
 features = ["release_max_level_trace", "max_level_trace"]
+
+# Set vendored feature for nettle to statically link.
+[dependencies.nettle-sys]
+version = "*"
+features = ["vendored"]
 
 [build-dependencies]
 protoc-rust = "*"

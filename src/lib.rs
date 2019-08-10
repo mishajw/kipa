@@ -12,7 +12,6 @@ extern crate byteorder;
 extern crate clap;
 #[macro_use]
 extern crate error_chain;
-extern crate gpgme;
 extern crate pnet;
 extern crate protobuf;
 #[macro_use]
@@ -27,11 +26,13 @@ extern crate spectral;
 extern crate regex;
 #[macro_use]
 extern crate lazy_static;
+extern crate failure;
 extern crate num_cpus;
 extern crate periodic;
 extern crate rand;
 #[cfg(feature = "use-remotery")]
 extern crate remotery;
+extern crate sequoia_openpgp;
 extern crate threadpool;
 
 // Defines globally used macros, must be first
@@ -42,10 +43,10 @@ pub mod api;
 
 // Code for sending/receiving messages
 pub mod data_transformer;
-pub mod gpg_key;
 pub mod key_space_manager;
 pub mod message_handler;
 pub mod payload_handler;
+pub mod pgp;
 pub mod server;
 
 // Code for graph maintenance and searches

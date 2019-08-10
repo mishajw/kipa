@@ -23,6 +23,7 @@ pub use api::error::{ApiError, ApiErrorType, ApiResult};
 
 use error_chain;
 use error_chain::ChainedError;
+use failure;
 use slog::Logger;
 use std::fmt;
 
@@ -43,7 +44,9 @@ error_chain! {
         /// Error due to unimplemented functionality
         UnimplementedError(s: String) { display("Unimplemented error: {}", s) }
         /// Error due to GPGME
-        GpgMeError(s: String) { display("GPGME error: {}", s) }
+        GpgError(s: String, error: failure::Error) {
+            display("GPG error: {}. Caused by: {}", s, error)
+        }
     }
 }
 

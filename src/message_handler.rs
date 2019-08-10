@@ -11,8 +11,8 @@ use api::{
 };
 use data_transformer::DataTransformer;
 use error::*;
-use gpg_key::GpgKeyHandler;
 use payload_handler::PayloadHandler;
+use pgp::PgpKeyHandler;
 use server::{Client, LocalClient};
 use versioning;
 
@@ -26,7 +26,7 @@ pub struct MessageHandlerServer {
     payload_handler: Arc<PayloadHandler>,
     local_node: Node,
     data_transformer: Arc<DataTransformer>,
-    gpg_key_handler: Arc<GpgKeyHandler>,
+    pgp_key_handler: Arc<PgpKeyHandler>,
     log: Logger,
 }
 
@@ -36,14 +36,14 @@ impl MessageHandlerServer {
         payload_handler: Arc<PayloadHandler>,
         local_node: Node,
         data_transformer: Arc<DataTransformer>,
-        gpg_key_handler: Arc<GpgKeyHandler>,
+        pgp_key_handler: Arc<PgpKeyHandler>,
         log: Logger,
     ) -> Self {
         MessageHandlerServer {
             payload_handler,
             local_node,
             data_transformer,
-            gpg_key_handler,
+            pgp_key_handler,
             log,
         }
     }
@@ -108,9 +108,11 @@ impl MessageHandlerServer {
 
         debug!(self.log, "Received secure message");
 
-        let decrypted_body_data = self
-            .gpg_key_handler
-            .decrypt(&private_request.encrypted_body, &self.local_node.key)?;
+        let decrypted_body_data = self.pgp_key_handler.decrypt(
+            &private_request.encrypted_body,
+            &private_request.sender.key,
+            &self.local_node.key,
+        )?;
         let body = self
             .data_transformer
             .decode_request_body(&decrypted_body_data)?;
@@ -118,11 +120,13 @@ impl MessageHandlerServer {
             self.receive_body(body, Some(private_request.sender.clone()))?;
         let response_body_data =
             self.data_transformer.encode_response_body(response_body)?;
-        let encrypted_response_body_data = self
-            .gpg_key_handler
-            .encrypt(&response_body_data, &private_request.sender.key)?;
+        let encrypted_response_body_data = self.pgp_key_handler.encrypt(
+            &response_body_data,
+            &self.local_node.key,
+            &private_request.sender.key,
+        )?;
         let signed_response_body_data = self
-            .gpg_key_handler
+            .pgp_key_handler
             .sign(&response_body_data, &self.local_node.key)?;
         Ok(PrivateResponse::new(
             signed_response_body_data,
@@ -147,7 +151,7 @@ impl MessageHandlerServer {
         let response_body_data =
             self.data_transformer.encode_response_body(response_body)?;
         let signed_response_body_data = self
-            .gpg_key_handler
+            .pgp_key_handler
             .sign(&response_body_data, &self.local_node.key)?;
         Ok(FastResponse::new(
             response_body_data,
@@ -201,7 +205,7 @@ pub struct MessageHandlerClient {
     local_node: Node,
     client: Arc<Client>,
     data_transformer: Arc<DataTransformer>,
-    gpg_key_handler: Arc<GpgKeyHandler>,
+    pgp_key_handler: Arc<PgpKeyHandler>,
     log: Logger,
 }
 
@@ -211,14 +215,14 @@ impl MessageHandlerClient {
         local_node: Node,
         client: Arc<Client>,
         data_transformer: Arc<DataTransformer>,
-        gpg_key_handler: Arc<GpgKeyHandler>,
+        pgp_key_handler: Arc<PgpKeyHandler>,
         log: Logger,
     ) -> MessageHandlerClient {
         MessageHandlerClient {
             local_node,
             client,
             data_transformer,
-            gpg_key_handler,
+            pgp_key_handler,
             log,
         }
     }
@@ -261,11 +265,14 @@ impl MessageHandlerClient {
         let body_data = to_internal_result(
             self.data_transformer.encode_request_body(body),
         )?;
-        let encrypted_body_data = to_internal_result(
-            self.gpg_key_handler.encrypt(&body_data, &node.key),
-        )?;
+        let encrypted_body_data =
+            to_internal_result(self.pgp_key_handler.encrypt(
+                &body_data,
+                &self.local_node.key,
+                &node.key,
+            ))?;
         let signed_body_data = to_internal_result(
-            self.gpg_key_handler.sign(&body_data, &self.local_node.key),
+            self.pgp_key_handler.sign(&body_data, &self.local_node.key),
         )?;
 
         let message = PrivateRequest::new(
@@ -297,8 +304,12 @@ impl MessageHandlerClient {
         };
 
         let response_body_data = self
-            .gpg_key_handler
-            .decrypt(&private_response.encrypted_body, &self.local_node.key)
+            .pgp_key_handler
+            .decrypt(
+                &private_response.encrypted_body,
+                &node.key,
+                &self.local_node.key,
+            )
             .map_err(|err| {
                 InternalError::public_with_error(
                     "Failed to decrypt message",
@@ -307,7 +318,7 @@ impl MessageHandlerClient {
                 )
             })?;
 
-        self.gpg_key_handler
+        self.pgp_key_handler
             .verify(
                 &response_body_data,
                 &private_response.body_signature,
@@ -387,7 +398,7 @@ impl MessageHandlerClient {
             }
         };
 
-        self.gpg_key_handler
+        self.pgp_key_handler
             .verify(
                 &fast_response.body,
                 &fast_response.body_signature,

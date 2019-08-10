@@ -10,11 +10,13 @@ use kipa_lib::api::Node;
 use kipa_lib::creators::*;
 use kipa_lib::data_transformer::DataTransformer;
 use kipa_lib::error::*;
-use kipa_lib::gpg_key::GpgKeyHandler;
 use kipa_lib::key_space_manager::KeySpaceManager;
 use kipa_lib::local_address_params::LocalAddressParams;
 use kipa_lib::message_handler::{MessageHandlerClient, MessageHandlerServer};
 use kipa_lib::payload_handler::PayloadHandler;
+use kipa_lib::pgp::GnupgKeyLoader;
+use kipa_lib::pgp::PgpKeyHandler;
+use kipa_lib::pgp::SecretLoader;
 use kipa_lib::remotery_util;
 use kipa_lib::server::{Client, LocalServer, Server};
 use kipa_lib::thread_manager::ThreadManager;
@@ -32,7 +34,7 @@ fn main() -> ApiResult<()> {
     creator_args.append(&mut Client::get_clap_args());
     creator_args.append(&mut Server::get_clap_args());
     creator_args.append(&mut LocalServer::get_clap_args());
-    creator_args.append(&mut GpgKeyHandler::get_clap_args());
+    creator_args.append(&mut SecretLoader::get_clap_args());
     creator_args.append(&mut KeySpaceManager::get_clap_args());
 
     let args = clap::App::new("kipa_daemon")
@@ -99,12 +101,23 @@ fn run_servers(
     let request_thread_manager = Arc::new(request_thread_manager);
 
     let key_id: String = args.value_of("key_id").unwrap().into();
-    let gpg_key_handler: Arc<GpgKeyHandler> =
-        GpgKeyHandler::create((), args, log.new(o!("gpg" => true)))?.into();
-    gpg_key_handler.copy_user_key(&key_id, true)?;
+    let secret_loader: SecretLoader =
+        *SecretLoader::create((), args, log.new(o!("secret_loader" => true)))?;
+    let gnupg_key_loader: GnupgKeyLoader = *GnupgKeyLoader::create(
+        (),
+        args,
+        log.new(o!("gnupg_key_loader" => true)),
+    )?;
+    let pgp_key_handler: Arc<PgpKeyHandler> = PgpKeyHandler::create(
+        (),
+        args,
+        log.new(o!("pgp_key_handler" => true)),
+    )?
+    .into();
 
     // Create local node
-    let local_key = gpg_key_handler.get_user_key(key_id)?;
+    let local_key =
+        gnupg_key_loader.get_local_private_key(key_id, secret_loader)?;
     let local_node = Node::new(
         LocalAddressParams::create(
             (),
@@ -141,7 +154,7 @@ fn run_servers(
                 local_node.clone(),
                 client,
                 data_transformer.clone(),
-                gpg_key_handler.clone(),
+                pgp_key_handler.clone(),
             ),
             args,
             log.new(o!("message_handler_client" => true)),
@@ -165,7 +178,7 @@ fn run_servers(
             (
                 payload_handler,
                 data_transformer.clone(),
-                gpg_key_handler.clone(),
+                pgp_key_handler.clone(),
                 local_node.clone(),
             ),
             args,

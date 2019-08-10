@@ -6,13 +6,13 @@
 use api::Node;
 use data_transformer::DataTransformer;
 use error::*;
-use gpg_key::GpgKeyHandler;
 use key_space_manager::KeySpaceManager;
 use local_address_params::LocalAddressParams;
 use message_handler::{
     MessageHandlerClient, MessageHandlerLocalClient, MessageHandlerServer,
 };
 use payload_handler::PayloadHandler;
+use pgp::{GnupgKeyLoader, PgpKeyHandler, SecretLoader};
 #[allow(unused)]
 use server::{Client, LocalClient, LocalServer, Server};
 use thread_manager::ThreadManager;
@@ -217,25 +217,40 @@ impl Creator for DataTransformer {
     }
 }
 
-impl Creator for GpgKeyHandler {
+impl Creator for PgpKeyHandler {
+    type Parameters = ();
+
+    fn create(
+        _parameters: Self::Parameters,
+        _args: &clap::ArgMatches,
+        log: Logger,
+    ) -> InternalResult<Box<Self>> {
+        Ok(Box::new(PgpKeyHandler::new(log)))
+    }
+}
+
+impl Creator for GnupgKeyLoader {
+    type Parameters = ();
+
+    fn create(
+        _parameters: Self::Parameters,
+        _args: &clap::ArgMatches,
+        log: Logger,
+    ) -> InternalResult<Box<Self>> {
+        Ok(Box::new(GnupgKeyLoader::new(log)))
+    }
+}
+
+impl Creator for SecretLoader {
     type Parameters = ();
 
     fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
-        use gpg_key::{
-            DEFAULT_OWNED_GNUPG_HOME_DIRECTORY, DEFAULT_SECRET_PATH,
-        };
-        vec![
-            clap::Arg::with_name("owned_gnupg_home_directory")
-                .long("gnupg-home-directory")
-                .help("Modifiable GnuPG directory to load/delete keys from")
-                .takes_value(true)
-                .default_value(DEFAULT_OWNED_GNUPG_HOME_DIRECTORY),
-            clap::Arg::with_name("secret_path")
-                .long("secret-path")
-                .help("File containing password for GPG keys")
-                .takes_value(true)
-                .default_value(DEFAULT_SECRET_PATH),
-        ]
+        use pgp::DEFAULT_SECRET_PATH;
+        vec![clap::Arg::with_name("secret_path")
+            .long("secret-path")
+            .help("File containing password for GPG keys")
+            .takes_value(true)
+            .default_value(DEFAULT_SECRET_PATH)]
     }
 
     fn create(
@@ -243,14 +258,8 @@ impl Creator for GpgKeyHandler {
         args: &clap::ArgMatches,
         log: Logger,
     ) -> InternalResult<Box<Self>> {
-        let owned_gnupg_home_directory =
-            args.value_of("owned_gnupg_home_directory").unwrap();
         let secret_path = args.value_of("secret_path").unwrap();
-        Ok(Box::new(GpgKeyHandler::new(
-            owned_gnupg_home_directory.into(),
-            secret_path,
-            log,
-        )?))
+        Ok(Box::new(SecretLoader::new(secret_path.to_string(), log)))
     }
 }
 
@@ -341,7 +350,7 @@ impl Creator for MessageHandlerServer {
     type Parameters = (
         Arc<PayloadHandler>,
         Arc<DataTransformer>,
-        Arc<GpgKeyHandler>,
+        Arc<PgpKeyHandler>,
         Node,
     );
     fn create(
@@ -349,13 +358,13 @@ impl Creator for MessageHandlerServer {
         _args: &clap::ArgMatches,
         log: Logger,
     ) -> InternalResult<Box<Self>> {
-        let (payload_handler, data_transformer, gpg_key_handler, local_node) =
+        let (payload_handler, data_transformer, pgp_key_handler, local_node) =
             parameters;
         Ok(Box::new(MessageHandlerServer::new(
             payload_handler,
             local_node,
             data_transformer,
-            gpg_key_handler,
+            pgp_key_handler,
             log,
         )))
     }
@@ -363,19 +372,19 @@ impl Creator for MessageHandlerServer {
 
 impl Creator for MessageHandlerClient {
     type Parameters =
-        (Node, Arc<Client>, Arc<DataTransformer>, Arc<GpgKeyHandler>);
+        (Node, Arc<Client>, Arc<DataTransformer>, Arc<PgpKeyHandler>);
     fn create(
         parameters: Self::Parameters,
         _args: &clap::ArgMatches,
         log: Logger,
     ) -> InternalResult<Box<Self>> {
-        let (local_node, client, data_transformer, gpg_key_handler) =
+        let (local_node, client, data_transformer, pgp_key_handler) =
             parameters;
         Ok(Box::new(MessageHandlerClient::new(
             local_node,
             client,
             data_transformer,
-            gpg_key_handler,
+            pgp_key_handler,
             log,
         )))
     }
