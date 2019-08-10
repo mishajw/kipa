@@ -157,7 +157,7 @@ class DockerBackend(ParallelBackend):
                     chmod +x kipa_cli && \\
                     echo "p@ssword" >> secret.txt
                 CMD RUST_BACKTRACE=1 ./kipa_daemon \\
-                    -vvv \\
+                    -vvvv \\
                     --key-id $KIPA_KEY_ID \\
                     $KIPA_ARGS
             """

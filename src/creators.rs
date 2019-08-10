@@ -108,7 +108,7 @@ impl Creator for Logger {
             clap::Arg::with_name("verbose")
                 .long("verbose")
                 .short("v")
-                .help("Verbose logging (0=errors, 1=warnings, 2=info, 3=debug")
+                .help("Verbose logging (0=errors, 1=warnings, 2=info, 3=debug, 4=trace")
                 .multiple(true),
         ]
     }
@@ -132,7 +132,8 @@ impl Creator for Logger {
             0 => Level::Error,
             1 => Level::Warning,
             2 => Level::Info,
-            _ => Level::Debug,
+            3 => Level::Debug,
+            _ => Level::Trace,
         };
 
         // Create log file
