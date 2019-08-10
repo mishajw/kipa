@@ -223,8 +223,8 @@ class DockerBackend(ParallelBackend):
             container_logs = self.__containers[node_id].logs().decode()
             log.error(
                 f"Error on {node_id} when performing command {command}, "
-                f"logs: {container_logs}. Returning empty string",
-                error,
+                f"logs: {container_logs}. Returning empty string. "
+                f"Error: {error}"
             )
             return None
 
