@@ -9,12 +9,15 @@ KEY_SPACE_WIDTH = KEY_SPACE_UPPER - KEY_SPACE_LOWER
 
 
 class Distance(ABC):
+    def __init__(self, args: Args):
+        self.args = args
+
     @classmethod
-    def get(cls, name: str) -> "Distance":
+    def get(cls, name: str, args: Args) -> "Distance":
         if name == "wrapped":
-            return Wrapped()
+            return Wrapped(args)
         elif name == "unwrapped":
-            return Unwrapped()
+            return Unwrapped(args)
         else:
             raise AssertionError(f"Unknown distance: {name}")
 
@@ -26,7 +29,7 @@ class Distance(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def max_distance(self, args: Args) -> float:
+    def max_distance(self) -> float:
         """
         Get the maximum distance between any two points in key space.
         """
@@ -46,8 +49,10 @@ class Wrapped(Distance):
             total += distance ** 2
         return total ** 0.5
 
-    def max_distance(self, args: "Args") -> float:
-        return (((KEY_SPACE_WIDTH / 2) ** 2) * args.key_space_dimensions) ** 0.5
+    def max_distance(self) -> float:
+        return (
+            ((KEY_SPACE_WIDTH / 2) ** 2) * self.args.key_space_dimensions
+        ) ** 0.5
 
 
 class Unwrapped(Distance):
@@ -56,5 +61,7 @@ class Unwrapped(Distance):
         total = sum((a - b) ** 2 for a, b in zip(a.position, b.position))
         return total ** 0.5
 
-    def max_distance(self, args: "Args") -> float:
-        return (((KEY_SPACE_WIDTH / 2) ** 2) * args.key_space_dimensions) ** 0.5
+    def max_distance(self) -> float:
+        return (
+            ((KEY_SPACE_WIDTH / 2) ** 2) * self.args.key_space_dimensions
+        ) ** 0.5

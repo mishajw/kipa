@@ -50,17 +50,19 @@ def main():
     parser_args = parser.parse_args()
     all_args = Args.create(parser_args)
 
-    distance = Distance.get(parser_args.distance)
     test_strategy = TestStrategy.get(parser_args.test_strategy)
     for neighbour_strategy_name in parser_args.neighbour_strategy:
-        neighbour_strategy = NeighbourStrategy.get(neighbour_strategy_name)
-        results = [
-            run(
-                neighbour_strategy, distance, test_strategy, arg
-            ).mean_num_requests
-            for arg in all_args
-        ]
-        plt.plot(results)
+        results = []
+        for args in all_args:
+            distance = Distance.get(parser_args.distance, args)
+            neighbour_strategy = NeighbourStrategy.get(
+                neighbour_strategy_name, distance, args
+            )
+            results.append(
+                run(neighbour_strategy, distance, test_strategy, args)
+            )
+
+        plt.plot([r.mean_num_requests for r in results])
     plt.xticks(list(range(len(all_args))), all_args, rotation=45)
     plt.legend(parser_args.neighbour_strategy)
     plt.savefig(parser_args.output_path)
@@ -77,7 +79,7 @@ def run(
         Node(i, KeySpace.random(args.key_space_dimensions))
         for i in range(args.num_nodes)
     )
-    nodes = test_strategy.apply(nodes, neighbour_strategy, distance, args)
+    nodes = test_strategy.apply(nodes, neighbour_strategy)
     results = test_nodes(nodes, distance, args)
     print(type(neighbour_strategy).__name__, args, results, sep="\t")
     return results

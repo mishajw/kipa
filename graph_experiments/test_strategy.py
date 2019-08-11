@@ -14,11 +14,7 @@ class TestStrategy(ABC):
 
     @abstractmethod
     def apply(
-        self,
-        nodes: FrozenSet[Node],
-        neighbour_strategy: NeighbourStrategy,
-        distance: Distance,
-        args: Args,
+        self, nodes: FrozenSet[Node], neighbour_strategy: NeighbourStrategy
     ) -> FrozenSet[Node]:
         """
         Connects the input nodes together in some way, using a
@@ -37,19 +33,13 @@ class AllKnowing(TestStrategy):
     """
 
     def apply(
-        self,
-        nodes: FrozenSet[Node],
-        neighbour_strategy: NeighbourStrategy,
-        distance: Distance,
-        args: Args,
+        self, nodes: FrozenSet[Node], neighbour_strategy: NeighbourStrategy
     ) -> FrozenSet[Node]:
         new_nodes = []
         for node in nodes:
             for other_node in nodes:
                 if node is other_node:
                     pass
-                node = neighbour_strategy.apply(
-                    node, other_node, nodes, distance, args
-                )
+                node = neighbour_strategy.apply(node, other_node, nodes)
             new_nodes.append(node)
         return frozenset(new_nodes)
