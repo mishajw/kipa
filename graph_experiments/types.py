@@ -45,6 +45,15 @@ class KeySpace(NamedTuple):
             total += distance ** 2
         return total ** 0.5
 
+    @staticmethod
+    def max_distance(args: "Args", wrapped=True) -> float:
+        max_dimension_distance = float(
+            KEY_SPACE_WIDTH / 2 if wrapped else KEY_SPACE_WIDTH
+        )
+        return (
+            (max_dimension_distance ** 2) * args.key_space_dimensions
+        ) ** 0.5
+
 
 class Args(NamedTuple):
     num_nodes: int

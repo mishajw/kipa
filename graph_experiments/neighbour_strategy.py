@@ -14,6 +14,8 @@ class NeighbourStrategy(ABC):
             return Closest()
         elif name == "closest-unwrapped":
             return ClosestUnwrapped()
+        elif name == "closest-random":
+            return ClosestRandom()
         else:
             raise AssertionError(f"Unknown neighbour strategy: {name}")
 
@@ -37,7 +39,7 @@ class NeighbourStrategy(ABC):
             n for n in all_nodes if n.index in node.neighbours
         )
         new_neighbours = self.select_neighbours(
-            node.key_space, current_neighbours, new_neighbour
+            node.key_space, current_neighbours, new_neighbour, args
         )
         return node.with_neighbours(frozenset(n.index for n in new_neighbours))
 
@@ -47,6 +49,7 @@ class NeighbourStrategy(ABC):
         local: KeySpace,
         current_neighbours: FrozenSet[Node],
         new_neighbour: Node,
+        args: Args,
     ) -> FrozenSet[Node]:
         """
         Selects which neighbours to keep out of the current and a new one.
@@ -70,6 +73,7 @@ class Random(NeighbourStrategy):
         local: KeySpace,
         current_neighbours: FrozenSet[Node],
         new_neighbour: Node,
+        args: Args,
     ) -> FrozenSet[Node]:
         all_nodes = current_neighbours.union([new_neighbour])
         return frozenset(random.sample(all_nodes, len(current_neighbours)))
@@ -85,6 +89,7 @@ class Closest(NeighbourStrategy):
         local: KeySpace,
         current_neighbours: FrozenSet[Node],
         new_neighbour: Node,
+        args: Args,
     ) -> FrozenSet[Node]:
         closest = list(
             sorted(
@@ -105,11 +110,35 @@ class ClosestUnwrapped(NeighbourStrategy):
         local: KeySpace,
         current_neighbours: FrozenSet[Node],
         new_neighbour: Node,
+        args: Args,
     ) -> FrozenSet[Node]:
         closest = list(
             sorted(
                 [*current_neighbours, new_neighbour],
                 key=lambda n: local.distance(n.key_space, wrapped=False),
+            )
+        )
+        return frozenset(closest[: len(current_neighbours)])
+
+
+class ClosestRandom(NeighbourStrategy):
+    """
+    Selects the closes neighbours.
+    """
+
+    def select_neighbours(
+        self,
+        local: KeySpace,
+        current_neighbours: FrozenSet[Node],
+        new_neighbour: Node,
+        args: Args,
+    ) -> FrozenSet[Node]:
+        max_distance = KeySpace.max_distance(args)
+        closest = list(
+            sorted(
+                [*current_neighbours, new_neighbour],
+                key=lambda n: local.distance(n.key_space)
+                + random.random() * max_distance,
             )
         )
         return frozenset(closest[: len(current_neighbours)])
