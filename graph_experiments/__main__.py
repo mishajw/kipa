@@ -42,7 +42,8 @@ def main():
         "--key-space-dimensions", type=int, default=[2], nargs="+"
     )
     parser.add_argument("--max-neighbours", type=int, default=[10], nargs="+")
-    parser.add_argument("--num-tests", type=int, default=100)
+    parser.add_argument("--num-search-tests", type=int, default=100)
+    parser.add_argument("--num-graph-tests", type=int, default=1)
     parser.add_argument("--output-path", type=str, default="output.png")
     parser_args = parser.parse_args()
     all_args = Args.create(parser_args)

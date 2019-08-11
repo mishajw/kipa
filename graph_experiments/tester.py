@@ -19,9 +19,18 @@ class ConnectednessResults(NamedTuple):
 
 
 def test_nodes(nodes: FrozenSet[Node], args: Args) -> "ConnectednessResults":
+    assert args.num_graph_tests > 0
+    results = [__run_test(nodes, args) for _ in range(args.num_graph_tests)]
+    return ConnectednessResults(
+        sum(r.successful_percent for r in results) / len(results),
+        sum(r.mean_num_requests for r in results) / len(results),
+    )
+
+
+def __run_test(nodes: FrozenSet[Node], args: Args) -> "ConnectednessResults":
     search_node_pairs = list(permutations(nodes, 2))
     search_node_pairs = random.sample(
-        search_node_pairs, k=min(args.num_tests, len(search_node_pairs))
+        search_node_pairs, k=min(args.num_search_tests, len(search_node_pairs))
     )
     results = [
         __search(from_node, to_node, nodes)
