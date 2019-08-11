@@ -42,11 +42,12 @@ class Args(NamedTuple):
     num_nodes: int
     key_space_dimensions: int
     max_neighbours: int
+    num_tests: int
 
     @classmethod
     def create(cls, arg_lists) -> List["Args"]:
         return [
-            Args(*args)
+            Args(*args, num_tests=arg_lists.num_tests)
             for args in product(
                 arg_lists.num_nodes,
                 arg_lists.key_space_dimensions,

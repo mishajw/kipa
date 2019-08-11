@@ -42,6 +42,7 @@ def main():
         "--key-space-dimensions", type=int, default=[2], nargs="+"
     )
     parser.add_argument("--max-neighbours", type=int, default=[10], nargs="+")
+    parser.add_argument("--num-tests", type=int, default=100)
     parser.add_argument("--output-path", type=str, default="output.png")
     parser_args = parser.parse_args()
     all_args = Args.create(parser_args)
@@ -70,7 +71,7 @@ def run(
         for i in range(args.num_nodes)
     )
     nodes = test_strategy.apply(nodes, neighbour_strategy, args)
-    results = test_nodes(nodes)
+    results = test_nodes(nodes, args)
     print(type(neighbour_strategy).__name__, args, results, sep="\t")
     return results
 

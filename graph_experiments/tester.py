@@ -1,7 +1,8 @@
+import random
 from itertools import permutations
 from typing import NamedTuple, FrozenSet, Optional, Set
 
-from graph_experiments import Node
+from graph_experiments import Node, Args
 
 
 class ConnectednessResults(NamedTuple):
@@ -17,10 +18,14 @@ class ConnectednessResults(NamedTuple):
         )
 
 
-def test_nodes(nodes: FrozenSet[Node]) -> "ConnectednessResults":
+def test_nodes(nodes: FrozenSet[Node], args: Args) -> "ConnectednessResults":
+    search_node_pairs = list(permutations(nodes, 2))
+    search_node_pairs = random.sample(
+        search_node_pairs, k=min(args.num_tests, len(search_node_pairs))
+    )
     results = [
         __search(from_node, to_node, nodes)
-        for from_node, to_node in permutations(nodes, 2)
+        for from_node, to_node in search_node_pairs
     ]
     results_success = list(filter(None, results))
     successful_percent = len(results_success) / len(results) if results else 0
