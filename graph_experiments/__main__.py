@@ -5,8 +5,14 @@ This is a simplified set up of the code in src/graph. This allows for quick
 prototyping and testing of new algorithms in a perfect environment.
 
 To try a new neighbour selection algorithm, implement the `NeighbourStrategy`
-interface and choose `TestStrategy` to test it against. For now, you have to set
-the strategies in the main function.
+interface and choose `TestStrategy` to test it against.
+
+For example, to benchmark the "closest neighbours" strategy against the
+"all-knowing" test strategy, run:
+
+  python -m graph_experiments \
+    --neighbour-strategy closest \
+    --test-strategy all-knowing
 """
 
 import random
@@ -21,13 +27,15 @@ KEY_SPACE_UPPER = 1
 
 def main():
     parser = ArgumentParser("graph_experiments")
+    parser.add_argument("--neighbour-strategy", type=str, required=True)
+    parser.add_argument("--test-strategy", type=str, required=True)
     parser.add_argument("--num-nodes", type=int, default=100)
     parser.add_argument("--key-space-dimensions", type=int, default=2)
     parser.add_argument("--max-neighbours", type=int, default=10)
     args = parser.parse_args()
 
-    neighbour_strategy: NeighbourStrategy = ClosestNeighbourStrategy()
-    test_strategy: TestStrategy = AllKnowingTestStrategy()
+    neighbour_strategy = NeighbourStrategy.get(args.neighbour_strategy)
+    test_strategy = TestStrategy.get(args.test_strategy)
 
     nodes = frozenset(
         Node(i, KeySpace.random(args.key_space_dimensions))
@@ -73,6 +81,15 @@ class KeySpace(NamedTuple):
 
 
 class NeighbourStrategy(ABC):
+    @classmethod
+    def get(cls, name: str) -> "NeighbourStrategy":
+        if name == "random":
+            return RandomNeighbourStrategy()
+        elif name == "closest":
+            return ClosestNeighbourStrategy()
+        else:
+            raise AssertionError(f"Unknown neighbour strategy: {name}")
+
     def apply(
         self,
         node: Node,
@@ -117,6 +134,13 @@ class NeighbourStrategy(ABC):
 
 
 class TestStrategy(ABC):
+    @classmethod
+    def get(cls, name: str) -> "TestStrategy":
+        if name == "all-knowing":
+            return AllKnowingTestStrategy()
+        else:
+            raise AssertionError(f"Unknown test strategy: {name}")
+
     @abstractmethod
     def connect_nodes(
         self,
