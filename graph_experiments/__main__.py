@@ -18,8 +18,8 @@ For example, to benchmark the "closest neighbours" strategy against the
 import random
 from abc import ABC, abstractmethod
 from argparse import ArgumentParser
-from itertools import permutations
-from typing import NamedTuple, Set, Optional, FrozenSet, Tuple
+from itertools import permutations, product
+from typing import NamedTuple, Set, Optional, FrozenSet, Tuple, List
 
 KEY_SPACE_LOWER = -1
 KEY_SPACE_UPPER = 1
@@ -31,21 +31,24 @@ def main():
         "--neighbour-strategy", type=str, required=True, nargs="+"
     )
     parser.add_argument("--test-strategy", type=str, required=True)
-    parser.add_argument("--num-nodes", type=int, default=100)
-    parser.add_argument("--key-space-dimensions", type=int, default=2)
-    parser.add_argument("--max-neighbours", type=int, default=10)
+    parser.add_argument("--num-nodes", type=int, default=[100], nargs="+")
+    parser.add_argument(
+        "--key-space-dimensions", type=int, default=[2], nargs="+"
+    )
+    parser.add_argument("--max-neighbours", type=int, default=[10], nargs="+")
     parser_args = parser.parse_args()
-    args = Args.create(parser_args)
+    all_args = Args.create(parser_args)
 
     test_strategy = TestStrategy.get(parser_args.test_strategy)
     for neighbour_strategy_name in parser_args.neighbour_strategy:
         neighbour_strategy = NeighbourStrategy.get(neighbour_strategy_name)
-        print(
-            neighbour_strategy_name,
-            args,
-            run(neighbour_strategy, test_strategy, args),
-            sep="\t",
-        )
+        for args in all_args:
+            print(
+                neighbour_strategy_name,
+                args,
+                run(neighbour_strategy, test_strategy, args),
+                sep="\t",
+            )
 
 
 def run(
@@ -67,10 +70,15 @@ class Args(NamedTuple):
     max_neighbours: int
 
     @classmethod
-    def create(cls, args) -> "Args":
-        return Args(
-            args.num_nodes, args.key_space_dimensions, args.max_neighbours
-        )
+    def create(cls, arg_lists) -> List["Args"]:
+        return [
+            Args(*args)
+            for args in product(
+                arg_lists.num_nodes,
+                arg_lists.key_space_dimensions,
+                arg_lists.max_neighbours,
+            )
+        ]
 
     def __str__(self) -> str:
         return ",".join(
