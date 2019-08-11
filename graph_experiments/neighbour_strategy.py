@@ -84,7 +84,37 @@ class MetricNeighbourStrategy(NeighbourStrategy, ABC):
         return frozenset(sorted_by_metric)
 
     @abstractmethod
-    def metric(self, local: KeySpace, other: Node, args: Args) -> float:
+    def metric(self, local: KeySpace, node: Node, args: Args) -> float:
+        raise NotImplementedError()
+
+
+class ContextMetricNeighbourStrategy(NeighbourStrategy, ABC):
+    """
+    Strategy that picks nodes that minimize a given metric. The metric
+    calculation also takes the context of the other potential nodes.
+    """
+
+    def select_neighbours(
+        self,
+        local: KeySpace,
+        current_neighbours: FrozenSet[Node],
+        new_neighbour: Node,
+        args: Args,
+    ) -> FrozenSet[Node]:
+        all_nodes = current_neighbours.union([new_neighbour])
+        sorted_by_metric = sorted(
+            [*current_neighbours, new_neighbour],
+            key=lambda n: self.metric(
+                local, n, all_nodes.difference([n]), args
+            ),
+        )
+        sorted_by_metric = islice(sorted_by_metric, len(current_neighbours))
+        return frozenset(sorted_by_metric)
+
+    @abstractmethod
+    def metric(
+        self, local: KeySpace, node: Node, others: FrozenSet[Node], args: Args
+    ) -> float:
         raise NotImplementedError()
 
 
@@ -93,7 +123,7 @@ class Random(MetricNeighbourStrategy):
     Randomly selects neighbours.
     """
 
-    def metric(self, local: KeySpace, other: Node, args: Args) -> float:
+    def metric(self, local: KeySpace, node: Node, args: Args) -> float:
         return random.random()
 
 
@@ -102,8 +132,8 @@ class Closest(MetricNeighbourStrategy):
     Selects the closest neighbours.
     """
 
-    def metric(self, local: KeySpace, other: Node, args: Args) -> float:
-        return local.distance(other.key_space)
+    def metric(self, local: KeySpace, node: Node, args: Args) -> float:
+        return local.distance(node.key_space)
 
 
 class ClosestUnwrapped(MetricNeighbourStrategy):
@@ -111,8 +141,8 @@ class ClosestUnwrapped(MetricNeighbourStrategy):
     Selects the closest neighbours in unwrapped key space.
     """
 
-    def metric(self, local: KeySpace, other: Node, args: Args) -> float:
-        return local.distance(other.key_space, wrapped=False)
+    def metric(self, local: KeySpace, node: Node, args: Args) -> float:
+        return local.distance(node.key_space, wrapped=False)
 
 
 class ClosestRandom(MetricNeighbourStrategy):
@@ -120,7 +150,8 @@ class ClosestRandom(MetricNeighbourStrategy):
     Selects the closest neighbours with some randomness.
     """
 
-    def metric(self, local: KeySpace, other: Node, args: Args) -> float:
-        return local.distance(
-            other.key_space
-        ) + random.random() * KeySpace.max_distance(args)
+    def metric(self, local: KeySpace, node: Node, args: Args) -> float:
+        return (
+            local.distance(node.key_space)
+            + random.random() * KeySpace.max_distance(args) * 0.1
+        )
