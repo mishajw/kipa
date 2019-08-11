@@ -7,11 +7,13 @@ prototyping and testing of new algorithms in a perfect environment.
 To try a new neighbour selection algorithm, implement the `NeighbourStrategy`
 interface and choose `TestStrategy` to test it against.
 
-For example, to benchmark the "closest neighbours" strategy against the
-"all-knowing" test strategy, run:
+For example, to benchmark the "random" and  "closest" neighbour strategies
+against the "all-knowing" test strategy, against different numbers of nodes,
+run:
 
   python -m graph_experiments \
-    --neighbour-strategy closest \
+    --num-nodes 10 20 30 40 50
+    --neighbour-strategy random closest \
     --test-strategy all-knowing
 """
 
