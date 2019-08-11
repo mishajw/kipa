@@ -42,7 +42,9 @@ def main():
         neighbour_strategy = NeighbourStrategy.get(neighbour_strategy_name)
         print(
             neighbour_strategy_name,
+            args,
             run(neighbour_strategy, test_strategy, args),
+            sep="\t",
         )
 
 
@@ -68,6 +70,15 @@ class Args(NamedTuple):
     def create(cls, args) -> "Args":
         return Args(
             args.num_nodes, args.key_space_dimensions, args.max_neighbours
+        )
+
+    def __str__(self) -> str:
+        return ",".join(
+            [
+                f"n={self.num_nodes}",
+                f"e={self.max_neighbours}",
+                f"d={self.key_space_dimensions}",
+            ]
         )
 
 
@@ -223,6 +234,14 @@ class ConnectednessResults(NamedTuple):
             )
             to_explore.update(new_nodes.difference(explored))
         return None
+
+    def __str__(self) -> str:
+        return ",".join(
+            [
+                f"{self.successful_percent * 100:.2f}%",
+                f"avg={self.mean_num_requests:.2f}",
+            ]
+        )
 
 
 class RandomNeighbourStrategy(NeighbourStrategy):
