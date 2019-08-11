@@ -1,4 +1,4 @@
-from .types import Node, KeySpace, Args
+from .types import Node, KeySpace, GraphArgs, StrategyArgs, TestArgs
 from .distance import Distance
 from .neighbour_strategy import NeighbourStrategy
 from .test_strategy import TestStrategy

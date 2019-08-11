@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import FrozenSet
 
-from graph_experiments import Node, Args, NeighbourStrategy, Distance
+from graph_experiments import Node, GraphArgs, NeighbourStrategy, Distance
 
 
 class TestStrategy(ABC):

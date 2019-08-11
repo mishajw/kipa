@@ -3,17 +3,17 @@ from abc import ABC, abstractmethod
 from itertools import islice
 from typing import FrozenSet
 
-from graph_experiments import Node, Args, KeySpace, Distance
+from graph_experiments import Node, GraphArgs, KeySpace, Distance
 
 
 class NeighbourStrategy(ABC):
-    def __init__(self, distance: Distance, args: Args) -> None:
+    def __init__(self, distance: Distance, args: GraphArgs) -> None:
         self.distance = distance
         self.args = args
 
     @classmethod
     def get(
-        cls, name: str, distance: Distance, args: Args
+        cls, name: str, distance: Distance, args: GraphArgs
     ) -> "NeighbourStrategy":
         if name == "random":
             return Random(distance, args)

@@ -2,7 +2,7 @@ import random
 from itertools import permutations
 from typing import NamedTuple, FrozenSet, Optional, Set
 
-from graph_experiments import Node, Args, Distance
+from graph_experiments import Node, Distance, TestArgs
 
 
 class ConnectednessResults(NamedTuple):
@@ -19,7 +19,7 @@ class ConnectednessResults(NamedTuple):
 
 
 def test_nodes(
-    nodes: FrozenSet[Node], distance: Distance, args: Args
+    nodes: FrozenSet[Node], distance: Distance, args: TestArgs
 ) -> "ConnectednessResults":
     assert args.num_graph_tests > 0
     results = [
@@ -32,7 +32,7 @@ def test_nodes(
 
 
 def __run_test(
-    nodes: FrozenSet[Node], distance: Distance, args: Args
+    nodes: FrozenSet[Node], distance: Distance, args: TestArgs
 ) -> "ConnectednessResults":
     search_node_pairs = list(permutations(nodes, 2))
     search_node_pairs = random.sample(

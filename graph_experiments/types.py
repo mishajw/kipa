@@ -32,12 +32,10 @@ class KeySpace(NamedTuple):
         )
 
 
-class Args(NamedTuple):
+class GraphArgs(NamedTuple):
     num_nodes: int
     key_space_dimensions: int
     max_neighbours: int
-    num_search_tests: int
-    num_graph_tests: int
 
     def __str__(self) -> str:
         return ",".join(
@@ -47,3 +45,23 @@ class Args(NamedTuple):
                 f"d={self.key_space_dimensions}",
             ]
         )
+
+
+class StrategyArgs(NamedTuple):
+    neighbour_strategy_name: str
+    distance_name: str
+    test_strategy_name: str
+
+    def __str__(self) -> str:
+        return ",".join(
+            [
+                self.neighbour_strategy_name,
+                self.distance_name,
+                self.test_strategy_name,
+            ]
+        )
+
+
+class TestArgs(NamedTuple):
+    num_search_tests: int
+    num_graph_tests: int

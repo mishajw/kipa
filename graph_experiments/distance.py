@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from graph_experiments import KeySpace, Args
+from graph_experiments import KeySpace, GraphArgs
 
 # TODO: DRY
 KEY_SPACE_LOWER = -1
@@ -9,11 +9,11 @@ KEY_SPACE_WIDTH = KEY_SPACE_UPPER - KEY_SPACE_LOWER
 
 
 class Distance(ABC):
-    def __init__(self, args: Args):
+    def __init__(self, args: GraphArgs):
         self.args = args
 
     @classmethod
-    def get(cls, name: str, args: Args) -> "Distance":
+    def get(cls, name: str, args: GraphArgs) -> "Distance":
         if name == "wrapped":
             return Wrapped(args)
         elif name == "unwrapped":
