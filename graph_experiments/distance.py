@@ -13,6 +13,8 @@ class Distance(ABC):
             return Wrapped(args)
         elif name == "unwrapped":
             return Unwrapped(args)
+        elif name == "ring":
+            return Ring(args)
         else:
             raise AssertionError(f"Unknown distance: {name}")
 
@@ -62,3 +64,24 @@ class Unwrapped(Distance):
             ((constants.KEY_SPACE_WIDTH / 2) ** 2)
             * self.args.key_space_dimensions
         ) ** 0.5
+
+
+class Ring(Distance):
+    def __init__(self, args: GraphArgs):
+        super().__init__(args)
+        self.underlying = Wrapped(args)
+
+    def distance(self, a: KeySpace, b: KeySpace) -> float:
+        assert self.args.key_space_dimensions > 1
+        radius, *a_position = a.position
+        _, *b_position = b.position
+        radius = abs(radius)
+        return abs(
+            radius
+            - self.underlying.distance(
+                KeySpace(a_position), KeySpace(b_position)
+            )
+        )
+
+    def max_distance(self) -> float:
+        return self.underlying.max_distance()
