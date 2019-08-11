@@ -8,7 +8,7 @@ class TestStrategy(ABC):
     @classmethod
     def get(cls, name: str) -> "TestStrategy":
         if name == "all-knowing":
-            return AllKnowingTestStrategy()
+            return AllKnowing()
         else:
             raise AssertionError(f"Unknown test strategy: {name}")
 
@@ -29,7 +29,7 @@ class TestStrategy(ABC):
         raise NotImplementedError()
 
 
-class AllKnowingTestStrategy(TestStrategy):
+class AllKnowing(TestStrategy):
     """
     Gives every node the choice of every other node. The ideal scenario for a
     `NeighbourStrategy`.

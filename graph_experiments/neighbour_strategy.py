@@ -9,11 +9,11 @@ class NeighbourStrategy(ABC):
     @classmethod
     def get(cls, name: str) -> "NeighbourStrategy":
         if name == "random":
-            return RandomNeighbourStrategy()
+            return Random()
         elif name == "closest":
-            return ClosestNeighbourStrategy()
+            return Closest()
         elif name == "closest-unwrapped":
-            return ClosestUnwrappedNeighbourStrategy()
+            return ClosestUnwrapped()
         else:
             raise AssertionError(f"Unknown neighbour strategy: {name}")
 
@@ -60,7 +60,7 @@ class NeighbourStrategy(ABC):
         raise NotImplementedError()
 
 
-class RandomNeighbourStrategy(NeighbourStrategy):
+class Random(NeighbourStrategy):
     """
     Randomly selects neighbours.
     """
@@ -75,7 +75,7 @@ class RandomNeighbourStrategy(NeighbourStrategy):
         return frozenset(random.sample(all_nodes, len(current_neighbours)))
 
 
-class ClosestNeighbourStrategy(NeighbourStrategy):
+class Closest(NeighbourStrategy):
     """
     Selects the closest neighbours.
     """
@@ -95,7 +95,7 @@ class ClosestNeighbourStrategy(NeighbourStrategy):
         return frozenset(closest[: len(current_neighbours)])
 
 
-class ClosestUnwrappedNeighbourStrategy(NeighbourStrategy):
+class ClosestUnwrapped(NeighbourStrategy):
     """
     Selects the closest neighbours in unwrapped key space.
     """
