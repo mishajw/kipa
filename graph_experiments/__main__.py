@@ -26,7 +26,7 @@ def main():
     parser.add_argument("--max-neighbours", type=int, default=10)
     args = parser.parse_args()
 
-    neighbour_strategy: NeighbourStrategy = RandomNeighbourStrategy()
+    neighbour_strategy: NeighbourStrategy = ClosestNeighbourStrategy()
     test_strategy: TestStrategy = AllKnowingTestStrategy()
 
     nodes = frozenset(
@@ -188,6 +188,26 @@ class RandomNeighbourStrategy(NeighbourStrategy):
     ) -> FrozenSet[Node]:
         all_nodes = current_neighbours.union([new_neighbour])
         return frozenset(random.sample(all_nodes, len(current_neighbours)))
+
+
+class ClosestNeighbourStrategy(NeighbourStrategy):
+    """
+    Selects the closes neighbours.
+    """
+
+    def select_neighbours(
+        self,
+        local: KeySpace,
+        current_neighbours: FrozenSet[Node],
+        new_neighbour: Node,
+    ) -> FrozenSet[Node]:
+        closest = list(
+            sorted(
+                [*current_neighbours, new_neighbour],
+                key=lambda n: local.distance(n.key_space),
+            )
+        )
+        return frozenset(closest[: len(current_neighbours)])
 
 
 class AllKnowingTestStrategy(TestStrategy):
