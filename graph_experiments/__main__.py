@@ -27,7 +27,9 @@ KEY_SPACE_UPPER = 1
 
 def main():
     parser = ArgumentParser("graph_experiments")
-    parser.add_argument("--neighbour-strategy", type=str, required=True)
+    parser.add_argument(
+        "--neighbour-strategy", type=str, required=True, nargs="+"
+    )
     parser.add_argument("--test-strategy", type=str, required=True)
     parser.add_argument("--num-nodes", type=int, default=100)
     parser.add_argument("--key-space-dimensions", type=int, default=2)
@@ -35,9 +37,13 @@ def main():
     parser_args = parser.parse_args()
     args = Args.create(parser_args)
 
-    neighbour_strategy = NeighbourStrategy.get(parser_args.neighbour_strategy)
     test_strategy = TestStrategy.get(parser_args.test_strategy)
-    print(run(neighbour_strategy, test_strategy, args))
+    for neighbour_strategy_name in parser_args.neighbour_strategy:
+        neighbour_strategy = NeighbourStrategy.get(neighbour_strategy_name)
+        print(
+            neighbour_strategy_name,
+            run(neighbour_strategy, test_strategy, args),
+        )
 
 
 def run(
