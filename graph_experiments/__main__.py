@@ -182,7 +182,7 @@ class TestStrategy(ABC):
 
 
 class ConnectednessResults(NamedTuple):
-    fully_connected: bool
+    successful_percent: float
     mean_num_requests: float
 
     @classmethod
@@ -192,12 +192,15 @@ class ConnectednessResults(NamedTuple):
             for from_node, to_node in permutations(nodes, 2)
         ]
         results_success = list(filter(None, results))
+        successful_percent = (
+            len(results_success) / len(results) if results else 0
+        )
         mean_num_requests = (
             sum(results_success) / len(results_success)
             if results_success
             else 0
         )
-        return ConnectednessResults(None not in results, mean_num_requests)
+        return ConnectednessResults(successful_percent, mean_num_requests)
 
     @staticmethod
     def __search(
