@@ -1,11 +1,6 @@
 from abc import ABC, abstractmethod
 
-from graph_experiments import KeySpace, GraphArgs
-
-# TODO: DRY
-KEY_SPACE_LOWER = -1
-KEY_SPACE_UPPER = 1
-KEY_SPACE_WIDTH = KEY_SPACE_UPPER - KEY_SPACE_LOWER
+from graph_experiments import KeySpace, GraphArgs, constants
 
 
 class Distance(ABC):
@@ -43,15 +38,16 @@ class Wrapped(Distance):
         for a, b in zip(a.position, b.position):
             distance = min(
                 abs(a - b),
-                abs((a + KEY_SPACE_WIDTH) - b),
-                abs((a - KEY_SPACE_WIDTH) - b),
+                abs((a + constants.KEY_SPACE_WIDTH) - b),
+                abs((a - constants.KEY_SPACE_WIDTH) - b),
             )
             total += distance ** 2
         return total ** 0.5
 
     def max_distance(self) -> float:
         return (
-            ((KEY_SPACE_WIDTH / 2) ** 2) * self.args.key_space_dimensions
+            ((constants.KEY_SPACE_WIDTH / 2) ** 2)
+            * self.args.key_space_dimensions
         ) ** 0.5
 
 
@@ -63,5 +59,6 @@ class Unwrapped(Distance):
 
     def max_distance(self) -> float:
         return (
-            ((KEY_SPACE_WIDTH / 2) ** 2) * self.args.key_space_dimensions
+            ((constants.KEY_SPACE_WIDTH / 2) ** 2)
+            * self.args.key_space_dimensions
         ) ** 0.5

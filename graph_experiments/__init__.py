@@ -1,3 +1,4 @@
+from . import constants
 from .types import Node, KeySpace, GraphArgs, StrategyArgs, TestArgs
 from .distance import Distance
 from .neighbour_strategy import NeighbourStrategy

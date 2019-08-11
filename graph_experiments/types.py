@@ -1,9 +1,7 @@
 import random
 from typing import NamedTuple, FrozenSet, Tuple
 
-KEY_SPACE_LOWER = -1
-KEY_SPACE_UPPER = 1
-KEY_SPACE_WIDTH = KEY_SPACE_UPPER - KEY_SPACE_LOWER
+from graph_experiments import constants
 
 
 class Node(NamedTuple):
@@ -25,7 +23,11 @@ class KeySpace(NamedTuple):
     def random(cls, key_space_dimensions: int) -> "KeySpace":
         return KeySpace(
             tuple(
-                float(random.uniform(KEY_SPACE_LOWER, KEY_SPACE_UPPER))
+                float(
+                    random.uniform(
+                        constants.KEY_SPACE_LOWER, constants.KEY_SPACE_UPPER
+                    )
+                )
                 for _ in range(key_space_dimensions)
             )
         )
