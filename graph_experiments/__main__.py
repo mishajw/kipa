@@ -58,8 +58,8 @@ def main():
         plt.plot(results)
     plt.xticks(list(range(len(all_args))), all_args, rotation=45)
     plt.legend(parser_args.neighbour_strategy)
-    plt.show()
     plt.savefig(parser_args.output_path)
+    plt.show()
 
 
 def run(
