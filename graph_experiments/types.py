@@ -39,21 +39,6 @@ class Args(NamedTuple):
     num_search_tests: int
     num_graph_tests: int
 
-    @classmethod
-    def create(cls, arg_lists) -> List["Args"]:
-        return [
-            Args(
-                *args,
-                num_search_tests=arg_lists.num_search_tests,
-                num_graph_tests=arg_lists.num_graph_tests,
-            )
-            for args in product(
-                arg_lists.num_nodes,
-                arg_lists.key_space_dimensions,
-                arg_lists.max_neighbours,
-            )
-        ]
-
     def __str__(self) -> str:
         return ",".join(
             [

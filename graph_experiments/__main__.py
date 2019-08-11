@@ -18,6 +18,7 @@ run:
 """
 
 from argparse import ArgumentParser
+from itertools import product
 
 import matplotlib.pyplot as plt
 
@@ -37,8 +38,8 @@ def main():
     parser.add_argument(
         "--neighbour-strategy", type=str, required=True, nargs="+"
     )
-    parser.add_argument("--distance", type=str, required=True)
-    parser.add_argument("--test-strategy", type=str, required=True)
+    parser.add_argument("--distance", type=str, required=True, nargs="+")
+    parser.add_argument("--test-strategy", type=str, required=True, nargs="+")
     parser.add_argument("--num-nodes", type=int, default=[100], nargs="+")
     parser.add_argument(
         "--key-space-dimensions", type=int, default=[2], nargs="+"
@@ -48,23 +49,43 @@ def main():
     parser.add_argument("--num-graph-tests", type=int, default=1)
     parser.add_argument("--output-path", type=str, default="output.png")
     parser_args = parser.parse_args()
-    all_args = Args.create(parser_args)
 
-    test_strategy = TestStrategy.get(parser_args.test_strategy)
-    for neighbour_strategy_name in parser_args.neighbour_strategy:
+    all_strategy_names = list(
+        product(
+            parser_args.neighbour_strategy,
+            parser_args.distance,
+            parser_args.test_strategy,
+        )
+    )
+
+    all_args = [
+        Args(
+            *args,
+            num_search_tests=parser_args.num_search_tests,
+            num_graph_tests=parser_args.num_graph_tests,
+        )
+        for args in product(
+            parser_args.num_nodes,
+            parser_args.key_space_dimensions,
+            parser_args.max_neighbours,
+        )
+    ]
+
+    for neighbour_name, distance_name, test_name in all_strategy_names:
         results = []
         for args in all_args:
-            distance = Distance.get(parser_args.distance, args)
+            distance = Distance.get(distance_name, args)
             neighbour_strategy = NeighbourStrategy.get(
-                neighbour_strategy_name, distance, args
+                neighbour_name, distance, args
             )
+            test_strategy = TestStrategy.get(test_name)
             results.append(
                 run(neighbour_strategy, distance, test_strategy, args)
             )
-
         plt.plot([r.mean_num_requests for r in results])
+
     plt.xticks(list(range(len(all_args))), all_args, rotation=45)
-    plt.legend(parser_args.neighbour_strategy)
+    plt.legend(all_strategy_names)
     plt.savefig(parser_args.output_path)
     plt.show()
 
@@ -81,7 +102,14 @@ def run(
     )
     nodes = test_strategy.apply(nodes, neighbour_strategy)
     results = test_nodes(nodes, distance, args)
-    print(type(neighbour_strategy).__name__, args, results, sep="\t")
+    print(
+        type(neighbour_strategy).__name__,
+        type(distance).__name__,
+        type(test_strategy).__name__,
+        args,
+        results,
+        sep="\t",
+    )
     return results
 
 
