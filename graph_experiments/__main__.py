@@ -69,7 +69,7 @@ def run(
         Node(i, KeySpace.random(args.key_space_dimensions))
         for i in range(args.num_nodes)
     )
-    nodes = test_strategy.connect_nodes(nodes, neighbour_strategy, args)
+    nodes = test_strategy.apply(nodes, neighbour_strategy, args)
     results = test_nodes(nodes)
     print(type(neighbour_strategy).__name__, args, results, sep="\t")
     return results

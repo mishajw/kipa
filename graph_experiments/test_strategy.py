@@ -13,7 +13,7 @@ class TestStrategy(ABC):
             raise AssertionError(f"Unknown test strategy: {name}")
 
     @abstractmethod
-    def connect_nodes(
+    def apply(
         self,
         nodes: FrozenSet[Node],
         neighbour_strategy: NeighbourStrategy,
@@ -35,7 +35,7 @@ class AllKnowingTestStrategy(TestStrategy):
     `NeighbourStrategy`.
     """
 
-    def connect_nodes(
+    def apply(
         self,
         nodes: FrozenSet[Node],
         neighbour_strategy: NeighbourStrategy,
