@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import FrozenSet
 
-from graph_experiments import Node, Args, NeighbourStrategy
+from graph_experiments import Node, Args, NeighbourStrategy, Distance
 
 
 class TestStrategy(ABC):
@@ -17,6 +17,7 @@ class TestStrategy(ABC):
         self,
         nodes: FrozenSet[Node],
         neighbour_strategy: NeighbourStrategy,
+        distance: Distance,
         args: Args,
     ) -> FrozenSet[Node]:
         """
@@ -39,6 +40,7 @@ class AllKnowing(TestStrategy):
         self,
         nodes: FrozenSet[Node],
         neighbour_strategy: NeighbourStrategy,
+        distance: Distance,
         args: Args,
     ) -> FrozenSet[Node]:
         new_nodes = []
@@ -46,6 +48,8 @@ class AllKnowing(TestStrategy):
             for other_node in nodes:
                 if node is other_node:
                     pass
-                node = neighbour_strategy.apply(node, other_node, nodes, args)
+                node = neighbour_strategy.apply(
+                    node, other_node, nodes, distance, args
+                )
             new_nodes.append(node)
         return frozenset(new_nodes)

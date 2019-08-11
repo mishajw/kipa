@@ -2,7 +2,7 @@ import random
 from itertools import permutations
 from typing import NamedTuple, FrozenSet, Optional, Set
 
-from graph_experiments import Node, Args
+from graph_experiments import Node, Args, Distance
 
 
 class ConnectednessResults(NamedTuple):
@@ -18,22 +18,28 @@ class ConnectednessResults(NamedTuple):
         )
 
 
-def test_nodes(nodes: FrozenSet[Node], args: Args) -> "ConnectednessResults":
+def test_nodes(
+    nodes: FrozenSet[Node], distance: Distance, args: Args
+) -> "ConnectednessResults":
     assert args.num_graph_tests > 0
-    results = [__run_test(nodes, args) for _ in range(args.num_graph_tests)]
+    results = [
+        __run_test(nodes, distance, args) for _ in range(args.num_graph_tests)
+    ]
     return ConnectednessResults(
         sum(r.successful_percent for r in results) / len(results),
         sum(r.mean_num_requests for r in results) / len(results),
     )
 
 
-def __run_test(nodes: FrozenSet[Node], args: Args) -> "ConnectednessResults":
+def __run_test(
+    nodes: FrozenSet[Node], distance: Distance, args: Args
+) -> "ConnectednessResults":
     search_node_pairs = list(permutations(nodes, 2))
     search_node_pairs = random.sample(
         search_node_pairs, k=min(args.num_search_tests, len(search_node_pairs))
     )
     results = [
-        __search(from_node, to_node, nodes)
+        __search(from_node, to_node, nodes, distance)
         for from_node, to_node in search_node_pairs
     ]
     results_success = list(filter(None, results))
@@ -45,13 +51,17 @@ def __run_test(nodes: FrozenSet[Node], args: Args) -> "ConnectednessResults":
 
 
 def __search(
-    from_node: Node, to_node: Node, all_nodes: FrozenSet[Node]
+    from_node: Node,
+    to_node: Node,
+    all_nodes: FrozenSet[Node],
+    distance: Distance,
 ) -> Optional[int]:
     explored: Set[Node] = set()
     to_explore: Set[Node] = {from_node}
     while to_explore:
         exploring = min(
-            to_explore, key=lambda n: to_node.key_space.distance(n.key_space)
+            to_explore,
+            key=lambda n: distance.distance(to_node.key_space, n.key_space),
         )
         to_explore.remove(exploring)
         explored.add(exploring)

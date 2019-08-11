@@ -31,29 +31,6 @@ class KeySpace(NamedTuple):
             )
         )
 
-    def distance(self, other: "KeySpace", wrapped=True) -> float:
-        assert len(self.position) == len(other.position)
-        total = float(0)
-        for a, b in zip(self.position, other.position):
-            distance = abs(a - b)
-            if wrapped:
-                distance = min(
-                    distance,
-                    abs((a + KEY_SPACE_WIDTH) - b),
-                    abs((a - KEY_SPACE_WIDTH) - b),
-                )
-            total += distance ** 2
-        return total ** 0.5
-
-    @staticmethod
-    def max_distance(args: "Args", wrapped=True) -> float:
-        max_dimension_distance = float(
-            KEY_SPACE_WIDTH / 2 if wrapped else KEY_SPACE_WIDTH
-        )
-        return (
-            (max_dimension_distance ** 2) * args.key_space_dimensions
-        ) ** 0.5
-
 
 class Args(NamedTuple):
     num_nodes: int

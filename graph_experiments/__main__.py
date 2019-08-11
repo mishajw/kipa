@@ -27,6 +27,7 @@ from graph_experiments import (
     NeighbourStrategy,
     KeySpace,
     Node,
+    Distance,
 )
 from graph_experiments.tester import ConnectednessResults, test_nodes
 
@@ -36,6 +37,7 @@ def main():
     parser.add_argument(
         "--neighbour-strategy", type=str, required=True, nargs="+"
     )
+    parser.add_argument("--distance", type=str, required=True)
     parser.add_argument("--test-strategy", type=str, required=True)
     parser.add_argument("--num-nodes", type=int, default=[100], nargs="+")
     parser.add_argument(
@@ -48,11 +50,14 @@ def main():
     parser_args = parser.parse_args()
     all_args = Args.create(parser_args)
 
+    distance = Distance.get(parser_args.distance)
     test_strategy = TestStrategy.get(parser_args.test_strategy)
     for neighbour_strategy_name in parser_args.neighbour_strategy:
         neighbour_strategy = NeighbourStrategy.get(neighbour_strategy_name)
         results = [
-            run(neighbour_strategy, test_strategy, arg).mean_num_requests
+            run(
+                neighbour_strategy, distance, test_strategy, arg
+            ).mean_num_requests
             for arg in all_args
         ]
         plt.plot(results)
@@ -63,16 +68,17 @@ def main():
 
 
 def run(
-    neighbour_strategy: "NeighbourStrategy",
-    test_strategy: "TestStrategy",
-    args: "Args",
-) -> "ConnectednessResults":
+    neighbour_strategy: NeighbourStrategy,
+    distance: Distance,
+    test_strategy: TestStrategy,
+    args: Args,
+) -> ConnectednessResults:
     nodes = frozenset(
         Node(i, KeySpace.random(args.key_space_dimensions))
         for i in range(args.num_nodes)
     )
-    nodes = test_strategy.apply(nodes, neighbour_strategy, args)
-    results = test_nodes(nodes, args)
+    nodes = test_strategy.apply(nodes, neighbour_strategy, distance, args)
+    results = test_nodes(nodes, distance, args)
     print(type(neighbour_strategy).__name__, args, results, sep="\t")
     return results
 
