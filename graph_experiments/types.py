@@ -4,6 +4,7 @@ from typing import NamedTuple, List, FrozenSet, Tuple
 
 KEY_SPACE_LOWER = -1
 KEY_SPACE_UPPER = 1
+KEY_SPACE_WIDTH = KEY_SPACE_UPPER - KEY_SPACE_LOWER
 
 
 class Node(NamedTuple):
@@ -30,12 +31,19 @@ class KeySpace(NamedTuple):
             )
         )
 
-    def distance(self, other: "KeySpace") -> float:
+    def distance(self, other: "KeySpace", wrapped=True) -> float:
         assert len(self.position) == len(other.position)
-        return (
-            sum((a - b) ** 2 for a, b in zip(self.position, other.position))
-            ** 0.5
-        )
+        total = float(0)
+        for a, b in zip(self.position, other.position):
+            distance = abs(a - b)
+            if wrapped:
+                distance = min(
+                    distance,
+                    abs((a + KEY_SPACE_WIDTH) - b),
+                    abs((a - KEY_SPACE_WIDTH) - b),
+                )
+            total += distance ** 2
+        return total ** 0.5
 
 
 class Args(NamedTuple):

@@ -12,6 +12,8 @@ class NeighbourStrategy(ABC):
             return RandomNeighbourStrategy()
         elif name == "closest":
             return ClosestNeighbourStrategy()
+        elif name == "closest-unwrapped":
+            return ClosestUnwrappedNeighbourStrategy()
         else:
             raise AssertionError(f"Unknown neighbour strategy: {name}")
 
@@ -75,7 +77,7 @@ class RandomNeighbourStrategy(NeighbourStrategy):
 
 class ClosestNeighbourStrategy(NeighbourStrategy):
     """
-    Selects the closes neighbours.
+    Selects the closest neighbours.
     """
 
     def select_neighbours(
@@ -88,6 +90,26 @@ class ClosestNeighbourStrategy(NeighbourStrategy):
             sorted(
                 [*current_neighbours, new_neighbour],
                 key=lambda n: local.distance(n.key_space),
+            )
+        )
+        return frozenset(closest[: len(current_neighbours)])
+
+
+class ClosestUnwrappedNeighbourStrategy(NeighbourStrategy):
+    """
+    Selects the closest neighbours in unwrapped key space.
+    """
+
+    def select_neighbours(
+        self,
+        local: KeySpace,
+        current_neighbours: FrozenSet[Node],
+        new_neighbour: Node,
+    ) -> FrozenSet[Node]:
+        closest = list(
+            sorted(
+                [*current_neighbours, new_neighbour],
+                key=lambda n: local.distance(n.key_space, wrapped=False),
             )
         )
         return frozenset(closest[: len(current_neighbours)])
