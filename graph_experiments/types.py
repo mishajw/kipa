@@ -1,6 +1,5 @@
 import random
-from itertools import product
-from typing import NamedTuple, List, FrozenSet, Tuple
+from typing import NamedTuple, FrozenSet, Tuple
 
 KEY_SPACE_LOWER = -1
 KEY_SPACE_UPPER = 1
