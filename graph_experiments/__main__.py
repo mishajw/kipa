@@ -26,7 +26,6 @@ def main():
     parser.add_argument("--max-neighbours", type=int, default=10)
     args = parser.parse_args()
 
-    # TODO: set up strategies
     neighbour_strategy: NeighbourStrategy = RandomNeighbourStrategy()
     test_strategy: TestStrategy = AllKnowingTestStrategy()
 
@@ -174,6 +173,45 @@ class ConnectednessResults(NamedTuple):
             )
             to_explore.update(new_nodes.difference(explored))
         return None
+
+
+class RandomNeighbourStrategy(NeighbourStrategy):
+    """
+    Randomly selects neighbours.
+    """
+
+    def select_neighbours(
+        self,
+        local: KeySpace,
+        current_neighbours: FrozenSet[Node],
+        new_neighbour: Node,
+    ) -> FrozenSet[Node]:
+        all_nodes = current_neighbours.union([new_neighbour])
+        return frozenset(random.sample(all_nodes, len(current_neighbours)))
+
+
+class AllKnowingTestStrategy(TestStrategy):
+    """
+    Gives every node the choice of every other node. The ideal scenario for a
+    `NeighbourStrategy`.
+    """
+
+    def connect_nodes(
+        self,
+        nodes: FrozenSet[Node],
+        neighbour_strategy: NeighbourStrategy,
+        max_neighbours: int,
+    ) -> FrozenSet[Node]:
+        new_nodes = []
+        for node in nodes:
+            for other_node in nodes:
+                if node is other_node:
+                    pass
+                node = neighbour_strategy.apply(
+                    node, other_node, max_neighbours, nodes
+                )
+            new_nodes.append(node)
+        return frozenset(new_nodes)
 
 
 if __name__ == "__main__":
