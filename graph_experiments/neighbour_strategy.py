@@ -1,5 +1,6 @@
 import random
 from abc import ABC, abstractmethod
+from itertools import islice
 from typing import FrozenSet
 
 from graph_experiments import Node, Args, KeySpace
@@ -63,82 +64,63 @@ class NeighbourStrategy(ABC):
         raise NotImplementedError()
 
 
-class Random(NeighbourStrategy):
+class MetricNeighbourStrategy(NeighbourStrategy, ABC):
+    """
+    Strategy that picks nodes that minimize a given metric.
+    """
+
+    def select_neighbours(
+        self,
+        local: KeySpace,
+        current_neighbours: FrozenSet[Node],
+        new_neighbour: Node,
+        args: Args,
+    ) -> FrozenSet[Node]:
+        sorted_by_metric = sorted(
+            [*current_neighbours, new_neighbour],
+            key=lambda n: self.metric(local, n, args),
+        )
+        sorted_by_metric = islice(sorted_by_metric, len(current_neighbours))
+        return frozenset(sorted_by_metric)
+
+    @abstractmethod
+    def metric(self, local: KeySpace, other: Node, args: Args) -> float:
+        raise NotImplementedError()
+
+
+class Random(MetricNeighbourStrategy):
     """
     Randomly selects neighbours.
     """
 
-    def select_neighbours(
-        self,
-        local: KeySpace,
-        current_neighbours: FrozenSet[Node],
-        new_neighbour: Node,
-        args: Args,
-    ) -> FrozenSet[Node]:
-        all_nodes = current_neighbours.union([new_neighbour])
-        return frozenset(random.sample(all_nodes, len(current_neighbours)))
+    def metric(self, local: KeySpace, other: Node, args: Args) -> float:
+        return random.random()
 
 
-class Closest(NeighbourStrategy):
+class Closest(MetricNeighbourStrategy):
     """
     Selects the closest neighbours.
     """
 
-    def select_neighbours(
-        self,
-        local: KeySpace,
-        current_neighbours: FrozenSet[Node],
-        new_neighbour: Node,
-        args: Args,
-    ) -> FrozenSet[Node]:
-        closest = list(
-            sorted(
-                [*current_neighbours, new_neighbour],
-                key=lambda n: local.distance(n.key_space),
-            )
-        )
-        return frozenset(closest[: len(current_neighbours)])
+    def metric(self, local: KeySpace, other: Node, args: Args) -> float:
+        return local.distance(other.key_space)
 
 
-class ClosestUnwrapped(NeighbourStrategy):
+class ClosestUnwrapped(MetricNeighbourStrategy):
     """
     Selects the closest neighbours in unwrapped key space.
     """
 
-    def select_neighbours(
-        self,
-        local: KeySpace,
-        current_neighbours: FrozenSet[Node],
-        new_neighbour: Node,
-        args: Args,
-    ) -> FrozenSet[Node]:
-        closest = list(
-            sorted(
-                [*current_neighbours, new_neighbour],
-                key=lambda n: local.distance(n.key_space, wrapped=False),
-            )
-        )
-        return frozenset(closest[: len(current_neighbours)])
+    def metric(self, local: KeySpace, other: Node, args: Args) -> float:
+        return local.distance(other.key_space, wrapped=False)
 
 
-class ClosestRandom(NeighbourStrategy):
+class ClosestRandom(MetricNeighbourStrategy):
     """
-    Selects the closes neighbours.
+    Selects the closest neighbours with some randomness.
     """
 
-    def select_neighbours(
-        self,
-        local: KeySpace,
-        current_neighbours: FrozenSet[Node],
-        new_neighbour: Node,
-        args: Args,
-    ) -> FrozenSet[Node]:
-        max_distance = KeySpace.max_distance(args)
-        closest = list(
-            sorted(
-                [*current_neighbours, new_neighbour],
-                key=lambda n: local.distance(n.key_space)
-                + random.random() * max_distance,
-            )
-        )
-        return frozenset(closest[: len(current_neighbours)])
+    def metric(self, local: KeySpace, other: Node, args: Args) -> float:
+        return local.distance(
+            other.key_space
+        ) + random.random() * KeySpace.max_distance(args)
