@@ -17,6 +17,8 @@ class NeighbourStrategy(ABC):
             return ClosestUnwrapped()
         elif name == "closest-random":
             return ClosestRandom()
+        elif name == "closest-gaussian":
+            return ClosestRandom()
         else:
             raise AssertionError(f"Unknown neighbour strategy: {name}")
 
@@ -155,3 +157,14 @@ class ClosestRandom(MetricNeighbourStrategy):
             local.distance(node.key_space)
             + random.random() * KeySpace.max_distance(args) * 0.1
         )
+
+
+class ClosestGaussian(MetricNeighbourStrategy):
+    """
+    Selects the closest neighbours with gaussian probability.
+    """
+
+    def metric(self, local: KeySpace, node: Node, args: Args) -> float:
+        distance = local.distance(node.key_space)
+        gauss = abs(random.gauss(0, KeySpace.max_distance(args)))
+        return 1 if gauss > distance else 0
