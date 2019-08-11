@@ -32,20 +32,31 @@ def main():
     parser.add_argument("--num-nodes", type=int, default=100)
     parser.add_argument("--key-space-dimensions", type=int, default=2)
     parser.add_argument("--max-neighbours", type=int, default=10)
-    args = parser.parse_args()
+    parser_args = parser.parse_args()
+    args = Args.create(parser_args)
 
-    neighbour_strategy = NeighbourStrategy.get(args.neighbour_strategy)
-    test_strategy = TestStrategy.get(args.test_strategy)
+    neighbour_strategy = NeighbourStrategy.get(parser_args.neighbour_strategy)
+    test_strategy = TestStrategy.get(parser_args.test_strategy)
 
     nodes = frozenset(
         Node(i, KeySpace.random(args.key_space_dimensions))
         for i in range(args.num_nodes)
     )
-    nodes = test_strategy.connect_nodes(
-        nodes, neighbour_strategy, args.max_neighbours
-    )
+    nodes = test_strategy.connect_nodes(nodes, neighbour_strategy, args)
     results = ConnectednessResults.test(nodes)
     print(results)
+
+
+class Args(NamedTuple):
+    num_nodes: int
+    key_space_dimensions: int
+    max_neighbours: int
+
+    @classmethod
+    def create(cls, args) -> "Args":
+        return Args(
+            args.num_nodes, args.key_space_dimensions, args.max_neighbours
+        )
 
 
 class Node(NamedTuple):
@@ -94,15 +105,15 @@ class NeighbourStrategy(ABC):
         self,
         node: Node,
         new_neighbour: Node,
-        max_neighbours: int,
         all_nodes: FrozenSet[Node],
+        args: Args,
     ) -> Node:
         """
         Applies the neighbour selection strategy to `node` with a
         potential `new_neighbour`.
         """
-        assert len(node.neighbours) <= max_neighbours
-        if len(node.neighbours) < max_neighbours:
+        assert len(node.neighbours) <= args.max_neighbours
+        if len(node.neighbours) < args.max_neighbours:
             return node.with_neighbours(
                 node.neighbours.union([new_neighbour.index])
             )
@@ -146,7 +157,7 @@ class TestStrategy(ABC):
         self,
         nodes: FrozenSet[Node],
         neighbour_strategy: NeighbourStrategy,
-        max_neighbours: int,
+        args: Args,
     ) -> FrozenSet[Node]:
         """
         Connects the input nodes together in some way, using a
@@ -244,16 +255,14 @@ class AllKnowingTestStrategy(TestStrategy):
         self,
         nodes: FrozenSet[Node],
         neighbour_strategy: NeighbourStrategy,
-        max_neighbours: int,
+        args: Args,
     ) -> FrozenSet[Node]:
         new_nodes = []
         for node in nodes:
             for other_node in nodes:
                 if node is other_node:
                     pass
-                node = neighbour_strategy.apply(
-                    node, other_node, max_neighbours, nodes
-                )
+                node = neighbour_strategy.apply(node, other_node, nodes, args)
             new_nodes.append(node)
         return frozenset(new_nodes)
 
