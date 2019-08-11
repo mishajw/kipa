@@ -19,7 +19,8 @@ import random
 from abc import ABC, abstractmethod
 from argparse import ArgumentParser
 from itertools import permutations, product
-from typing import NamedTuple, Set, Optional, FrozenSet, Tuple, List
+from typing import NamedTuple, Set, Optional, FrozenSet, Tuple, List, Dict
+import matplotlib.pyplot as plt
 
 KEY_SPACE_LOWER = -1
 KEY_SPACE_UPPER = 1
@@ -36,19 +37,22 @@ def main():
         "--key-space-dimensions", type=int, default=[2], nargs="+"
     )
     parser.add_argument("--max-neighbours", type=int, default=[10], nargs="+")
+    parser.add_argument("--output-path", type=str, default="output.png")
     parser_args = parser.parse_args()
     all_args = Args.create(parser_args)
 
     test_strategy = TestStrategy.get(parser_args.test_strategy)
     for neighbour_strategy_name in parser_args.neighbour_strategy:
         neighbour_strategy = NeighbourStrategy.get(neighbour_strategy_name)
-        for args in all_args:
-            print(
-                neighbour_strategy_name,
-                args,
-                run(neighbour_strategy, test_strategy, args),
-                sep="\t",
-            )
+        results = [
+            run(neighbour_strategy, test_strategy, arg).mean_num_requests
+            for arg in all_args
+        ]
+        plt.plot(results)
+    plt.xticks(list(range(len(all_args))), all_args, rotation=45)
+    plt.legend(parser_args.neighbour_strategy)
+    plt.show()
+    plt.savefig(parser_args.output_path)
 
 
 def run(
@@ -61,7 +65,9 @@ def run(
         for i in range(args.num_nodes)
     )
     nodes = test_strategy.connect_nodes(nodes, neighbour_strategy, args)
-    return ConnectednessResults.test(nodes)
+    results = ConnectednessResults.test(nodes)
+    print(type(neighbour_strategy).__name__, args, results, sep="\t")
+    return results
 
 
 class Args(NamedTuple):
