@@ -37,14 +37,20 @@ def main():
 
     neighbour_strategy = NeighbourStrategy.get(parser_args.neighbour_strategy)
     test_strategy = TestStrategy.get(parser_args.test_strategy)
+    print(run(neighbour_strategy, test_strategy, args))
 
+
+def run(
+    neighbour_strategy: "NeighbourStrategy",
+    test_strategy: "TestStrategy",
+    args: "Args",
+) -> "ConnectednessResults":
     nodes = frozenset(
         Node(i, KeySpace.random(args.key_space_dimensions))
         for i in range(args.num_nodes)
     )
     nodes = test_strategy.connect_nodes(nodes, neighbour_strategy, args)
-    results = ConnectednessResults.test(nodes)
-    print(results)
+    return ConnectednessResults.test(nodes)
 
 
 class Args(NamedTuple):
