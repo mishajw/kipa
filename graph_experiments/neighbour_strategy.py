@@ -22,36 +22,38 @@ class NeighbourStrategy(ABC):
         elif name == "closest-random":
             return ClosestRandom(distance, args)
         elif name == "closest-gaussian":
-            return ClosestRandom(distance, args)
+            return ClosestGaussian(distance, args)
         else:
             raise AssertionError(f"Unknown neighbour strategy: {name}")
 
     def apply(
-        self, node: Node, new_neighbour: Node, all_nodes: FrozenSet[Node]
+        self,
+        node: Node,
+        new_neighbours: FrozenSet[Node],
+        all_nodes: FrozenSet[Node],
     ) -> Node:
         """
         Applies the neighbour selection strategy to `node` with a
         potential `new_neighbour`.
         """
         assert len(node.neighbours) <= self.args.max_neighbours
-        if len(node.neighbours) < self.args.max_neighbours:
-            return node.with_neighbours(
-                node.neighbours.union([new_neighbour.index])
-            )
         current_neighbours = frozenset(
             n for n in all_nodes if n.index in node.neighbours
         )
-        new_neighbours = self.select_neighbours(
-            node.key_space, current_neighbours, new_neighbour
+        selected_neighbours = self.select_neighbours(
+            node.key_space, current_neighbours, new_neighbours
         )
-        return node.with_neighbours(frozenset(n.index for n in new_neighbours))
+        assert len(selected_neighbours) <= self.args.max_neighbours
+        return node.with_neighbours(
+            frozenset(n.index for n in selected_neighbours)
+        )
 
     @abstractmethod
     def select_neighbours(
         self,
         local: KeySpace,
         current_neighbours: FrozenSet[Node],
-        new_neighbour: Node,
+        new_neighbours: FrozenSet[Node],
     ) -> FrozenSet[Node]:
         """
         Selects which neighbours to keep out of the current and a new one.
@@ -74,13 +76,13 @@ class MetricNeighbourStrategy(NeighbourStrategy, ABC):
         self,
         local: KeySpace,
         current_neighbours: FrozenSet[Node],
-        new_neighbour: Node,
+        new_neighbours: FrozenSet[Node],
     ) -> FrozenSet[Node]:
         sorted_by_metric = sorted(
-            [*current_neighbours, new_neighbour],
+            [*current_neighbours, *new_neighbours],
             key=lambda n: self.metric(local, n),
         )
-        sorted_by_metric = islice(sorted_by_metric, len(current_neighbours))
+        sorted_by_metric = islice(sorted_by_metric, self.args.max_neighbours)
         return frozenset(sorted_by_metric)
 
     @abstractmethod
@@ -98,14 +100,14 @@ class ContextMetricNeighbourStrategy(NeighbourStrategy, ABC):
         self,
         local: KeySpace,
         current_neighbours: FrozenSet[Node],
-        new_neighbour: Node,
+        new_neighbours: FrozenSet[Node],
     ) -> FrozenSet[Node]:
-        all_nodes = current_neighbours.union([new_neighbour])
+        all_nodes = current_neighbours.union(new_neighbours)
         sorted_by_metric = sorted(
-            [*current_neighbours, new_neighbour],
+            [*current_neighbours, *new_neighbours],
             key=lambda n: self.metric(local, n, all_nodes.difference([n])),
         )
-        sorted_by_metric = islice(sorted_by_metric, len(current_neighbours))
+        sorted_by_metric = islice(sorted_by_metric, self.args.max_neighbours)
         return frozenset(sorted_by_metric)
 
     @abstractmethod

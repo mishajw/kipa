@@ -35,11 +35,9 @@ class AllKnowing(TestStrategy):
     def apply(
         self, nodes: FrozenSet[Node], neighbour_strategy: NeighbourStrategy
     ) -> FrozenSet[Node]:
-        new_nodes = []
-        for node in nodes:
-            for other_node in nodes:
-                if node is other_node:
-                    pass
-                node = neighbour_strategy.apply(node, other_node, nodes)
-            new_nodes.append(node)
-        return frozenset(new_nodes)
+        return frozenset(
+            neighbour_strategy.apply(
+                node, frozenset(n for n in nodes if n is not node), nodes
+            )
+            for node in nodes
+        )
