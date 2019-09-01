@@ -478,7 +478,7 @@ impl Creator for NeighboursStore {
             key_space_manager,
             Arc::new(move |n| {
                 message_handler_client
-                    .send_fast_message(
+                    .send_request(
                         n,
                         RequestPayload::VerifyRequest(),
                         Duration::from_secs(3),

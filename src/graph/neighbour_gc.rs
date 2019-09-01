@@ -135,7 +135,7 @@ impl NeighbourGc {
         }
 
         // Try to connect to the neighbour
-        let response = message_handler_client.send_private_message(
+        let response = message_handler_client.send_request(
             &neighbour,
             RequestPayload::VerifyRequest(),
             Duration::from_secs(3),

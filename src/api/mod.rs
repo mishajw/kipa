@@ -58,7 +58,7 @@ pub enum RequestPayload {
     ///
     /// This prompts the node to perform a search in the KIPA network it is
     /// connected to, looking for the [`Node`] that owns the [`Key`] provided.
-    SearchRequest(Key, request::MessageMode),
+    SearchRequest(Key),
     /// Query for the closest known nodes to some key (in key space)
     ///
     /// This returns the [`Node`]s that the local node is connected to, that

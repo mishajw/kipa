@@ -36,35 +36,15 @@ message ApiError {
   ApiErrorType error_type = 2;
 }
 
-message PrivateRequest {
+message Request {
   SenderNode sender = 1;
   bytes body_signature = 2;
   bytes encrypted_body = 3;
 }
 
-message PrivateResponse {
+message Response {
   bytes body_signature = 1;
   bytes encrypted_body = 2;
-}
-
-message FastRequest {
-  SenderNode sender = 1;
-  bytes body = 2;
-}
-
-message FastResponse {
-  bytes body = 1;
-  bytes body_signature = 2;
-}
-
-message RequestMessage {
-  FastRequest fast = 1;
-  PrivateRequest private = 2;
-}
-
-message ResponseMessage {
-  FastResponse fast = 1;
-  PrivateResponse private = 2;
 }
 
 message RequestBody {
@@ -102,7 +82,6 @@ message QueryResponse {
 
 message SearchRequest {
   Key key = 1;
-  MessageMode mode = 2;
 }
 
 message SearchResponse {
@@ -124,8 +103,3 @@ message ListNeighboursResponse {
 message VerifyRequest {}
 
 message VerifyResponse {}
-
-enum MessageMode {
-  Fast = 0;
-  Private = 1;
-}

@@ -1,7 +1,7 @@
 //! Serialize and deserialize requests and responses for API messages over the
 //! wire
 
-use api::request::{RequestMessage, ResponseMessage};
+use api::request::{Request, Response};
 use api::Address;
 use api::{RequestBody, ResponseBody};
 use error::*;
@@ -17,26 +17,26 @@ pub trait DataTransformer: Send + Sync {
     /// Encode a request message into bytes
     fn encode_request_message(
         &self,
-        request: RequestMessage,
+        request: Request,
     ) -> Result<Vec<u8>>;
     /// Decode a request message from bytes
     fn decode_request_message(
         &self,
         data: &[u8],
         sender: Address,
-    ) -> Result<RequestMessage>;
+    ) -> Result<Request>;
 
     /// Encode a response message into bytes
     fn encode_response_message(
         &self,
-        response: ResponseMessage,
+        response: Response,
     ) -> Result<Vec<u8>>;
     /// Decode a response message from bytes
     fn decode_response_message(
         &self,
         data: &[u8],
         sender: Address,
-    ) -> Result<ResponseMessage>;
+    ) -> Result<Response>;
 
     /// Encode a request body into bytes
     fn encode_request_body(&self, body: RequestBody) -> Result<Vec<u8>>;

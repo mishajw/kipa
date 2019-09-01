@@ -65,6 +65,8 @@ The API is described in the source file for the module
 
 ## Messaging protocol
 
+<!-- TODO: Remove fast mode from docs. -->
+
 Communication between nodes has two different modes: **fast mode**, and
 **private mode**. These modes can be used for any API call between daemons.
 
