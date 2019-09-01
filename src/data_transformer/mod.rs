@@ -15,10 +15,7 @@ pub mod protobuf;
 /// bytes
 pub trait DataTransformer: Send + Sync {
     /// Encode a request message into bytes
-    fn encode_request_message(
-        &self,
-        request: Request,
-    ) -> Result<Vec<u8>>;
+    fn encode_request_message(&self, request: Request) -> Result<Vec<u8>>;
     /// Decode a request message from bytes
     fn decode_request_message(
         &self,
@@ -27,10 +24,7 @@ pub trait DataTransformer: Send + Sync {
     ) -> Result<Request>;
 
     /// Encode a response message into bytes
-    fn encode_response_message(
-        &self,
-        response: Response,
-    ) -> Result<Vec<u8>>;
+    fn encode_response_message(&self, response: Response) -> Result<Vec<u8>>;
     /// Decode a response message from bytes
     fn decode_response_message(
         &self,

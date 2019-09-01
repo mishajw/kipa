@@ -33,7 +33,7 @@ impl PgpKeyHandler {
     }
 
     /// Encrypt data for a recipient, signed by the local key.
-    pub fn encrypt(
+    pub fn encrypt_and_sign(
         &self,
         data: &[u8],
         sender: &Key,
@@ -77,8 +77,8 @@ impl PgpKeyHandler {
         Ok(encrypted)
     }
 
-    /// Decrypt data for the local key, signed by a sender.
-    pub fn decrypt(
+    /// Decrypt data for the local key, verifying it's from the sender.
+    pub fn decrypt_and_sign(
         &self,
         data: &[u8],
         sender: &Key,
@@ -111,31 +111,6 @@ impl PgpKeyHandler {
         io::copy(&mut decryptor, &mut decrypted_data)
             .chain_err(|| "Failed to copy decrypted data")?;
         Ok(decrypted_data)
-    }
-
-    /// Sign data as a sender, using the sender's private key.
-    pub fn sign(&self, data: &[u8], sender: &Key) -> Result<Vec<u8>> {
-        remotery_scope!("gpg_sign");
-        debug!(
-            self.log, "Signing data";
-            "length" => data.len(), "sender" => %sender);
-        // TODO: Remove this function
-        Ok(vec![])
-    }
-
-    /// Verify data signed by a sender, using the sender's public key.
-    pub fn verify(
-        &self,
-        data: &[u8],
-        _signature: &[u8],
-        sender: &Key,
-    ) -> Result<()> {
-        remotery_scope!("gpg_verify");
-        debug!(
-            self.log, "Verifying data";
-            "length" => data.len(), "sender" => %sender);
-        // TODO: Remove this function
-        Ok(())
     }
 }
 

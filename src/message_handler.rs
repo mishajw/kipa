@@ -81,15 +81,12 @@ impl MessageHandlerServer {
         }
     }
 
-    fn receive_request(
-        &self,
-        request: Request,
-    ) -> Result<Response> {
+    fn receive_request(&self, request: Request) -> Result<Response> {
         remotery_scope!("message_handler_receive_request");
 
         debug!(self.log, "Received secure message");
 
-        let decrypted_body_data = self.pgp_key_handler.decrypt(
+        let decrypted_body_data = self.pgp_key_handler.decrypt_and_sign(
             &request.encrypted_body,
             &request.sender.key,
             &self.local_node.key,
@@ -101,18 +98,12 @@ impl MessageHandlerServer {
             self.receive_body(body, Some(request.sender.clone()))?;
         let response_body_data =
             self.data_transformer.encode_response_body(response_body)?;
-        let encrypted_response_body_data = self.pgp_key_handler.encrypt(
+        let encrypted_response_body_data = self.pgp_key_handler.encrypt_and_sign(
             &response_body_data,
             &self.local_node.key,
             &request.sender.key,
         )?;
-        let signed_response_body_data = self
-            .pgp_key_handler
-            .sign(&response_body_data, &self.local_node.key)?;
-        Ok(Response::new(
-            signed_response_body_data,
-            encrypted_response_body_data,
-        ))
+        Ok(Response::new(encrypted_response_body_data))
     }
 
     /// Receive and handle a request message, returning a response message
@@ -202,23 +193,16 @@ impl MessageHandlerClient {
             self.data_transformer.encode_request_body(body),
         )?;
         let encrypted_body_data =
-            to_internal_result(self.pgp_key_handler.encrypt(
+            to_internal_result(self.pgp_key_handler.encrypt_and_sign(
                 &body_data,
                 &self.local_node.key,
                 &node.key,
             ))?;
-        let signed_body_data = to_internal_result(
-            self.pgp_key_handler.sign(&body_data, &self.local_node.key),
-        )?;
 
-        let message = Request::new(
-            self.local_node.clone(),
-            signed_body_data,
-            encrypted_body_data,
-        );
+        let message =
+            Request::new(self.local_node.clone(), encrypted_body_data);
         let message_data = to_internal_result(
-            self.data_transformer
-                .encode_request_message(message),
+            self.data_transformer.encode_request_message(message),
         )?;
 
         let response_message_data =
@@ -231,7 +215,7 @@ impl MessageHandlerClient {
 
         let response_body_data = self
             .pgp_key_handler
-            .decrypt(
+            .decrypt_and_sign(
                 &response_message.encrypted_body,
                 &node.key,
                 &self.local_node.key,
@@ -239,20 +223,6 @@ impl MessageHandlerClient {
             .map_err(|err| {
                 InternalError::public_with_error(
                     "Failed to decrypt message",
-                    ApiErrorType::Parse,
-                    err,
-                )
-            })?;
-
-        self.pgp_key_handler
-            .verify(
-                &response_body_data,
-                &response_message.body_signature,
-                &node.key,
-            )
-            .map_err(|err| {
-                InternalError::public_with_error(
-                    "Invalid signature",
                     ApiErrorType::Parse,
                     err,
                 )

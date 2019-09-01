@@ -38,13 +38,11 @@ message ApiError {
 
 message Request {
   SenderNode sender = 1;
-  bytes body_signature = 2;
-  bytes encrypted_body = 3;
+  bytes encrypted_body = 2;
 }
 
 message Response {
-  bytes body_signature = 1;
-  bytes encrypted_body = 2;
+  bytes encrypted_body = 1;
 }
 
 message RequestBody {

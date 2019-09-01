@@ -23,13 +23,9 @@ use std::convert::{From, Into};
 pub struct ProtobufDataTransformer {}
 
 impl DataTransformer for ProtobufDataTransformer {
-    fn encode_request_message(
-        &self,
-        request: Request,
-    ) -> Result<Vec<u8>> {
+    fn encode_request_message(&self, request: Request) -> Result<Vec<u8>> {
         let mut proto_request = proto_api::Request::new();
         proto_request.set_sender(request.sender.into());
-        proto_request.set_body_signature(request.body_signature);
         proto_request.set_encrypted_body(request.encrypted_body);
         proto_request
             .write_to_bytes()
@@ -41,22 +37,16 @@ impl DataTransformer for ProtobufDataTransformer {
         data: &[u8],
         sender: Address,
     ) -> Result<Request> {
-        let proto_message: proto_api::Request =
-            parse_from_bytes(data)
-                .chain_err(|| "Error on parsing request message")?;
+        let proto_message: proto_api::Request = parse_from_bytes(data)
+            .chain_err(|| "Error on parsing request message")?;
         Ok(Request::new(
             sender_node_to_node(proto_message.get_sender(), sender),
-            proto_message.get_body_signature().to_vec(),
             proto_message.get_encrypted_body().to_vec(),
         ))
     }
 
-    fn encode_response_message(
-        &self,
-        response: Response,
-    ) -> Result<Vec<u8>> {
+    fn encode_response_message(&self, response: Response) -> Result<Vec<u8>> {
         let mut proto_response = proto_api::Response::new();
-        proto_response.set_body_signature(response.body_signature);
         proto_response.set_encrypted_body(response.encrypted_body);
         proto_response
             .write_to_bytes()
@@ -71,10 +61,7 @@ impl DataTransformer for ProtobufDataTransformer {
     ) -> Result<Response> {
         let proto_message: proto_api::Response = parse_from_bytes(data)
             .chain_err(|| "Error on parsing response message")?;
-        Ok(Response::new(
-            proto_message.get_body_signature().to_vec(),
-            proto_message.get_encrypted_body().to_vec(),
-        ))
+        Ok(Response::new(proto_message.get_encrypted_body().to_vec()))
     }
 
     fn encode_request_body(&self, body: RequestBody) -> Result<Vec<u8>> {
