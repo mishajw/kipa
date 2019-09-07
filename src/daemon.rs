@@ -116,7 +116,7 @@ fn run_servers(
     .into();
 
     // Create local node
-    let local_key =
+    let local_secret_key =
         gnupg_key_loader.get_local_private_key(key_id, secret_loader)?;
     let local_node = Node::new(
         LocalAddressParams::create(
@@ -125,7 +125,7 @@ fn run_servers(
             log.new(o!("local_address_params" => true)),
         )?
         .create_address(log.new(o!("address_creation" => true)))?,
-        local_key,
+        local_secret_key.public().map_err(InternalError::private)?,
     );
 
     // Set up transformer for protobufs
@@ -152,6 +152,7 @@ fn run_servers(
         MessageHandlerClient::create(
             (
                 local_node.clone(),
+                local_secret_key.clone(),
                 client,
                 data_transformer.clone(),
                 pgp_key_handler.clone(),
@@ -179,7 +180,7 @@ fn run_servers(
                 payload_handler,
                 data_transformer.clone(),
                 pgp_key_handler.clone(),
-                local_node.clone(),
+                local_secret_key.clone(),
             ),
             args,
             log.new(o!("message_handler_server" => true)),

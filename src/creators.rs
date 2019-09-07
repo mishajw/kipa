@@ -3,7 +3,7 @@
 //! These depend on features and conditional compilation in order to bring in
 //! the correct implementations.
 
-use api::Node;
+use api::{Node, SecretKey};
 use data_transformer::DataTransformer;
 use error::*;
 use key_space_manager::KeySpaceManager;
@@ -351,18 +351,22 @@ impl Creator for MessageHandlerServer {
         Arc<PayloadHandler>,
         Arc<DataTransformer>,
         Arc<PgpKeyHandler>,
-        Node,
+        SecretKey,
     );
     fn create(
         parameters: Self::Parameters,
         _args: &clap::ArgMatches,
         log: Logger,
     ) -> InternalResult<Box<Self>> {
-        let (payload_handler, data_transformer, pgp_key_handler, local_node) =
-            parameters;
+        let (
+            payload_handler,
+            data_transformer,
+            pgp_key_handler,
+            local_secret_key,
+        ) = parameters;
         Ok(Box::new(MessageHandlerServer::new(
             payload_handler,
-            local_node,
+            local_secret_key,
             data_transformer,
             pgp_key_handler,
             log,
@@ -371,17 +375,28 @@ impl Creator for MessageHandlerServer {
 }
 
 impl Creator for MessageHandlerClient {
-    type Parameters =
-        (Node, Arc<Client>, Arc<DataTransformer>, Arc<PgpKeyHandler>);
+    type Parameters = (
+        Node,
+        SecretKey,
+        Arc<Client>,
+        Arc<DataTransformer>,
+        Arc<PgpKeyHandler>,
+    );
     fn create(
         parameters: Self::Parameters,
         _args: &clap::ArgMatches,
         log: Logger,
     ) -> InternalResult<Box<Self>> {
-        let (local_node, client, data_transformer, pgp_key_handler) =
-            parameters;
+        let (
+            local_node,
+            local_secret_key,
+            client,
+            data_transformer,
+            pgp_key_handler,
+        ) = parameters;
         Ok(Box::new(MessageHandlerClient::new(
             local_node,
+            local_secret_key,
             client,
             data_transformer,
             pgp_key_handler,

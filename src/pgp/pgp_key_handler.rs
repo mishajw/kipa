@@ -1,4 +1,4 @@
-use api::Key;
+use api::{Key, SecretKey};
 use error::*;
 
 use failure;
@@ -36,7 +36,7 @@ impl PgpKeyHandler {
     pub fn encrypt_and_sign(
         &self,
         data: &[u8],
-        sender: &Key,
+        sender: &SecretKey,
         recipient: &Key,
     ) -> Result<Vec<u8>> {
         remotery_scope!("gpg_encrypt");
@@ -44,12 +44,12 @@ impl PgpKeyHandler {
             self.log, "Encrypting data";
             "length" => data.len(), "sender" => %sender, "recipient" => %recipient);
 
-        let recipient_tpk = key_to_tpk(recipient)?;
+        let recipient_tpk = key_to_tpk(&recipient.data)?;
         log_tpk(
             &recipient_tpk,
             &self.log.new(o!("encrypt" => true, "type" => "recipient")),
         );
-        let sender_tpk = key_to_tpk(sender)?;
+        let sender_tpk = key_to_tpk(sender.secret_key_data_yes_really())?;
         log_tpk(
             &sender_tpk,
             &self.log.new(o!("encrypt" => true, "type" => "sender")),
@@ -82,19 +82,19 @@ impl PgpKeyHandler {
         &self,
         data: &[u8],
         sender: &Key,
-        recipient: &Key,
+        recipient: &SecretKey,
     ) -> Result<Vec<u8>> {
         remotery_scope!("gpg_decrypt");
         debug!(
             self.log, "Decrypting data";
             "length" => data.len(), "sender" => %sender, "recipient" => %recipient);
 
-        let sender_tpk = key_to_tpk(sender)?;
+        let sender_tpk = key_to_tpk(&sender.data)?;
         log_tpk(
             &sender_tpk,
             &self.log.new(o!("decrypt" => true, "type" => "sender")),
         );
-        let recipient_tpk = key_to_tpk(recipient)?;
+        let recipient_tpk = key_to_tpk(recipient.secret_key_data_yes_really())?;
         log_tpk(
             &recipient_tpk,
             &self.log.new(o!("decrypt" => true, "type" => "recipient")),
@@ -213,11 +213,11 @@ fn write(stack: Stack<Cookie>, data: &[u8]) -> Result<()> {
     Ok(())
 }
 
-fn key_to_tpk(key: &Key) -> Result<TPK> {
+fn key_to_tpk(key_data: &[u8]) -> Result<TPK> {
     // TODO: This function gets called on every encr/decr operation. This isn't
     // too slow, but still should be fixed.
     remotery_scope!("gpg_parse_tpk");
-    PacketParser::from_bytes(&key.data)
+    PacketParser::from_bytes(&key_data)
         .and_then(TPK::from_packet_parser)
         .map_err(|_| {
             ErrorKind::ParseError("Failed to parse bytes as TPK".into()).into()

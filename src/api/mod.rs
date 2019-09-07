@@ -16,7 +16,7 @@ mod key;
 mod key_space;
 mod node;
 pub use api::address::Address;
-pub use api::key::Key;
+pub use api::key::{Key, SecretKey};
 pub use api::key_space::KeySpace;
 pub use api::node::Node;
 

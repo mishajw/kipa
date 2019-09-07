@@ -1,4 +1,4 @@
-use api::Key;
+use api::{Key, SecretKey};
 use error::*;
 
 use pgp::SecretLoader;
@@ -31,7 +31,7 @@ impl GnupgKeyLoader {
         &self,
         key_id: String,
         secret_loader: SecretLoader,
-    ) -> InternalResult<Key> {
+    ) -> InternalResult<SecretKey> {
         remotery_scope!("gnupg_get_local_private_key");
         trace!(
             self.log, "Requested local private key ID";
@@ -41,7 +41,7 @@ impl GnupgKeyLoader {
         let key_data = self
             .get_private_key_data(&key_id, &secret)
             .map_err(InternalError::private)?;
-        Ok(Key::new(key_id, key_data))
+        Ok(SecretKey::new(key_id, key_data))
     }
 
     /// Gets the public key of a recipient.

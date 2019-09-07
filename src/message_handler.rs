@@ -2,7 +2,7 @@
 
 use api::error::ApiErrorType;
 use api::request::{Request, Response};
-use api::{Address, Node};
+use api::{Address, Node, SecretKey};
 use api::{
     ApiVisibility, RequestBody, RequestPayload, ResponseBody, ResponsePayload,
 };
@@ -21,7 +21,7 @@ use std::time::Duration;
 /// Handles messages incoming from external sources (i.e. another daemon, CLI)
 pub struct MessageHandlerServer {
     payload_handler: Arc<PayloadHandler>,
-    local_node: Node,
+    local_secret_key: SecretKey,
     data_transformer: Arc<DataTransformer>,
     pgp_key_handler: Arc<PgpKeyHandler>,
     log: Logger,
@@ -31,14 +31,14 @@ impl MessageHandlerServer {
     #[allow(missing_docs)]
     pub fn new(
         payload_handler: Arc<PayloadHandler>,
-        local_node: Node,
+        local_secret_key: SecretKey,
         data_transformer: Arc<DataTransformer>,
         pgp_key_handler: Arc<PgpKeyHandler>,
         log: Logger,
     ) -> Self {
         MessageHandlerServer {
             payload_handler,
-            local_node,
+            local_secret_key,
             data_transformer,
             pgp_key_handler,
             log,
@@ -89,7 +89,7 @@ impl MessageHandlerServer {
         let decrypted_body_data = self.pgp_key_handler.decrypt_and_sign(
             &request.encrypted_body,
             &request.sender.key,
-            &self.local_node.key,
+            &self.local_secret_key,
         )?;
         let body = self
             .data_transformer
@@ -98,11 +98,12 @@ impl MessageHandlerServer {
             self.receive_body(body, Some(request.sender.clone()))?;
         let response_body_data =
             self.data_transformer.encode_response_body(response_body)?;
-        let encrypted_response_body_data = self.pgp_key_handler.encrypt_and_sign(
-            &response_body_data,
-            &self.local_node.key,
-            &request.sender.key,
-        )?;
+        let encrypted_response_body_data =
+            self.pgp_key_handler.encrypt_and_sign(
+                &response_body_data,
+                &self.local_secret_key,
+                &request.sender.key,
+            )?;
         Ok(Response::new(encrypted_response_body_data))
     }
 
@@ -150,6 +151,7 @@ impl MessageHandlerServer {
 /// node
 pub struct MessageHandlerClient {
     local_node: Node,
+    local_secret_key: SecretKey,
     client: Arc<Client>,
     data_transformer: Arc<DataTransformer>,
     pgp_key_handler: Arc<PgpKeyHandler>,
@@ -160,6 +162,7 @@ impl MessageHandlerClient {
     #[allow(missing_docs)]
     pub fn new(
         local_node: Node,
+        local_secret_key: SecretKey,
         client: Arc<Client>,
         data_transformer: Arc<DataTransformer>,
         pgp_key_handler: Arc<PgpKeyHandler>,
@@ -167,6 +170,7 @@ impl MessageHandlerClient {
     ) -> MessageHandlerClient {
         MessageHandlerClient {
             local_node,
+            local_secret_key,
             client,
             data_transformer,
             pgp_key_handler,
@@ -195,7 +199,7 @@ impl MessageHandlerClient {
         let encrypted_body_data =
             to_internal_result(self.pgp_key_handler.encrypt_and_sign(
                 &body_data,
-                &self.local_node.key,
+                &self.local_secret_key,
                 &node.key,
             ))?;
 
@@ -218,7 +222,7 @@ impl MessageHandlerClient {
             .decrypt_and_sign(
                 &response_message.encrypted_body,
                 &node.key,
-                &self.local_node.key,
+                &self.local_secret_key,
             )
             .map_err(|err| {
                 InternalError::public_with_error(
@@ -304,7 +308,7 @@ impl MessageHandlerLocalClient {
         if response_message.id != message_id {
             return Err(InternalError::private(ErrorKind::ResponseError(
                 format!(
-                    "Incorrect message ID in resposonse: expected {}, got {}",
+                    "Incorrect message ID in response: expected {}, got {}",
                     message_id, response_message.id
                 ),
             )));
