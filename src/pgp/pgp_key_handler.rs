@@ -150,10 +150,7 @@ impl<'a> VerificationHelper for GpgHelper<'a> {
         &mut self,
         structure: &MessageStructure,
     ) -> sequoia_openpgp::Result<()> {
-        info!(
-            self.log, "Checking signature";
-            "structure" => format!("{:#?}", structure),
-        );
+        info!(self.log, "Checking signature");
         // We sign first, so we take the first layer of the structure.
         let verification_results = match structure.iter().next() {
             Some(MessageLayer::SignatureGroup { results }) => Ok(results),
