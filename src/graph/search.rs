@@ -22,7 +22,7 @@ pub enum SearchCallbackReturn<T> {
     Exit(),
 }
 
-pub type GetNeighboursFn = Arc<Fn(&Node, &Key) -> ResponseResult<Vec<Node>> + Send + Sync>;
+pub type GetNeighboursFn = Arc<Fn(&Node, &Key) -> InternalResult<Vec<Node>> + Send + Sync>;
 type FoundNodeCallback<T> = Arc<Fn(&Node) -> Result<SearchCallbackReturn<T>> + Send + Sync>;
 type ExploredNodeCallback<T> = Arc<Fn(&Node) -> Result<SearchCallbackReturn<T>> + Send + Sync>;
 
@@ -126,7 +126,7 @@ impl GraphSearch {
 
         // Set up channels for returning results from spawned threads
         let (explored_channel_tx, explored_channel_rx) =
-            channel::<(Node, ResponseResult<Vec<Node>>)>();
+            channel::<(Node, InternalResult<Vec<Node>>)>();
 
         // Counter of active threads
         let mut num_active_threads = 0 as usize;
@@ -144,7 +144,7 @@ impl GraphSearch {
         };
 
         let wait_explored_channel_tx = explored_channel_tx.clone();
-        let wait_for_threads = |rx: &Receiver<(Node, ResponseResult<Vec<Node>>)>| -> Result<()> {
+        let wait_for_threads = |rx: &Receiver<(Node, InternalResult<Vec<Node>>)>| -> Result<()> {
             remotery_scope!("wait_for_threads");
 
             // Wait for `recv` to resolve

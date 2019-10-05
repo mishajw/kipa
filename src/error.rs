@@ -1,23 +1,14 @@
-//! Error types used across project
+//! Error types used across KIPA.
 //!
-//! There are four main error/result types used across the project:
-//! 1. `kipa_lib::error::{Error, Result}`: Error types created by `error_chain`,
-//!    used for code that does not directly interact with external agents (e.g.
-//!    other nodes, CLI).
-//! 2. `kipa_lib::api::{ApiError, ApiResult}`: Error types that are
-//!    public-facing (e.g. seen by other nodes and the CLI).
-//! 3. `kipa_lib::error::{InternalError, InternalResult}`: Error types that can
-//!    either represent an internal error (`PrivateError`) or a public-facing
-//!    error (`PublicError`). These types should be used to propagate errors
-//!    from functionality that can produce public-facing errors, but can also
-//!    have internal errors that should not be public-facing. This should be
-//!    typically used across all request handling until the highest level, when
-//!    it is converted to an `{ApiError, ApiResult}` in order to be sent
-//!    publicly.
-//! 4. `kipa_lib::error::{ResponseError, ResponseResult}`: Error types that
-//!    represent a response from a different node, with two options for errors:
-//!    either a public error that has been received from the other node, or an
-//!    error that occurred when receiving this response.
+//! There are four main error/result types used:
+//! 1. `kipa_lib::api::{ApiError, ApiResult}`: Public errors that are seen by other nodes and the
+//!    CLI.
+//! 2. `kipa_lib::error::{Error, Result}`: Private errors created by `error_chain`, typically seen
+//!    only in logs.
+//! 3. `kipa_lib::error::{InternalError, InternalResult}`: Either a public or private error (i.e.
+//!    `ApiError` or `Error`). Used in functions where we potentially return API errors, but can
+//!    also fail internally. These can be converted to `ApiError`s, where in the case that it is a
+//!    private error, the `ApiErrorType::InternalError` is used.
 
 pub use api::error::{ApiError, ApiErrorType, ApiResult};
 
@@ -104,17 +95,7 @@ impl fmt::Display for InternalError {
 /// externally
 pub type InternalResult<T> = ::std::result::Result<T, InternalError>;
 
-/// Representation of an error that can be caused when getting a response from
-/// another node
-///
-/// Programmatically identical to `InternalError`, but semantically different.
-pub type ResponseError = InternalError;
-
-/// Result type with `ResponseError` as error type
-pub type ResponseResult<T> = InternalResult<T>;
-
-// TODO: Change all conversion types into `Into` trait impls, waiting on
-// rfc/1023
+// TODO: Change all conversion types into `Into` trait impls, waiting on rfc/1023
 
 /// Convert a result into an internal result
 pub fn to_internal_result<T>(result: Result<T>) -> InternalResult<T> {

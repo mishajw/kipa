@@ -163,7 +163,7 @@ impl MessageHandlerClient {
         node: &Node,
         payload: RequestPayload,
         timeout: Duration,
-    ) -> ResponseResult<ResponsePayload> {
+    ) -> InternalResult<ResponsePayload> {
         remotery_scope!("message_handler_client_send_request");
 
         let message_id: u32 = thread_rng().gen();
@@ -248,7 +248,7 @@ impl MessageHandlerLocalClient {
     }
 
     /// Send a payload to a node.
-    pub fn send(&self, payload: RequestPayload) -> ResponseResult<ResponsePayload> {
+    pub fn send(&self, payload: RequestPayload) -> InternalResult<ResponsePayload> {
         remotery_scope!("message_handler_local_client_send");
 
         let message_id: u32 = thread_rng().gen();
