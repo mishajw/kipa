@@ -1,4 +1,4 @@
-//! Manage how to create and compare points in `KeySpace`
+//! Key space management structure.
 
 use api::{Key, KeySpace};
 
@@ -8,24 +8,23 @@ use std::ops::{BitXor, Deref};
 
 use byteorder::{BigEndian, ReadBytesExt};
 
-/// The default dimension size for key space
+/// The default number of dimensions in key space.
 pub const DEFAULT_KEY_SPACE_SIZE: &str = "2";
 
-/// Key space management structure
+/// Manages locations in `KeySpace`, including their creation and distance metrics.
 pub struct KeySpaceManager {
     num_key_space_dims: usize,
 }
 
 impl KeySpaceManager {
-    /// Create a new key space manager with a key space dimensionality
+    #[allow(missing_docs)]
     pub fn new(num_key_space_dims: usize) -> Self {
         KeySpaceManager { num_key_space_dims }
     }
 
-    /// Create a location in key space from a key
+    /// Creates a location in key space from a key.
     pub fn create_from_key(&self, key: &Key) -> KeySpace {
-        let chunk_size =
-            (size_of::<i32>() * self.num_key_space_dims) / size_of::<u8>();
+        let chunk_size = (size_of::<i32>() * self.num_key_space_dims) / size_of::<u8>();
         let chunks = key.data.chunks(chunk_size);
         let mut chunks_transpose = vec![vec![]; chunk_size];
         for cs in chunks {
@@ -43,11 +42,10 @@ impl KeySpaceManager {
         KeySpace { coords }
     }
 
-    /// Gets the euclidean distance between points in key space
+    /// Calculates the euclidean distance between points in key space.
     pub fn distance(&self, a_ks: &KeySpace, b_ks: &KeySpace) -> f32 {
         use std::cmp::min;
-        static I32_RANGE: i64 =
-            (::std::i32::MAX as i64) - (::std::i32::MIN as i64);
+        static I32_RANGE: i64 = (::std::i32::MAX as i64) - (::std::i32::MIN as i64);
 
         assert_eq!(a_ks.coords.len(), b_ks.coords.len());
 
@@ -68,14 +66,10 @@ impl KeySpaceManager {
         result
     }
 
-    /// Get the angle between two points in key space `a` and `b`, relative to
-    /// a point in key space `relative_to`
-    pub fn angle(
-        &self,
-        relative_to: &KeySpace,
-        a: &KeySpace,
-        b: &KeySpace,
-    ) -> f32 {
+    /// Calculates the angle between two points in key space `a` and `b`, relative to a point in key
+    /// space `relative_to`.
+    // TODO: Is this function unused?
+    pub fn angle(&self, relative_to: &KeySpace, a: &KeySpace, b: &KeySpace) -> f32 {
         let dot = |a2: &KeySpace, b2: &KeySpace| -> f32 {
             let result: i128 = a2
                 .coords
@@ -83,10 +77,8 @@ impl KeySpaceManager {
                 .zip(&b2.coords)
                 .zip(&relative_to.coords)
                 // Map to `i128` so we have enough space to subtract `i32`s,
-                // mutliply together, and sum results
-                .map(|((i, j), l)| {
-                    ((i128::from(*i), i128::from(*j)), i128::from(*l))
-                })
+                // multiply together, and sum results
+                .map(|((i, j), l)| ((i128::from(*i), i128::from(*j)), i128::from(*l)))
                 .map(|((i, j), l)| (i - l, j - l))
                 .map(|(i, j)| i * j)
                 .sum();
@@ -111,16 +103,15 @@ impl KeySpaceManager {
         cos_angle.min(1.0).max(-1.0).acos()
     }
 
-    /// Sort a vector by each element's closeness to some key in key space
+    /// Sort a vector by each element's distance to some key in key space
     pub fn sort_key_relative<T>(
         &self,
         v: &mut Vec<T>,
         get_key_space_fn: &Fn(&T) -> KeySpace,
         key_space: &KeySpace,
     ) {
-        // TODO: Can we use lifetimes to avoid `get_key_space_fn` returning a
-        // value, and instead a reference?
-        // Related: https://github.com/rust-lang/rust/issues/22340
+        // TODO: Can we use lifetimes to avoid `get_key_space_fn` returning a value, and instead a
+        // reference? Related: https://github.com/rust-lang/rust/issues/22340
         v.sort_by(|a: &T, b: &T| {
             let a_ks: KeySpace = get_key_space_fn(a);
             let b_ks: KeySpace = get_key_space_fn(b);
@@ -130,12 +121,8 @@ impl KeySpaceManager {
         });
     }
 
-    /// Remove elements from a vector that contain the same key
-    pub fn remove_duplicate_keys<T>(
-        &self,
-        v: &mut Vec<T>,
-        get_key_space_fn: &Fn(&T) -> KeySpace,
-    ) {
+    /// Remove elements from a vector that contain the duplicate keys.
+    pub fn remove_duplicate_keys<T>(&self, v: &mut Vec<T>, get_key_space_fn: &Fn(&T) -> KeySpace) {
         if v.len() <= 1 {
             return;
         }
@@ -163,8 +150,7 @@ mod test {
 
     #[test]
     fn test_remove_duplicate_keys_small() {
-        let mut ks =
-            vec![KeySpace { coords: vec![1] }, KeySpace { coords: vec![1] }];
+        let mut ks = vec![KeySpace { coords: vec![1] }, KeySpace { coords: vec![1] }];
         let manager = KeySpaceManager::new(1);
         manager.remove_duplicate_keys(&mut ks, &|k: &KeySpace| k.clone());
         assert_that!(ks.len()).is_equal_to(1);
@@ -210,12 +196,9 @@ mod test {
             }
         }
 
-        assert_that!(manager.distance(&ks[0], &ks[1]))
-            .is_close_to(3f32.sqrt(), 1e-4);
-        assert_that!(manager.distance(&ks[0], &ks[2]))
-            .is_close_to(4f32.sqrt(), 1e-4);
-        assert_that!(manager.distance(&ks[1], &ks[2]))
-            .is_close_to(5f32.sqrt(), 1e-4);
+        assert_that!(manager.distance(&ks[0], &ks[1])).is_close_to(3f32.sqrt(), 1e-4);
+        assert_that!(manager.distance(&ks[0], &ks[2])).is_close_to(4f32.sqrt(), 1e-4);
+        assert_that!(manager.distance(&ks[1], &ks[2])).is_close_to(5f32.sqrt(), 1e-4);
     }
 
     #[test]

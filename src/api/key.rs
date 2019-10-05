@@ -50,8 +50,7 @@ impl SecretKey {
         let tpk: TPK = PacketParser::from_bytes(&self.data)
             .and_then(TPK::from_packet_parser)
             .map_err(|e| -> Error {
-                ErrorKind::GpgError("Failed to parse bytes as TPK".into(), e)
-                    .into()
+                ErrorKind::GpgError("Failed to parse bytes as TPK".into(), e).into()
             })?;
         let mut public_key_data = Vec::new();
         // When we serialize TPKs, sequoia only exports the public parts. The

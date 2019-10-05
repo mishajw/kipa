@@ -15,16 +15,14 @@ pub fn verify_version(our_version: &str, their_version: &str) -> ApiResult<()> {
                 .expect("Failed to compile version regex");
     }
 
-    let ours_parsed =
-        VERSION_REGEX.captures(our_version).ok_or(ApiError::new(
-            "Error on parsing our version number".into(),
-            ApiErrorType::Parse,
-        ))?;
-    let theirs_parsed =
-        VERSION_REGEX.captures(their_version).ok_or(ApiError::new(
-            "Error on parsing our version number".into(),
-            ApiErrorType::Parse,
-        ))?;
+    let ours_parsed = VERSION_REGEX.captures(our_version).ok_or(ApiError::new(
+        "Error on parsing our version number".into(),
+        ApiErrorType::Parse,
+    ))?;
+    let theirs_parsed = VERSION_REGEX.captures(their_version).ok_or(ApiError::new(
+        "Error on parsing our version number".into(),
+        ApiErrorType::Parse,
+    ))?;
 
     if ours_parsed["maj"] != theirs_parsed["maj"] {
         return Err(ApiError::new(

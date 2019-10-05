@@ -45,10 +45,7 @@ impl GnupgKeyLoader {
     }
 
     /// Gets the public key of a recipient.
-    pub fn get_recipient_public_key(
-        &self,
-        key_id: String,
-    ) -> InternalResult<Key> {
+    pub fn get_recipient_public_key(&self, key_id: String) -> InternalResult<Key> {
         remotery_scope!("gnupg_get_recipient_public_key");
         trace!(
             self.log, "Requested recipient public key ID";
@@ -61,11 +58,7 @@ impl GnupgKeyLoader {
     }
 
     /// Gets private key data from user's GnuPG directory, without passphrase.
-    fn get_private_key_data(
-        &self,
-        key_id: &str,
-        secret: &str,
-    ) -> Result<Vec<u8>> {
+    fn get_private_key_data(&self, key_id: &str, secret: &str) -> Result<Vec<u8>> {
         remotery_scope!("gpg_get_user_key_data");
         info!(
             self.log, "Spawning GPG command to export key data";
@@ -85,12 +78,9 @@ impl GnupgKeyLoader {
             .spawn()
             .chain_err(|| "Error on spawn gpg command to export key data")?;
 
-        let mut stdin =
-            BufWriter::new(child.stdin.chain_err(|| "Failed to get stdin")?);
-        let mut stdout =
-            BufReader::new(child.stdout.chain_err(|| "Failed to get stdout")?);
-        let stderr =
-            BufReader::new(child.stderr.chain_err(|| "Failed to get stderr")?);
+        let mut stdin = BufWriter::new(child.stdin.chain_err(|| "Failed to get stdin")?);
+        let mut stdout = BufReader::new(child.stdout.chain_err(|| "Failed to get stdout")?);
+        let stderr = BufReader::new(child.stderr.chain_err(|| "Failed to get stderr")?);
 
         // Write the passphrase to stdin.
         stdin
@@ -114,14 +104,12 @@ impl GnupgKeyLoader {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
 
-        let child = command.spawn().chain_err(|| {
-            "Error on spawn gpg command to export public key data"
-        })?;
+        let child = command
+            .spawn()
+            .chain_err(|| "Error on spawn gpg command to export public key data")?;
 
-        let mut stdout =
-            BufReader::new(child.stdout.chain_err(|| "Failed to get stdout")?);
-        let stderr =
-            BufReader::new(child.stderr.chain_err(|| "Failed to get stderr")?);
+        let mut stdout = BufReader::new(child.stdout.chain_err(|| "Failed to get stdout")?);
+        let stderr = BufReader::new(child.stderr.chain_err(|| "Failed to get stderr")?);
 
         let mut key_data = Vec::new();
         stdout

@@ -85,17 +85,12 @@ fn main() -> ApiResult<()> {
     }
 }
 
-fn run_servers(
-    args: &clap::ArgMatches,
-    log: &slog::Logger,
-) -> InternalResult<()> {
+fn run_servers(args: &clap::ArgMatches, log: &slog::Logger) -> InternalResult<()> {
     let request_thread_manager = match args
         .value_of("max_num_threads")
         .and_then(|s| s.parse::<usize>().ok())
     {
-        Some(max_num_threads) => {
-            ThreadManager::from_size("requests".into(), max_num_threads)
-        }
+        Some(max_num_threads) => ThreadManager::from_size("requests".into(), max_num_threads),
         None => ThreadManager::with_default_size("requests".into()),
     };
     let request_thread_manager = Arc::new(request_thread_manager);
@@ -103,42 +98,25 @@ fn run_servers(
     let key_id: String = args.value_of("key_id").unwrap().into();
     let secret_loader: SecretLoader =
         *SecretLoader::create((), args, log.new(o!("secret_loader" => true)))?;
-    let gnupg_key_loader: GnupgKeyLoader = *GnupgKeyLoader::create(
-        (),
-        args,
-        log.new(o!("gnupg_key_loader" => true)),
-    )?;
-    let pgp_key_handler: Arc<PgpKeyHandler> = PgpKeyHandler::create(
-        (),
-        args,
-        log.new(o!("pgp_key_handler" => true)),
-    )?
-    .into();
+    let gnupg_key_loader: GnupgKeyLoader =
+        *GnupgKeyLoader::create((), args, log.new(o!("gnupg_key_loader" => true)))?;
+    let pgp_key_handler: Arc<PgpKeyHandler> =
+        PgpKeyHandler::create((), args, log.new(o!("pgp_key_handler" => true)))?.into();
 
     // Create local node
-    let local_secret_key =
-        gnupg_key_loader.get_local_private_key(key_id, secret_loader)?;
+    let local_secret_key = gnupg_key_loader.get_local_private_key(key_id, secret_loader)?;
     let local_node = Node::new(
-        LocalAddressParams::create(
-            (),
-            args,
-            log.new(o!("local_address_params" => true)),
-        )?
-        .create_address(log.new(o!("address_creation" => true)))?,
+        LocalAddressParams::create((), args, log.new(o!("local_address_params" => true)))?
+            .create_address(log.new(o!("address_creation" => true)))?,
         local_secret_key.public().map_err(InternalError::private)?,
     );
 
     // Set up transformer for protobufs
-    let data_transformer: Arc<DataTransformer> = DataTransformer::create(
-        (),
-        args,
-        log.new(o!("data_transformer" => true)),
-    )?
-    .into();
+    let data_transformer: Arc<DataTransformer> =
+        DataTransformer::create((), args, log.new(o!("data_transformer" => true)))?.into();
 
     // Set up out communication
-    let client: Arc<Client> =
-        Client::create((), args, log.new(o!("client" => true)))?.into();
+    let client: Arc<Client> = Client::create((), args, log.new(o!("client" => true)))?.into();
 
     // Set up how to handle key spaces
     let key_space_manager: Arc<KeySpaceManager> = KeySpaceManager::create(
@@ -148,19 +126,18 @@ fn run_servers(
     )?
     .into();
 
-    let message_handler_client: Arc<MessageHandlerClient> =
-        MessageHandlerClient::create(
-            (
-                local_node.clone(),
-                local_secret_key.clone(),
-                client,
-                data_transformer.clone(),
-                pgp_key_handler.clone(),
-            ),
-            args,
-            log.new(o!("message_handler_client" => true)),
-        )?
-        .into();
+    let message_handler_client: Arc<MessageHandlerClient> = MessageHandlerClient::create(
+        (
+            local_node.clone(),
+            local_secret_key.clone(),
+            client,
+            data_transformer.clone(),
+            pgp_key_handler.clone(),
+        ),
+        args,
+        log.new(o!("message_handler_client" => true)),
+    )?
+    .into();
 
     // Set up request handler
     let payload_handler: Arc<PayloadHandler> = PayloadHandler::create(
@@ -174,18 +151,17 @@ fn run_servers(
     )?
     .into();
 
-    let message_handler_server: Arc<MessageHandlerServer> =
-        MessageHandlerServer::create(
-            (
-                payload_handler,
-                data_transformer.clone(),
-                pgp_key_handler.clone(),
-                local_secret_key.clone(),
-            ),
-            args,
-            log.new(o!("message_handler_server" => true)),
-        )?
-        .into();
+    let message_handler_server: Arc<MessageHandlerServer> = MessageHandlerServer::create(
+        (
+            payload_handler,
+            data_transformer.clone(),
+            pgp_key_handler.clone(),
+            local_secret_key.clone(),
+        ),
+        args,
+        log.new(o!("message_handler_server" => true)),
+    )?
+    .into();
 
     // Set up listening for connections
     let server = Server::create(

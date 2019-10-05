@@ -22,12 +22,9 @@ pub enum SearchCallbackReturn<T> {
     Exit(),
 }
 
-pub type GetNeighboursFn =
-    Arc<Fn(&Node, &Key) -> ResponseResult<Vec<Node>> + Send + Sync>;
-type FoundNodeCallback<T> =
-    Arc<Fn(&Node) -> Result<SearchCallbackReturn<T>> + Send + Sync>;
-type ExploredNodeCallback<T> =
-    Arc<Fn(&Node) -> Result<SearchCallbackReturn<T>> + Send + Sync>;
+pub type GetNeighboursFn = Arc<Fn(&Node, &Key) -> ResponseResult<Vec<Node>> + Send + Sync>;
+type FoundNodeCallback<T> = Arc<Fn(&Node) -> Result<SearchCallbackReturn<T>> + Send + Sync>;
+type ExploredNodeCallback<T> = Arc<Fn(&Node) -> Result<SearchCallbackReturn<T>> + Send + Sync>;
 
 macro_rules! return_callback {
     ($callback_value:expr) => {
@@ -74,10 +71,7 @@ impl PartialOrd for SearchNode {
 impl GraphSearch {
     /// Create a new graph search with a function for retrieving the neighbours
     /// of the node
-    pub fn new(
-        key_space_manager: Arc<KeySpaceManager>,
-        thread_pool_size: usize,
-    ) -> Self {
+    pub fn new(key_space_manager: Arc<KeySpaceManager>, thread_pool_size: usize) -> Self {
         GraphSearch {
             key_space_manager,
             thread_manager: Arc::new(ThreadManager::from_size(
@@ -140,10 +134,9 @@ impl GraphSearch {
         // Cast a `Node` into a `SearchNode` so it can be compared in
         // `to_explore`
         let into_search_node = |n: Node| -> SearchNode {
-            let cost = self.key_space_manager.distance(
-                &self.key_space_manager.create_from_key(&n.key),
-                &key_space,
-            );
+            let cost = self
+                .key_space_manager
+                .distance(&self.key_space_manager.create_from_key(&n.key), &key_space);
             SearchNode {
                 node: n,
                 cost: -cost,
@@ -151,21 +144,20 @@ impl GraphSearch {
         };
 
         let wait_explored_channel_tx = explored_channel_tx.clone();
-        let wait_for_threads =
-            |rx: &Receiver<(Node, ResponseResult<Vec<Node>>)>| -> Result<()> {
-                remotery_scope!("wait_for_threads");
+        let wait_for_threads = |rx: &Receiver<(Node, ResponseResult<Vec<Node>>)>| -> Result<()> {
+            remotery_scope!("wait_for_threads");
 
-                // Wait for `recv` to resolve
-                let recv = rx
-                    .recv_timeout(timeout)
-                    .chain_err(|| "Error on `recv` when waiting for threads")?;
-                // And send it back down the channel
-                wait_explored_channel_tx
-                    .send(recv)
-                    .chain_err(|| "Error on `send` when waiting for threads")?;
+            // Wait for `recv` to resolve
+            let recv = rx
+                .recv_timeout(timeout)
+                .chain_err(|| "Error on `recv` when waiting for threads")?;
+            // And send it back down the channel
+            wait_explored_channel_tx
+                .send(recv)
+                .chain_err(|| "Error on `send` when waiting for threads")?;
 
-                Ok(())
-            };
+            Ok(())
+        };
 
         // Add all nodes in `start_nodes` into `found` and `to_explore`, while
         // calling the `found_node_callback`
@@ -181,9 +173,7 @@ impl GraphSearch {
 
             // Pop everything we can off the channel and into `found` and
             // `to_explore`
-            while let Ok((explored_node, found_nodes)) =
-                explored_channel_rx.try_recv()
-            {
+            while let Ok((explored_node, found_nodes)) = explored_channel_rx.try_recv() {
                 remotery_scope!("processing_explored_channel");
 
                 // If we pop something off the channel, a thread has finished
@@ -192,8 +182,7 @@ impl GraphSearch {
                 // Strip errors from result - if there's an error, set to an
                 // empty list. Logging of the error has already been done, so
                 // we can ignore it here
-                let flattened_found_nodes: Vec<Node> =
-                    found_nodes.unwrap_or(vec![]);
+                let flattened_found_nodes: Vec<Node> = found_nodes.unwrap_or(vec![]);
                 // Check all found nodes
                 for found_node in flattened_found_nodes {
                     let search_node = into_search_node(found_node);
@@ -229,10 +218,7 @@ impl GraphSearch {
             } else if to_explore.is_empty() && num_active_threads > 0 {
                 // If there's nothing left to explore, we can wait for a thread
                 // to finish with some results
-                trace!(
-                    log,
-                    "Nothing to explore, waiting for a thread to finish"
-                );
+                trace!(log, "Nothing to explore, waiting for a thread to finish");
                 wait_for_threads(&explored_channel_rx)?;
                 continue;
             } else if num_active_threads >= max_num_active_threads {
@@ -280,8 +266,7 @@ impl GraphSearch {
                     spawn_log, "Getting neighbours";
                     "making_request" => true,
                     "node" => %current_node.node);
-                let neighbours =
-                    spawn_get_neighbours_fn(&current_node.node, &spawn_key);
+                let neighbours = spawn_get_neighbours_fn(&current_node.node, &spawn_key);
                 match neighbours {
                     Ok(ref neighbours) => trace!(
                         spawn_log, "Found neighbours for node";
@@ -298,8 +283,8 @@ impl GraphSearch {
                         "err" => %err),
                 }
 
-                if let Err(err) = spawn_explored_channel_tx
-                    .send((current_node.node.clone(), neighbours))
+                if let Err(err) =
+                    spawn_explored_channel_tx.send((current_node.node.clone(), neighbours))
                 {
                     warn!(
                         spawn_log,
@@ -433,25 +418,21 @@ mod test {
         search
             .search::<()>(
                 &nodes[0].key,
-                vec![
-                    nodes[START_INDEX].clone(),
-                    nodes[START_INDEX + 1].clone(),
-                ],
+                vec![nodes[START_INDEX].clone(), nodes[START_INDEX + 1].clone()],
                 Arc::new(move |n, _k| {
                     let node_index = n.address.port as usize;
-                    let neighbours: Vec<Node> =
-                        if node_index > 0 && node_index < NUM_NODES - 1 {
-                            vec![
-                                search_nodes[node_index - 1].clone(),
-                                search_nodes[node_index + 1].clone(),
-                            ]
-                        } else if node_index <= 0 {
-                            vec![search_nodes[node_index + 1].clone()]
-                        } else if node_index >= NUM_NODES - 1 {
-                            vec![search_nodes[node_index - 1].clone()]
-                        } else {
-                            vec![]
-                        };
+                    let neighbours: Vec<Node> = if node_index > 0 && node_index < NUM_NODES - 1 {
+                        vec![
+                            search_nodes[node_index - 1].clone(),
+                            search_nodes[node_index + 1].clone(),
+                        ]
+                    } else if node_index <= 0 {
+                        vec![search_nodes[node_index + 1].clone()]
+                    } else if node_index >= NUM_NODES - 1 {
+                        vec![search_nodes[node_index - 1].clone()]
+                    } else {
+                        vec![]
+                    };
                     Ok(neighbours)
                 }),
                 Arc::new(|_n| Ok(SearchCallbackReturn::Continue())),
@@ -471,10 +452,8 @@ mod test {
             .iter()
             .map(|n| n.address.port as usize)
             .collect();
-        let mut expected_found: Vec<usize> =
-            (0..START_INDEX + 1).rev().collect();
-        expected_found
-            .extend((START_INDEX + 1..NUM_NODES).collect::<Vec<usize>>());
+        let mut expected_found: Vec<usize> = (0..START_INDEX + 1).rev().collect();
+        expected_found.extend((START_INDEX + 1..NUM_NODES).collect::<Vec<usize>>());
         assert_that!(expected_found).is_equal_to(found_indices);
     }
 }

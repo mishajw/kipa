@@ -89,12 +89,7 @@ impl NeighbourGc {
                 .neighbour_statuses
                 .entry(neighbour.key.key_id.clone())
                 .or_insert_with(|| NeighbourStatus::new());
-            Self::update_neighbour_status(
-                &neighbour,
-                status,
-                message_handler_client,
-                log,
-            )
+            Self::update_neighbour_status(&neighbour, status, message_handler_client, log)
         }
 
         // Remove unresponsive neighbours and clean up unused statuses
@@ -180,8 +175,8 @@ impl Iterator for RandomDurationIter {
     fn next(&mut self) -> Option<Self::Item> {
         let mut rng = thread_rng();
         let duration_multiplier: f32 = rng.gen_range(0.5, 2.0);
-        let duration_millis: u64 = ((self.average_duration_millis as f32)
-            * duration_multiplier) as u64;
+        let duration_millis: u64 =
+            ((self.average_duration_millis as f32) * duration_multiplier) as u64;
         let duration = Duration::from_millis(duration_millis);
         self.now += duration;
         Some(self.now)

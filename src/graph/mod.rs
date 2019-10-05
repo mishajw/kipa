@@ -74,10 +74,7 @@ impl GraphPayloadHandler {
             max_num_search_threads,
             search_timeout_sec,
             message_handler_client,
-            graph_search: Arc::new(GraphSearch::new(
-                key_space_manager,
-                search_thread_pool_size,
-            )),
+            graph_search: Arc::new(GraphSearch::new(key_space_manager, search_thread_pool_size)),
             neighbours_store,
             log,
         }
@@ -202,9 +199,7 @@ impl GraphPayloadHandler {
             );
 
             match response {
-                Ok(ResponsePayload::QueryResponse(ref nodes)) => {
-                    Ok(nodes.clone())
-                }
+                Ok(ResponsePayload::QueryResponse(ref nodes)) => Ok(nodes.clone()),
                 Ok(_) => to_internal_result(Err(ErrorKind::ResponseError(
                     "Incorrect response for query request".into(),
                 )

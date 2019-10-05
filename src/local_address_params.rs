@@ -20,11 +20,7 @@ pub struct LocalAddressParams {
 
 impl LocalAddressParams {
     #[allow(missing_docs)]
-    pub fn new(
-        port: u16,
-        interface_name: Option<String>,
-        force_ipv6: bool,
-    ) -> Self {
+    pub fn new(port: u16, interface_name: Option<String>, force_ipv6: bool) -> Self {
         LocalAddressParams {
             port,
             interface_name,
@@ -41,16 +37,12 @@ impl LocalAddressParams {
         } = self;
         for interface in datalink::interfaces() {
             // Skip interfaces that are loopback or have no IPs
-            if interface_name.is_none() && (interface.name == "lo")
-                || interface.ips.is_empty()
-            {
+            if interface_name.is_none() && (interface.name == "lo") || interface.ips.is_empty() {
                 continue;
             }
 
             // Skip if we've specified a name, and this interface doesn't match
-            if interface_name.is_some()
-                && interface.name != interface_name.clone().unwrap()
-            {
+            if interface_name.is_some() && interface.name != interface_name.clone().unwrap() {
                 continue;
             }
 
@@ -68,13 +60,11 @@ impl LocalAddressParams {
             };
 
             if ips.is_empty() {
-                return Err(InternalError::private(ErrorKind::IpAddressError(
-                    format!(
-                        "Could not find any IP address on interface {}, \
-                         found: {:?}",
-                        interface.name, ips
-                    ),
-                )));
+                return Err(InternalError::private(ErrorKind::IpAddressError(format!(
+                    "Could not find any IP address on interface {}, \
+                     found: {:?}",
+                    interface.name, ips
+                ))));
             }
 
             if ips.len() > 1 {

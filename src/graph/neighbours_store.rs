@@ -113,9 +113,7 @@ impl NeighboursStore {
         {
             // Check if the address has changed, and if the new address is
             // valid. If so, update the address
-            if n.address != node.address
-                && (trusted || self.verify_neighbour(node))
-            {
+            if n.address != node.address && (trusted || self.verify_neighbour(node)) {
                 info!(
                     self.log, "Updating neighbour with new address";
                     "new_node" => %node,
@@ -147,9 +145,7 @@ impl NeighboursStore {
         let scores = self.get_neighbour_scores(&potential_neighbours);
         let (min_key_id, _) = scores
             .iter()
-            .min_by(|(_, a_score), (_, b_score)| {
-                b_score.partial_cmp(a_score).unwrap()
-            })
+            .min_by(|(_, a_score), (_, b_score)| b_score.partial_cmp(a_score).unwrap())
             // We can be certain of a result, as `potential_neighbours` has at
             // least one element in it
             .unwrap();
@@ -169,9 +165,7 @@ impl NeighboursStore {
                 "node" => %node);
         }
 
-        debug_assert!(
-            self.neighbours.lock().unwrap().len() <= self.max_num_neighbours
-        );
+        debug_assert!(self.neighbours.lock().unwrap().len() <= self.max_num_neighbours);
     }
 
     /// Remove a neighbour by its key ID
@@ -185,12 +179,7 @@ impl NeighboursStore {
 
     /// Add a neighbour to the list, first verifying it exists. Returns true if
     /// adding succeeded
-    fn add_neighbour(
-        &self,
-        neighbour: Node,
-        key_space: KeySpace,
-        trusted: bool,
-    ) -> bool {
+    fn add_neighbour(&self, neighbour: Node, key_space: KeySpace, trusted: bool) -> bool {
         let verified = trusted || self.verify_neighbour(&neighbour);
         if verified {
             info!(
@@ -226,10 +215,7 @@ impl NeighboursStore {
     /// - The distance in keyspace between the local node and the neighbour node
     /// - How "unique" the angle between the local node and the neighbour node
     ///   is, i.e. does adding this neighbour add a link in a new direction?
-    fn get_neighbour_scores(
-        &self,
-        neighbours: &Vec<(Node, KeySpace)>,
-    ) -> HashMap<String, f32> {
+    fn get_neighbour_scores(&self, neighbours: &Vec<(Node, KeySpace)>) -> HashMap<String, f32> {
         // Calculate the angle metric
         let min_angles: Vec<f32> = neighbours
             .iter()
@@ -238,15 +224,10 @@ impl NeighboursStore {
                     .iter()
                     .filter(|&&(_, ref ks2)| ks != ks2)
                     .map(|&(_, ref ks2)| {
-                        self.key_space_manager.angle(
-                            &self.local_key_space,
-                            &ks,
-                            &ks2,
-                        )
+                        self.key_space_manager
+                            .angle(&self.local_key_space, &ks, &ks2)
                     })
-                    .min_by(|a, b| {
-                        a.partial_cmp(b).expect("Error on comparing angles")
-                    })
+                    .min_by(|a, b| a.partial_cmp(b).expect("Error on comparing angles"))
                     .unwrap()
             })
             .collect();
@@ -254,9 +235,7 @@ impl NeighboursStore {
         // Calculate the distance metric
         let distances: Vec<f32> = neighbours
             .iter()
-            .map(|&(_, ref ks)| {
-                self.key_space_manager.distance(&self.local_key_space, ks)
-            })
+            .map(|&(_, ref ks)| self.key_space_manager.distance(&self.local_key_space, ks))
             .collect();
 
         // Calculate the min/max distances for scaling
@@ -274,15 +253,13 @@ impl NeighboursStore {
             assert!(&0.0 <= a && a <= &::std::f32::consts::PI);
 
             let normalized_a = 1.0 - (a / ::std::f32::consts::PI);
-            let normalized_d =
-                if (max_distance - min_distance).abs() > ::std::f32::EPSILON {
-                    (d - min_distance) / (max_distance - min_distance)
-                } else {
-                    0.0
-                };
+            let normalized_d = if (max_distance - min_distance).abs() > ::std::f32::EPSILON {
+                (d - min_distance) / (max_distance - min_distance)
+            } else {
+                0.0
+            };
 
-            ((normalized_d * self.distance_weighting)
-                + (normalized_a * self.angle_weighting))
+            ((normalized_d * self.distance_weighting) + (normalized_a * self.angle_weighting))
                 / (self.distance_weighting + self.angle_weighting)
         });
 

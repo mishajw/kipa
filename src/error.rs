@@ -72,21 +72,14 @@ impl InternalError {
 
     /// Helper function to create a public error that was caused by a private
     /// error
-    pub fn public_with_error<E>(
-        s: &str,
-        error_type: ApiErrorType,
-        error: E,
-    ) -> InternalError
+    pub fn public_with_error<E>(s: &str, error_type: ApiErrorType, error: E) -> InternalError
     where
         E: ::std::error::Error + Send + 'static,
     {
         // Copied and editted from `error_chain`'s `chain_err` function
         let state = error_chain::State::new::<Error>(Box::new(error));
         let new_error = error_chain::ChainedError::new(s.into(), state);
-        InternalError::PublicError(
-            ApiError::new(s.into(), error_type),
-            Some(new_error),
-        )
+        InternalError::PublicError(ApiError::new(s.into(), error_type), Some(new_error))
     }
 
     /// Helper function to create a private error
@@ -101,12 +94,8 @@ impl fmt::Display for InternalError {
             InternalError::PublicError(pub_err, Some(priv_err)) => {
                 write!(f, "Public error: {}, caused by {}", pub_err, priv_err)
             }
-            InternalError::PublicError(pub_err, None) => {
-                write!(f, "Public error: {}", pub_err)
-            }
-            InternalError::PrivateError(err) => {
-                write!(f, "Private error: {}", err.display_chain())
-            }
+            InternalError::PublicError(pub_err, None) => write!(f, "Public error: {}", pub_err),
+            InternalError::PrivateError(err) => write!(f, "Private error: {}", err.display_chain()),
         }
     }
 }
@@ -138,10 +127,7 @@ pub fn api_to_internal_result<T>(result: ApiResult<T>) -> InternalResult<T> {
 }
 
 /// Turn an internal result into a public-facing `ApiResult`
-pub fn to_api_result<T>(
-    result: InternalResult<T>,
-    log: &Logger,
-) -> ApiResult<T> {
+pub fn to_api_result<T>(result: InternalResult<T>, log: &Logger) -> ApiResult<T> {
     result.map_err(|err| match err {
         InternalError::PublicError(err, _) => err,
         InternalError::PrivateError(err) => {

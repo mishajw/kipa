@@ -71,10 +71,7 @@ fn main() -> ApiResult<()> {
                         .required(true),
                 ),
         )
-        .subcommand(
-            clap::SubCommand::with_name("list-neighbours")
-                .about("List all neighbours"),
-        )
+        .subcommand(clap::SubCommand::with_name("list-neighbours").about("List all neighbours"))
         .args(&creator_args)
         .get_matches();
 
@@ -106,26 +103,15 @@ fn main() -> ApiResult<()> {
     }
 }
 
-fn message_daemon(
-    args: &clap::ArgMatches,
-    log: &slog::Logger,
-) -> InternalResult<()> {
-    let gnupg_key_loader: GnupgKeyLoader = *GnupgKeyLoader::create(
-        (),
-        args,
-        log.new(o!("gnupg_key_loader" => true)),
-    )?;
+fn message_daemon(args: &clap::ArgMatches, log: &slog::Logger) -> InternalResult<()> {
+    let gnupg_key_loader: GnupgKeyLoader =
+        *GnupgKeyLoader::create((), args, log.new(o!("gnupg_key_loader" => true)))?;
 
-    let data_transformer: Arc<DataTransformer> = DataTransformer::create(
-        (),
-        args,
-        log.new(o!("data_transformer" => true)),
-    )?
-    .into();
+    let data_transformer: Arc<DataTransformer> =
+        DataTransformer::create((), args, log.new(o!("data_transformer" => true)))?.into();
 
     let local_client: Arc<LocalClient> =
-        LocalClient::create((), args, log.new(o!("local_client" => true)))?
-            .into();
+        LocalClient::create((), args, log.new(o!("local_client" => true)))?.into();
 
     let message_handler_local_client = MessageHandlerLocalClient::create(
         (local_client, data_transformer),
@@ -134,23 +120,16 @@ fn message_daemon(
     )?;
 
     if let Some(search_args) = args.subcommand_matches("search") {
-        let search_key = gnupg_key_loader.get_recipient_public_key(
-            String::from(search_args.value_of("key_id").unwrap()),
-        )?;
-        let response = message_handler_local_client
-            .send(RequestPayload::SearchRequest(search_key))?;
+        let search_key = gnupg_key_loader
+            .get_recipient_public_key(String::from(search_args.value_of("key_id").unwrap()))?;
+        let response =
+            message_handler_local_client.send(RequestPayload::SearchRequest(search_key))?;
 
         match response {
             ResponsePayload::SearchResponse(Some(ref node)) => {
                 match search_args.value_of("print").unwrap() {
                     "all" => println!("{}", node.address),
-                    "ip" => println!(
-                        "{}",
-                        node.address
-                            .to_socket_addr()
-                            .map_err(InternalError::private)?
-                            .ip()
-                    ),
+                    "ip" => println!("{}", node.address.to_socket_addr().ip()),
                     "port" => println!("{}", node.address.port),
                     _ => panic!("Impossible print value"),
                 };
@@ -166,15 +145,12 @@ fn message_daemon(
         }
     } else if let Some(connect_args) = args.subcommand_matches("connect") {
         // Get node from arguments
-        let node_key = gnupg_key_loader.get_recipient_public_key(
-            String::from(connect_args.value_of("key_id").unwrap()),
-        )?;
-        let node_address =
-            Address::from_string(connect_args.value_of("address").unwrap())?;
+        let node_key = gnupg_key_loader
+            .get_recipient_public_key(String::from(connect_args.value_of("key_id").unwrap()))?;
+        let node_address = Address::from_string(connect_args.value_of("address").unwrap())?;
         let node = Node::new(node_address, node_key);
 
-        let response = message_handler_local_client
-            .send(RequestPayload::ConnectRequest(node))?;
+        let response = message_handler_local_client.send(RequestPayload::ConnectRequest(node))?;
 
         match response {
             ResponsePayload::ConnectResponse() => {
@@ -186,8 +162,7 @@ fn message_daemon(
             ))),
         }
     } else if let Some(_) = args.subcommand_matches("list-neighbours") {
-        let response = message_handler_local_client
-            .send(RequestPayload::ListNeighboursRequest())?;
+        let response = message_handler_local_client.send(RequestPayload::ListNeighboursRequest())?;
 
         match response {
             ResponsePayload::ListNeighboursResponse(ref neighbours) => {

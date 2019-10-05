@@ -1,4 +1,4 @@
-//! Library containing code for the daemon and command line interface for KIPA
+//! Library containing code for the daemon and command line interface for KIPA.
 //!
 //! For an introduction to KIPA, please see the [README.md]. For an overview on
 //! the design of KIPA, please see the [design document].
@@ -35,13 +35,13 @@ extern crate remotery;
 extern crate sequoia_openpgp;
 extern crate threadpool;
 
-// Defines globally used macros, must be first
+// Defines globally used macros, must be first.
 pub mod remotery_util;
 
-// Main API and building blocks
+// Main API and building blocks.
 pub mod api;
 
-// Code for sending/receiving messages
+// Code for sending/receiving messages.
 pub mod data_transformer;
 pub mod key_space_manager;
 pub mod message_handler;
@@ -49,11 +49,11 @@ pub mod payload_handler;
 pub mod pgp;
 pub mod server;
 
-// Code for graph maintenance and searches
+// Code for graph maintenance and searches.
 #[cfg(feature = "use-graph")]
 mod graph;
 
-// Utilities
+// Utilities.
 pub mod creators;
 pub mod local_address_params;
 pub mod thread_manager;

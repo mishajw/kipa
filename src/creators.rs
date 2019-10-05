@@ -8,9 +8,7 @@ use data_transformer::DataTransformer;
 use error::*;
 use key_space_manager::KeySpaceManager;
 use local_address_params::LocalAddressParams;
-use message_handler::{
-    MessageHandlerClient, MessageHandlerLocalClient, MessageHandlerServer,
-};
+use message_handler::{MessageHandlerClient, MessageHandlerLocalClient, MessageHandlerServer};
 use payload_handler::PayloadHandler;
 use pgp::{GnupgKeyLoader, PgpKeyHandler, SecretLoader};
 #[allow(unused)]
@@ -33,33 +31,29 @@ use std::sync::{Arc, Mutex};
 /// Macro to parse a `clap` argument with appropriate errors
 macro_rules! parse_with_err {
     ($value_name:ident, $value_type:ty, $args:ident) => {
-        let value_string = $args.value_of(stringify!($value_name)).expect(
-            &format!("Error on getting {} argument", stringify!($value_name)),
-        );
+        let value_string = $args.value_of(stringify!($value_name)).expect(&format!(
+            "Error on getting {} argument",
+            stringify!($value_name)
+        ));
 
-        let $value_name =
-            value_string.parse::<$value_type>().map_err(|err| {
-                InternalError::public_with_error(
-                    &format!(
-                        "Error on parsing parameter {} as {} with value {}",
-                        stringify!($value_name),
-                        stringify!($value_type),
-                        value_string,
-                    ),
-                    ApiErrorType::Parse,
-                    err,
-                )
-            })?;
+        let $value_name = value_string.parse::<$value_type>().map_err(|err| {
+            InternalError::public_with_error(
+                &format!(
+                    "Error on parsing parameter {} as {} with value {}",
+                    stringify!($value_name),
+                    stringify!($value_type),
+                    value_string,
+                ),
+                ApiErrorType::Parse,
+                err,
+            )
+        })?;
     };
 }
 
 /// Create a logger, print to `stderr` if creation failed
 pub fn get_logger(name: &str, args: &clap::ArgMatches) -> Logger {
-    match slog::Logger::create(
-        name.into(),
-        &args,
-        slog::Logger::root(&slog::Discard, o!()),
-    ) {
+    match slog::Logger::create(name.into(), &args, slog::Logger::root(&slog::Discard, o!())) {
         Ok(log) => *log,
         Err(InternalError::PublicError(err, _)) => {
             eprintln!("Error when initializing logging: {}", err.message);
@@ -139,15 +133,14 @@ impl Creator for Logger {
         // Create log file
         let file_name = &format!("log-{}.json", name);
         let file_directory = Path::new(&log_directory);
-        let log_file = fs::File::create(file_directory.join(file_name))
-            .expect("Error on creating log file");
+        let log_file =
+            fs::File::create(file_directory.join(file_name)).expect("Error on creating log file");
 
         // Set up log output
         let stdout = slog_term::TermDecorator::new().build();
         let stdout_drain = slog_term::CompactFormat::new(stdout).build().fuse();
         let stdout_drain = LevelFilter::new(stdout_drain, filter_level);
-        let file_drain =
-            slog_json::Json::new(log_file).add_default_keys().build();
+        let file_drain = slog_json::Json::new(log_file).add_default_keys().build();
         let drain = slog::Duplicate(file_drain, stdout_drain).fuse();
         let drain = slog_async::Async::new(drain).build().fuse();
         Ok(Box::new(slog::Logger::root(
@@ -212,7 +205,7 @@ impl Creator for DataTransformer {
         _args: &clap::ArgMatches,
         _log: Logger,
     ) -> InternalResult<Box<Self>> {
-        use data_transformer::protobuf::ProtobufDataTransformer;
+        use data_transformer::ProtobufDataTransformer;
         Ok(Box::new(ProtobufDataTransformer {}))
     }
 }
@@ -358,12 +351,7 @@ impl Creator for MessageHandlerServer {
         _args: &clap::ArgMatches,
         log: Logger,
     ) -> InternalResult<Box<Self>> {
-        let (
-            payload_handler,
-            data_transformer,
-            pgp_key_handler,
-            local_secret_key,
-        ) = parameters;
+        let (payload_handler, data_transformer, pgp_key_handler, local_secret_key) = parameters;
         Ok(Box::new(MessageHandlerServer::new(
             payload_handler,
             local_secret_key,
@@ -387,13 +375,7 @@ impl Creator for MessageHandlerClient {
         _args: &clap::ArgMatches,
         log: Logger,
     ) -> InternalResult<Box<Self>> {
-        let (
-            local_node,
-            local_secret_key,
-            client,
-            data_transformer,
-            pgp_key_handler,
-        ) = parameters;
+        let (local_node, local_secret_key, client, data_transformer, pgp_key_handler) = parameters;
         Ok(Box::new(MessageHandlerClient::new(
             local_node,
             local_secret_key,
@@ -446,12 +428,10 @@ impl Creator for KeySpaceManager {
 use graph::NeighboursStore;
 #[cfg(feature = "use-graph")]
 impl Creator for NeighboursStore {
-    type Parameters =
-        (::api::Key, Arc<KeySpaceManager>, Arc<MessageHandlerClient>);
+    type Parameters = (::api::Key, Arc<KeySpaceManager>, Arc<MessageHandlerClient>);
     fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
         use graph::{
-            DEFAULT_ANGLE_WEIGHTING, DEFAULT_DISTANCE_WEIGHTING,
-            DEFAULT_MAX_NUM_NEIGHBOURS,
+            DEFAULT_ANGLE_WEIGHTING, DEFAULT_DISTANCE_WEIGHTING, DEFAULT_MAX_NUM_NEIGHBOURS,
         };
         vec![
             clap::Arg::with_name("neighbours_size")
@@ -493,11 +473,7 @@ impl Creator for NeighboursStore {
             key_space_manager,
             Arc::new(move |n| {
                 message_handler_client
-                    .send_request(
-                        n,
-                        RequestPayload::VerifyRequest(),
-                        Duration::from_secs(3),
-                    )
+                    .send_request(n, RequestPayload::VerifyRequest(), Duration::from_secs(3))
                     .map(|_| ())
             }),
             log,
@@ -510,13 +486,10 @@ impl Creator for PayloadHandler {
 
     #[cfg(feature = "use-graph")]
     fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
-        use graph::neighbour_gc::{
-            DEFAULT_ENABLED, DEFAULT_FREQUENCY_SEC, DEFAULT_NUM_RETRIES,
-        };
+        use graph::neighbour_gc::{DEFAULT_ENABLED, DEFAULT_FREQUENCY_SEC, DEFAULT_NUM_RETRIES};
         use graph::{
-            DEFAULT_CONNECT_SEARCH_BREADTH, DEFAULT_MAX_NUM_SEARCH_THREADS,
-            DEFAULT_SEARCH_BREADTH, DEFAULT_SEARCH_THREAD_POOL_SIZE,
-            DEFAULT_SEARCH_TIMEOUT_SEC,
+            DEFAULT_CONNECT_SEARCH_BREADTH, DEFAULT_MAX_NUM_SEARCH_THREADS, DEFAULT_SEARCH_BREADTH,
+            DEFAULT_SEARCH_THREAD_POOL_SIZE, DEFAULT_SEARCH_TIMEOUT_SEC,
         };
 
         let mut args = vec![
@@ -585,8 +558,7 @@ impl Creator for PayloadHandler {
         use graph::GraphPayloadHandler;
         use std::time::Duration;
 
-        let (local_node, message_handler_client, key_space_manager) =
-            parameters;
+        let (local_node, message_handler_client, key_space_manager) = parameters;
 
         parse_with_err!(search_breadth, usize, args);
         parse_with_err!(connect_search_breadth, usize, args);

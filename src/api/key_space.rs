@@ -1,11 +1,11 @@
-//! Projects a key into an n-dimenional space in order to perform graph search
-
 use std::fmt;
 
-/// A key space value with a set of coordinates
+/// Location in N-dimensional "key space".
+///
+/// Derived from a key's public data.
 #[derive(Clone, PartialEq)]
 pub struct KeySpace {
-    /// Coordinates in key space
+    /// Coordinates in key space.
     pub coords: Vec<i32>,
 }
 

@@ -1,13 +1,3 @@
-//! Implementation of `DataTransformer` using protobufs to serialize messages
-//!
-//! Activated through the `use-protobuf` feature.
-//!
-//! Some relevant files:
-//! 1) `.proto` file can be found in `resources/proto/proto_api.proto`.
-//! 2) `build.rs` file creates the protobuf objects and places them in...
-//! 3) `src/lib/data_transformer/proto_api.rs` is where the generated protobuf
-//! files are placed.
-
 use api::error::{ApiError, ApiErrorType, ApiResult};
 use api::request::{Request, Response};
 use api::{Address, Key, Node};
@@ -18,7 +8,14 @@ use error::*;
 use protobuf::*;
 use std::convert::{From, Into};
 
-/// The protobuf data transformer type
+/// Implementation of `DataTransformer` using protobufs to serialize messages.
+///
+/// Activated through the `use-protobuf` feature.
+///
+/// Some relevant files:
+/// 1) `.proto` file can be found in `resources/proto/proto_api.proto`.
+/// 2) `build.rs` file creates the protobuf objects and places them in...
+/// 3) `src/data_transformer/proto_api.rs` is where the generated protobuf files are placed.
 #[derive(Default)]
 pub struct ProtobufDataTransformer {}
 
@@ -32,13 +29,9 @@ impl DataTransformer for ProtobufDataTransformer {
             .chain_err(|| "Error on write request message to bytes")
     }
 
-    fn decode_request_message(
-        &self,
-        data: &[u8],
-        sender: Address,
-    ) -> Result<Request> {
-        let proto_message: proto_api::Request = parse_from_bytes(data)
-            .chain_err(|| "Error on parsing request message")?;
+    fn decode_request_message(&self, data: &[u8], sender: Address) -> Result<Request> {
+        let proto_message: proto_api::Request =
+            parse_from_bytes(data).chain_err(|| "Error on parsing request message")?;
         Ok(Request::new(
             sender_node_to_node(proto_message.get_sender(), sender),
             proto_message.get_encrypted_body().to_vec(),
@@ -59,8 +52,8 @@ impl DataTransformer for ProtobufDataTransformer {
         // TODO: Consider removing argument
         _sender: Address,
     ) -> Result<Response> {
-        let proto_message: proto_api::Response = parse_from_bytes(data)
-            .chain_err(|| "Error on parsing response message")?;
+        let proto_message: proto_api::Response =
+            parse_from_bytes(data).chain_err(|| "Error on parsing response message")?;
         Ok(Response::new(proto_message.get_encrypted_body().to_vec()))
     }
 
@@ -72,8 +65,8 @@ impl DataTransformer for ProtobufDataTransformer {
     }
 
     fn decode_request_body(&self, data: &[u8]) -> Result<RequestBody> {
-        let proto_body: proto_api::RequestBody = parse_from_bytes(data)
-            .chain_err(|| "Error on parsing request body")?;
+        let proto_body: proto_api::RequestBody =
+            parse_from_bytes(data).chain_err(|| "Error on parsing request body")?;
         proto_body.into()
     }
 
@@ -85,8 +78,8 @@ impl DataTransformer for ProtobufDataTransformer {
     }
 
     fn decode_response_body(&self, data: &[u8]) -> Result<ResponseBody> {
-        let proto_body: proto_api::ResponseBody = parse_from_bytes(data)
-            .chain_err(|| "Error on parsing response body")?;
+        let proto_body: proto_api::ResponseBody =
+            parse_from_bytes(data).chain_err(|| "Error on parsing response body")?;
         proto_body.into()
     }
 }
@@ -113,9 +106,7 @@ impl Into<proto_api::RequestBody> for RequestBody {
                 proto_body.set_connect_request(connect);
             }
             RequestPayload::ListNeighboursRequest() => {
-                proto_body.set_list_neighbours_request(
-                    proto_api::ListNeighboursRequest::new(),
-                );
+                proto_body.set_list_neighbours_request(proto_api::ListNeighboursRequest::new());
             }
             RequestPayload::VerifyRequest() => {
                 proto_body.set_verify_request(proto_api::VerifyRequest::new());
@@ -137,17 +128,13 @@ impl Into<Result<RequestBody>> for proto_api::RequestBody {
             let key = self.get_search_request().get_key().clone().into();
             RequestPayload::SearchRequest(key)
         } else if self.has_connect_request() {
-            RequestPayload::ConnectRequest(
-                self.get_connect_request().get_node().clone().into(),
-            )
+            RequestPayload::ConnectRequest(self.get_connect_request().get_node().clone().into())
         } else if self.has_list_neighbours_request() {
             RequestPayload::ListNeighboursRequest()
         } else if self.has_verify_request() {
             RequestPayload::VerifyRequest()
         } else {
-            return Err(
-                ErrorKind::RequestError("Unrecognized request".into()).into()
-            );
+            return Err(ErrorKind::RequestError("Unrecognized request".into()).into());
         };
 
         Ok(RequestBody::new(
@@ -177,8 +164,9 @@ impl Into<proto_api::ResponseBody> for ResponseBody {
                 }
                 proto_body.set_search_response(search);
             }
-            Ok(ResponsePayload::ConnectResponse()) => proto_body
-                .set_connect_response(proto_api::ConnectResponse::new()),
+            Ok(ResponsePayload::ConnectResponse()) => {
+                proto_body.set_connect_response(proto_api::ConnectResponse::new())
+            }
             Ok(ResponsePayload::ListNeighboursResponse(ref nodes)) => {
                 let mut list = proto_api::ListNeighboursResponse::new();
                 let kipa_nodes: Vec<proto_api::Node> =
@@ -187,8 +175,7 @@ impl Into<proto_api::ResponseBody> for ResponseBody {
                 proto_body.set_list_neighbours_response(list);
             }
             Ok(ResponsePayload::VerifyResponse()) => {
-                proto_body
-                    .set_verify_response(proto_api::VerifyResponse::new());
+                proto_body.set_verify_response(proto_api::VerifyResponse::new());
             }
             Err(api_error) => {
                 let proto_error = api_error.clone().into();
@@ -214,8 +201,7 @@ impl Into<Result<ResponseBody>> for proto_api::ResponseBody {
             Ok(ResponsePayload::QueryResponse(nodes))
         } else if self.has_search_response() {
             if self.get_search_response().has_node() {
-                let node: Node =
-                    self.get_search_response().get_node().clone().into();
+                let node: Node = self.get_search_response().get_node().clone().into();
                 Ok(ResponsePayload::SearchResponse(Some(node)))
             } else {
                 Ok(ResponsePayload::SearchResponse(None))
@@ -236,9 +222,7 @@ impl Into<Result<ResponseBody>> for proto_api::ResponseBody {
             Ok(ResponsePayload::VerifyResponse())
         } else {
             // This return is scoped to the function, not to the payload
-            return Err(
-                ErrorKind::ParseError("Unrecognized response".into()).into()
-            );
+            return Err(ErrorKind::ParseError("Unrecognized response".into()).into());
         };
 
         Ok(ResponseBody::new(
@@ -309,10 +293,7 @@ impl Into<proto_api::SenderNode> for Node {
 
 /// We can not define this function as a `Into` trait, as we also need the
 /// `Address` to create the `SenderNode`
-fn sender_node_to_node(
-    sender_node: &proto_api::SenderNode,
-    address: Address,
-) -> Node {
+fn sender_node_to_node(sender_node: &proto_api::SenderNode, address: Address) -> Node {
     assert!(sender_node.has_key());
     assert!(sender_node.get_port() > 0 && sender_node.get_port() < 0xFFFF);
     let key = sender_node.get_key().clone().into();
@@ -327,9 +308,7 @@ impl Into<ApiErrorType> for proto_api::ApiErrorType {
         match self {
             proto_api::ApiErrorType::NoError => ApiErrorType::NoError,
             proto_api::ApiErrorType::Parse => ApiErrorType::Parse,
-            proto_api::ApiErrorType::Configuration => {
-                ApiErrorType::Configuration
-            }
+            proto_api::ApiErrorType::Configuration => ApiErrorType::Configuration,
             proto_api::ApiErrorType::Internal => ApiErrorType::Internal,
             proto_api::ApiErrorType::External => ApiErrorType::External,
         }
@@ -341,9 +320,7 @@ impl Into<proto_api::ApiErrorType> for ApiErrorType {
         match self {
             ApiErrorType::NoError => proto_api::ApiErrorType::NoError,
             ApiErrorType::Parse => proto_api::ApiErrorType::Parse,
-            ApiErrorType::Configuration => {
-                proto_api::ApiErrorType::Configuration
-            }
+            ApiErrorType::Configuration => proto_api::ApiErrorType::Configuration,
             ApiErrorType::Internal => proto_api::ApiErrorType::Internal,
             ApiErrorType::External => proto_api::ApiErrorType::External,
         }

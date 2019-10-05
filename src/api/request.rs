@@ -1,10 +1,13 @@
-//! Request and response types for communication between daemons and CLIs
+//! Request and response types for communication between daemons and CLIs.
+
+// TODO: Document the authenticity and privacy guarantees.
+// TODO: Move to api/mod.rs.
 
 use api::Node;
 
-/// Request with authenticity and secrecy
+/// Request that guarantees authenticity and privacy.
 pub struct Request {
-    /// The request sender's key
+    /// The request sender's key.
     pub sender: Node,
     /// The contents of the body encrypted with the recipient's public key,
     /// and signed with the sender's private key.
@@ -21,7 +24,7 @@ impl Request {
     }
 }
 
-/// Response with authenticity and secrecy
+/// Response with authenticity and secrecy.
 pub struct Response {
     /// The contents of the body encrypted with the recipient's public key,
     /// and signed with the sender's private key.

@@ -31,10 +31,7 @@ pub trait SocketHandler {
     ) -> Result<()>;
 
     /// Get the address of the peer connected to the other side of the socket
-    fn get_socket_peer_address(
-        &self,
-        socket: &Self::SocketType,
-    ) -> Option<Address>;
+    fn get_socket_peer_address(&self, socket: &Self::SocketType) -> Option<Address>;
 
     /// Send data down a socket. Handles writing the length of the data
     fn send_data(
@@ -106,8 +103,7 @@ pub trait SocketServer: SocketHandler + Send + Sync {
         socket_result: Result<Self::SocketType>,
         message_handler_server: Arc<MessageHandlerServer>,
     ) {
-        let result = socket_result
-            .and_then(|s| self.handle_socket(s, message_handler_server));
+        let result = socket_result.and_then(|s| self.handle_socket(s, message_handler_server));
 
         if let Err(ref err) = result {
             error!(
@@ -133,8 +129,7 @@ pub trait SocketServer: SocketHandler + Send + Sync {
         let request_data = self.receive_data(&mut inner_socket, None)?;
 
         trace!(log, "Processing request");
-        let response_data =
-            message_handler_server.receive_bytes(&request_data, address)?;
+        let response_data = message_handler_server.receive_bytes(&request_data, address)?;
 
         trace!(log, "Sending response");
         self.send_data(&response_data, &mut inner_socket, None)?;
@@ -150,19 +145,10 @@ pub trait SocketClient: SocketHandler {
     fn get_log(&self) -> &Logger;
 
     /// Create a socket to connect to the `node`
-    fn create_socket(
-        &self,
-        node: &Node,
-        timeout: Duration,
-    ) -> Result<Self::SocketType>;
+    fn create_socket(&self, node: &Node, timeout: Duration) -> Result<Self::SocketType>;
 
     /// Send a request to another `Node` and get the `Response`
-    fn send(
-        &self,
-        node: &Node,
-        request_data: &[u8],
-        timeout: Duration,
-    ) -> Result<Vec<u8>> {
+    fn send(&self, node: &Node, request_data: &[u8], timeout: Duration) -> Result<Vec<u8>> {
         remotery_scope!("socket_client_send");
 
         let deadline = Instant::now() + timeout;
@@ -172,8 +158,7 @@ pub trait SocketClient: SocketHandler {
             "node" => %node
         );
 
-        let mut socket =
-            self.create_socket(node, deadline_to_duration(deadline))?;
+        let mut socket = self.create_socket(node, deadline_to_duration(deadline))?;
 
         trace!(self.get_log(), "Sending request to another node");
         self.send_data(&request_data, &mut socket, Some(deadline))?;

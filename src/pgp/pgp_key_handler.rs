@@ -7,8 +7,8 @@ use sequoia_openpgp::constants::SymmetricAlgorithm;
 use sequoia_openpgp::crypto::SessionKey;
 use sequoia_openpgp::packet::{PKESK, SKESK};
 use sequoia_openpgp::parse::stream::{
-    DecryptionHelper, Decryptor, MessageLayer, MessageStructure,
-    VerificationHelper, VerificationResult,
+    DecryptionHelper, Decryptor, MessageLayer, MessageStructure, VerificationHelper,
+    VerificationResult,
 };
 use sequoia_openpgp::parse::PacketParser;
 use sequoia_openpgp::parse::Parse;
@@ -54,10 +54,11 @@ impl PgpKeyHandler {
             &sender_tpk,
             &self.log.new(o!("encrypt" => true, "type" => "sender")),
         );
-        let mut key_pair =
-            sender_tpk.primary().clone().into_keypair().map_err(
-                to_gpg_error("Failed to get keypair from signing key"),
-            )?;
+        let mut key_pair = sender_tpk
+            .primary()
+            .clone()
+            .into_keypair()
+            .map_err(to_gpg_error("Failed to get keypair from signing key"))?;
 
         let mut encrypted = Vec::new();
         {
@@ -122,10 +123,7 @@ struct GpgHelper<'a> {
 }
 
 impl<'a> VerificationHelper for GpgHelper<'a> {
-    fn get_public_keys(
-        &mut self,
-        key_ids: &[KeyID],
-    ) -> sequoia_openpgp::Result<Vec<TPK>> {
+    fn get_public_keys(&mut self, key_ids: &[KeyID]) -> sequoia_openpgp::Result<Vec<TPK>> {
         trace!(
             self.log, "Getting public key";
             "requested_key_ids" => format!("{:?}", key_ids),
@@ -146,10 +144,7 @@ impl<'a> VerificationHelper for GpgHelper<'a> {
             .collect());
     }
 
-    fn check(
-        &mut self,
-        structure: &MessageStructure,
-    ) -> sequoia_openpgp::Result<()> {
+    fn check(&mut self, structure: &MessageStructure) -> sequoia_openpgp::Result<()> {
         info!(self.log, "Checking signature");
         // We sign first, so we take the first layer of the structure.
         let verification_results = match structure.iter().next() {
@@ -174,10 +169,7 @@ impl<'a> DecryptionHelper for GpgHelper<'a> {
         mut decrypt: D,
     ) -> sequoia_openpgp::Result<Option<Fingerprint>>
     where
-        D: FnMut(
-            SymmetricAlgorithm,
-            &SessionKey,
-        ) -> sequoia_openpgp::Result<()>,
+        D: FnMut(SymmetricAlgorithm, &SessionKey) -> sequoia_openpgp::Result<()>,
     {
         let key = self.recipient.primary().clone();
         debug!(self.log, "Decrypting key"; "fingerprint" => key.fingerprint().to_string());
@@ -216,9 +208,7 @@ fn key_to_tpk(key_data: &[u8]) -> Result<TPK> {
     remotery_scope!("gpg_parse_tpk");
     PacketParser::from_bytes(&key_data)
         .and_then(TPK::from_packet_parser)
-        .map_err(|_| {
-            ErrorKind::ParseError("Failed to parse bytes as TPK".into()).into()
-        })
+        .map_err(|_| ErrorKind::ParseError("Failed to parse bytes as TPK".into()).into())
 }
 
 fn log_tpk(tpk: &TPK, log: &Logger) {

@@ -1,20 +1,22 @@
-//! Holds information on another KIPA node
-
 use api::{Address, Key};
 
 use std::fmt;
 
-/// A node in the network
+/// A node (i.e. user) in the network.
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Node {
-    /// The address of the node used for communicating with it
+    /// The address of the node.
+    ///
+    /// Used for communicating with it.
     pub address: Address,
-    /// The key of the node used for locating it
+    /// The public key of the node.
+    ///
+    /// Used for deriving location in key space and securing communication.
     pub key: Key,
 }
 
 impl Node {
-    /// Create a new node with some `Address` and `Key`
+    #[allow(missing_docs)]
     pub fn new(address: Address, key: Key) -> Self {
         Node { address, key }
     }

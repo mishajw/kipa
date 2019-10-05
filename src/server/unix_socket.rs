@@ -54,10 +54,8 @@ impl LocalServer for UnixSocketLocalServer {
                 .chain_err(|| "Error on removing old KIPA socket file")?;
         }
 
-        let listener =
-            UnixListener::bind(&self.socket_path).chain_err(|| {
-                format!("Error on binding to socket path: {}", self.socket_path)
-            })?;
+        let listener = UnixListener::bind(&self.socket_path)
+            .chain_err(|| format!("Error on binding to socket path: {}", self.socket_path))?;
         debug!(
             self.log,
             "Started listening on unix socket";
@@ -96,10 +94,7 @@ impl SocketHandler for UnixSocketLocalServer {
         Ok(())
     }
 
-    fn get_socket_peer_address(
-        &self,
-        _socket: &Self::SocketType,
-    ) -> Option<Address> {
+    fn get_socket_peer_address(&self, _socket: &Self::SocketType) -> Option<Address> {
         None
     }
 }
@@ -137,10 +132,7 @@ impl SocketHandler for UnixSocketLocalClient {
         Ok(())
     }
 
-    fn get_socket_peer_address(
-        &self,
-        _socket: &Self::SocketType,
-    ) -> Option<Address> {
+    fn get_socket_peer_address(&self, _socket: &Self::SocketType) -> Option<Address> {
         None
     }
 }
