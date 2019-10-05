@@ -1,4 +1,4 @@
-//! Parameters for creating the local address of a client
+//! Parameters for creating the local address of a client.
 
 use api::Address;
 use error::*;
@@ -8,10 +8,10 @@ use std::net::IpAddr;
 use pnet::datalink;
 use slog::Logger;
 
-/// The default port for server communication
+/// The default port for server communication.
 pub const DEFAULT_PORT: &str = "10842";
 
-/// Contains information of the local address
+/// Parameters for inferring a local IP address.
 pub struct LocalAddressParams {
     port: u16,
     interface_name: Option<String>,
@@ -28,7 +28,7 @@ impl LocalAddressParams {
         }
     }
 
-    /// Get the local address on a specified interface
+    /// Gets the local address specified by the parameters.
     pub fn create_address(self, log: Logger) -> InternalResult<Address> {
         let LocalAddressParams {
             port,
@@ -55,7 +55,7 @@ impl LocalAddressParams {
                     .ips
                     .iter()
                     .filter(|ip| ip.is_ipv6())
-                    .map(|ip| *ip)
+                    .cloned()
                     .collect()
             };
 
@@ -81,10 +81,7 @@ impl LocalAddressParams {
                 IpAddr::V6(addr) => addr.octets().to_vec(),
             };
 
-            return Ok(Address {
-                ip_data,
-                port: port,
-            });
+            return Ok(Address::new(ip_data, port));
         }
 
         Err(InternalError::public(

@@ -107,10 +107,10 @@ fn message_daemon(args: &clap::ArgMatches, log: &slog::Logger) -> InternalResult
     let gnupg_key_loader: GnupgKeyLoader =
         *GnupgKeyLoader::create((), args, log.new(o!("gnupg_key_loader" => true)))?;
 
-    let data_transformer: Arc<DataTransformer> =
+    let data_transformer: Arc<dyn DataTransformer> =
         DataTransformer::create((), args, log.new(o!("data_transformer" => true)))?.into();
 
-    let local_client: Arc<LocalClient> =
+    let local_client: Arc<dyn LocalClient> =
         LocalClient::create((), args, log.new(o!("local_client" => true)))?.into();
 
     let message_handler_local_client = MessageHandlerLocalClient::create(

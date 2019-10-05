@@ -125,7 +125,7 @@ impl GnupgKeyLoader {
         stderr
             .read_to_end(&mut stderr_logs)
             .chain_err(|| "Failed to read stderr")?;
-        if stderr_logs.len() > 0 {
+        if !stderr_logs.is_empty() {
             warn!(
                 self.log, "GPG command for exporting keys printed to stderr";
                 "stderr" => ::std::str::from_utf8(&stderr_logs)

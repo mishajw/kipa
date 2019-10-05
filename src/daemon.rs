@@ -112,11 +112,11 @@ fn run_servers(args: &clap::ArgMatches, log: &slog::Logger) -> InternalResult<()
     );
 
     // Set up transformer for protobufs
-    let data_transformer: Arc<DataTransformer> =
+    let data_transformer: Arc<dyn DataTransformer> =
         DataTransformer::create((), args, log.new(o!("data_transformer" => true)))?.into();
 
     // Set up out communication
-    let client: Arc<Client> = Client::create((), args, log.new(o!("client" => true)))?.into();
+    let client: Arc<dyn Client> = Client::create((), args, log.new(o!("client" => true)))?.into();
 
     // Set up how to handle key spaces
     let key_space_manager: Arc<KeySpaceManager> = KeySpaceManager::create(
@@ -140,7 +140,7 @@ fn run_servers(args: &clap::ArgMatches, log: &slog::Logger) -> InternalResult<()
     .into();
 
     // Set up request handler
-    let payload_handler: Arc<PayloadHandler> = PayloadHandler::create(
+    let payload_handler: Arc<dyn PayloadHandler> = PayloadHandler::create(
         (
             local_node.clone(),
             message_handler_client,

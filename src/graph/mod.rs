@@ -223,7 +223,7 @@ impl PayloadHandler for GraphPayloadHandler {
             self.log,
             "Received request";
             "sender" => sender.clone()
-                .map(|n| n.to_string()).unwrap_or("none".into()));
+                .map(|n| n.to_string()).unwrap_or_else(|| "none".into()));
 
         if let Some(n) = sender {
             remotery_scope!("consider_sender_for_neighbour");

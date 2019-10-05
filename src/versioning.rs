@@ -15,14 +15,18 @@ pub fn verify_version(our_version: &str, their_version: &str) -> ApiResult<()> {
                 .expect("Failed to compile version regex");
     }
 
-    let ours_parsed = VERSION_REGEX.captures(our_version).ok_or(ApiError::new(
-        "Error on parsing our version number".into(),
-        ApiErrorType::Parse,
-    ))?;
-    let theirs_parsed = VERSION_REGEX.captures(their_version).ok_or(ApiError::new(
-        "Error on parsing our version number".into(),
-        ApiErrorType::Parse,
-    ))?;
+    let ours_parsed = VERSION_REGEX.captures(our_version).ok_or_else(|| {
+        ApiError::new(
+            "Error on parsing our version number".into(),
+            ApiErrorType::Parse,
+        )
+    })?;
+    let theirs_parsed = VERSION_REGEX.captures(their_version).ok_or_else(|| {
+        ApiError::new(
+            "Error on parsing our version number".into(),
+            ApiErrorType::Parse,
+        )
+    })?;
 
     if ours_parsed["maj"] != theirs_parsed["maj"] {
         return Err(ApiError::new(
@@ -35,8 +39,8 @@ pub fn verify_version(our_version: &str, their_version: &str) -> ApiResult<()> {
     }
 
     if &ours_parsed["maj"] == "0"
-        && (&ours_parsed["min"] != &theirs_parsed["min"]
-            || &ours_parsed["patch"] != &theirs_parsed["patch"])
+        && (ours_parsed["min"] != theirs_parsed["min"]
+            || ours_parsed["patch"] != theirs_parsed["patch"])
     {
         return Err(ApiError::new(
             format!(

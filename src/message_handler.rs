@@ -20,9 +20,9 @@ use std::time::Duration;
 
 /// Server that receives requests from daemons and CLIs.
 pub struct MessageHandlerServer {
-    payload_handler: Arc<PayloadHandler>,
+    payload_handler: Arc<dyn PayloadHandler>,
     local_secret_key: SecretKey,
-    data_transformer: Arc<DataTransformer>,
+    data_transformer: Arc<dyn DataTransformer>,
     pgp_key_handler: Arc<PgpKeyHandler>,
     log: Logger,
 }
@@ -30,9 +30,9 @@ pub struct MessageHandlerServer {
 impl MessageHandlerServer {
     #[allow(missing_docs)]
     pub fn new(
-        payload_handler: Arc<PayloadHandler>,
+        payload_handler: Arc<dyn PayloadHandler>,
         local_secret_key: SecretKey,
-        data_transformer: Arc<DataTransformer>,
+        data_transformer: Arc<dyn DataTransformer>,
         pgp_key_handler: Arc<PgpKeyHandler>,
         log: Logger,
     ) -> Self {
@@ -131,8 +131,8 @@ impl MessageHandlerServer {
 pub struct MessageHandlerClient {
     local_node: Node,
     local_secret_key: SecretKey,
-    client: Arc<Client>,
-    data_transformer: Arc<DataTransformer>,
+    client: Arc<dyn Client>,
+    data_transformer: Arc<dyn DataTransformer>,
     pgp_key_handler: Arc<PgpKeyHandler>,
     log: Logger,
 }
@@ -142,8 +142,8 @@ impl MessageHandlerClient {
     pub fn new(
         local_node: Node,
         local_secret_key: SecretKey,
-        client: Arc<Client>,
-        data_transformer: Arc<DataTransformer>,
+        client: Arc<dyn Client>,
+        data_transformer: Arc<dyn DataTransformer>,
         pgp_key_handler: Arc<PgpKeyHandler>,
         log: Logger,
     ) -> MessageHandlerClient {
@@ -228,16 +228,16 @@ impl MessageHandlerClient {
 
 /// Client that sends requests to daemons from a CLI.
 pub struct MessageHandlerLocalClient {
-    local_client: Arc<LocalClient>,
-    data_transformer: Arc<DataTransformer>,
+    local_client: Arc<dyn LocalClient>,
+    data_transformer: Arc<dyn DataTransformer>,
     log: Logger,
 }
 
 impl MessageHandlerLocalClient {
     #[allow(missing_docs)]
     pub fn new(
-        local_client: Arc<LocalClient>,
-        data_transformer: Arc<DataTransformer>,
+        local_client: Arc<dyn LocalClient>,
+        data_transformer: Arc<dyn DataTransformer>,
         log: Logger,
     ) -> Self {
         MessageHandlerLocalClient {

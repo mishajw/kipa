@@ -99,7 +99,7 @@ pub type InternalResult<T> = ::std::result::Result<T, InternalError>;
 
 /// Convert a result into an internal result
 pub fn to_internal_result<T>(result: Result<T>) -> InternalResult<T> {
-    result.map_err(|err| InternalError::PrivateError(err.into()))
+    result.map_err(InternalError::PrivateError)
 }
 
 /// Convert an API result into an internal result

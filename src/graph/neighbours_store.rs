@@ -21,7 +21,7 @@ pub const DEFAULT_ANGLE_WEIGHTING: &str = "0.5";
 pub struct NeighboursStore {
     local_key_space: KeySpace,
     key_space_manager: Arc<KeySpaceManager>,
-    verify_neighbour_fn: Arc<Fn(&Node) -> InternalResult<()> + Send + Sync>,
+    verify_neighbour_fn: Arc<dyn Fn(&Node) -> InternalResult<()> + Send + Sync>,
     max_num_neighbours: usize,
     distance_weighting: f32,
     angle_weighting: f32,
@@ -38,7 +38,7 @@ impl NeighboursStore {
         distance_weighting: f32,
         angle_weighting: f32,
         key_space_manager: Arc<KeySpaceManager>,
-        verify_neighbour_fn: Arc<Fn(&Node) -> InternalResult<()> + Send + Sync>,
+        verify_neighbour_fn: Arc<dyn Fn(&Node) -> InternalResult<()> + Send + Sync>,
         log: Logger,
     ) -> Self {
         let local_key_space = key_space_manager.create_from_key(local_key);
@@ -63,7 +63,7 @@ impl NeighboursStore {
         let mut neighbours = self.neighbours.lock().unwrap().clone();
         self.key_space_manager.sort_key_relative(
             &mut neighbours,
-            &|&(_, ref ks)| ks.clone(),
+            |&(_, ref ks)| ks.clone(),
             &self.key_space_manager.create_from_key(key),
         );
         neighbours
@@ -107,9 +107,8 @@ impl NeighboursStore {
         let mut neighbours_locked = self.neighbours.lock().unwrap();
         if let Some((n, _)) = neighbours_locked
             .iter()
-            .filter(|(n, _)| n.key == node.key)
-            .next()
-            .map(|n| n.clone())
+            .find(|(n, _)| n.key == node.key)
+            .cloned()
         {
             // Check if the address has changed, and if the new address is
             // valid. If so, update the address
@@ -174,7 +173,7 @@ impl NeighboursStore {
         self.neighbours
             .lock()
             .unwrap()
-            .retain(|(n, _)| &n.key.key_id != key_id);
+            .retain(|(n, _)| n.key.key_id != key_id);
     }
 
     /// Add a neighbour to the list, first verifying it exists. Returns true if
@@ -215,7 +214,7 @@ impl NeighboursStore {
     /// - The distance in keyspace between the local node and the neighbour node
     /// - How "unique" the angle between the local node and the neighbour node
     ///   is, i.e. does adding this neighbour add a link in a new direction?
-    fn get_neighbour_scores(&self, neighbours: &Vec<(Node, KeySpace)>) -> HashMap<String, f32> {
+    fn get_neighbour_scores(&self, neighbours: &[(Node, KeySpace)]) -> HashMap<String, f32> {
         // Calculate the angle metric
         let min_angles: Vec<f32> = neighbours
             .iter()

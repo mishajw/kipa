@@ -25,7 +25,7 @@ macro_rules! remotery_scope {
 
 #[allow(missing_docs)]
 #[cfg(not(feature = "use-remotery"))]
-pub fn initialize_remotery(_log: &Logger) -> () {}
+pub fn initialize_remotery(_log: &Logger) {}
 
 #[cfg(not(feature = "use-remotery"))]
 macro_rules! remotery_scope {

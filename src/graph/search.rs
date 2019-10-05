@@ -22,9 +22,9 @@ pub enum SearchCallbackReturn<T> {
     Exit(),
 }
 
-pub type GetNeighboursFn = Arc<Fn(&Node, &Key) -> InternalResult<Vec<Node>> + Send + Sync>;
-type FoundNodeCallback<T> = Arc<Fn(&Node) -> Result<SearchCallbackReturn<T>> + Send + Sync>;
-type ExploredNodeCallback<T> = Arc<Fn(&Node) -> Result<SearchCallbackReturn<T>> + Send + Sync>;
+pub type GetNeighboursFn = Arc<dyn Fn(&Node, &Key) -> InternalResult<Vec<Node>> + Send + Sync>;
+type FoundNodeCallback<T> = Arc<dyn Fn(&Node) -> Result<SearchCallbackReturn<T>> + Send + Sync>;
+type ExploredNodeCallback<T> = Arc<dyn Fn(&Node) -> Result<SearchCallbackReturn<T>> + Send + Sync>;
 
 macro_rules! return_callback {
     ($callback_value:expr) => {
@@ -182,7 +182,7 @@ impl GraphSearch {
                 // Strip errors from result - if there's an error, set to an
                 // empty list. Logging of the error has already been done, so
                 // we can ignore it here
-                let flattened_found_nodes: Vec<Node> = found_nodes.unwrap_or(vec![]);
+                let flattened_found_nodes: Vec<Node> = found_nodes.unwrap_or_else(|_| vec![]);
                 // Check all found nodes
                 for found_node in flattened_found_nodes {
                     let search_node = into_search_node(found_node);
@@ -331,7 +331,7 @@ impl GraphSearch {
             n_closest_local.push((n.clone(), false));
             found_key_space_manager.sort_key_relative(
                 &mut n_closest_local,
-                &|&(ref n, _)| found_key_space_manager.create_from_key(&n.key),
+                |&(ref n, _)| found_key_space_manager.create_from_key(&n.key),
                 &key_space,
             );
             while n_closest_local.len() > breadth {

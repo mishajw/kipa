@@ -197,7 +197,7 @@ impl Creator for LocalAddressParams {
     }
 }
 
-impl Creator for DataTransformer {
+impl Creator for dyn DataTransformer {
     type Parameters = ();
     #[cfg(feature = "use-protobuf")]
     fn create(
@@ -256,7 +256,7 @@ impl Creator for SecretLoader {
     }
 }
 
-impl Creator for Client {
+impl Creator for dyn Client {
     type Parameters = ();
     #[cfg(feature = "use-tcp")]
     fn create(
@@ -269,7 +269,7 @@ impl Creator for Client {
     }
 }
 
-impl Creator for Server {
+impl Creator for dyn Server {
     type Parameters = (Arc<MessageHandlerServer>, Node, Arc<ThreadManager>);
     #[cfg(feature = "use-tcp")]
     fn create(
@@ -288,7 +288,7 @@ impl Creator for Server {
     }
 }
 
-impl Creator for LocalServer {
+impl Creator for dyn LocalServer {
     type Parameters = (Arc<MessageHandlerServer>, Arc<ThreadManager>);
 
     #[cfg(feature = "use-unix-socket")]
@@ -321,7 +321,7 @@ impl Creator for LocalServer {
     }
 }
 
-impl Creator for LocalClient {
+impl Creator for dyn LocalClient {
     type Parameters = ();
     // Shares `socket_path` parameter with `LocalServer`
     #[cfg(feature = "use-unix-socket")]
@@ -341,8 +341,8 @@ impl Creator for LocalClient {
 
 impl Creator for MessageHandlerServer {
     type Parameters = (
-        Arc<PayloadHandler>,
-        Arc<DataTransformer>,
+        Arc<dyn PayloadHandler>,
+        Arc<dyn DataTransformer>,
         Arc<PgpKeyHandler>,
         SecretKey,
     );
@@ -366,8 +366,8 @@ impl Creator for MessageHandlerClient {
     type Parameters = (
         Node,
         SecretKey,
-        Arc<Client>,
-        Arc<DataTransformer>,
+        Arc<dyn Client>,
+        Arc<dyn DataTransformer>,
         Arc<PgpKeyHandler>,
     );
     fn create(
@@ -388,7 +388,7 @@ impl Creator for MessageHandlerClient {
 }
 
 impl Creator for MessageHandlerLocalClient {
-    type Parameters = (Arc<LocalClient>, Arc<DataTransformer>);
+    type Parameters = (Arc<dyn LocalClient>, Arc<dyn DataTransformer>);
     fn create(
         parameters: Self::Parameters,
         _args: &clap::ArgMatches,
@@ -481,7 +481,7 @@ impl Creator for NeighboursStore {
     }
 }
 
-impl Creator for PayloadHandler {
+impl Creator for dyn PayloadHandler {
     type Parameters = (Node, Arc<MessageHandlerClient>, Arc<KeySpaceManager>);
 
     #[cfg(feature = "use-graph")]

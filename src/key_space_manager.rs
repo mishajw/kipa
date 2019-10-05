@@ -107,7 +107,7 @@ impl KeySpaceManager {
     pub fn sort_key_relative<T>(
         &self,
         v: &mut Vec<T>,
-        get_key_space_fn: &Fn(&T) -> KeySpace,
+        get_key_space_fn: impl Fn(&T) -> KeySpace,
         key_space: &KeySpace,
     ) {
         // TODO: Can we use lifetimes to avoid `get_key_space_fn` returning a value, and instead a
@@ -122,7 +122,11 @@ impl KeySpaceManager {
     }
 
     /// Remove elements from a vector that contain the duplicate keys.
-    pub fn remove_duplicate_keys<T>(&self, v: &mut Vec<T>, get_key_space_fn: &Fn(&T) -> KeySpace) {
+    pub fn remove_duplicate_keys<T>(
+        &self,
+        v: &mut Vec<T>,
+        get_key_space_fn: impl Fn(&T) -> KeySpace,
+    ) {
         if v.len() <= 1 {
             return;
         }

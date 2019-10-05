@@ -88,7 +88,7 @@ impl NeighbourGc {
             let status = self
                 .neighbour_statuses
                 .entry(neighbour.key.key_id.clone())
-                .or_insert_with(|| NeighbourStatus::new());
+                .or_insert_with(NeighbourStatus::new);
             Self::update_neighbour_status(&neighbour, status, message_handler_client, log)
         }
 
@@ -165,7 +165,7 @@ impl RandomDurationIter {
         RandomDurationIter {
             now: Instant::now(),
             average_duration_millis: average_duration.as_secs() * 1000
-                + average_duration.subsec_millis() as u64,
+                + u64::from(average_duration.subsec_millis()),
         }
     }
 }

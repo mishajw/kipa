@@ -130,8 +130,8 @@ impl<'a> VerificationHelper for GpgHelper<'a> {
             "sender_key_id" => %self.sender.primary().keyid(),
             "recipient_key_id" => %self.recipient.primary().keyid(),
         );
-        return Ok(key_ids
-            .into_iter()
+        Ok(key_ids
+            .iter()
             .filter_map(|key_id| {
                 if *key_id == self.sender.primary().keyid() {
                     Some(self.sender.clone())
@@ -141,7 +141,7 @@ impl<'a> VerificationHelper for GpgHelper<'a> {
                     None
                 }
             })
-            .collect());
+            .collect())
     }
 
     fn check(&mut self, structure: &MessageStructure) -> sequoia_openpgp::Result<()> {
@@ -152,10 +152,10 @@ impl<'a> VerificationHelper for GpgHelper<'a> {
             Some(_) => Err(failure::err_msg("Non-sig layer in structure")),
             None => Err(failure::err_msg("No layers found in structure")),
         }?;
-        match &verification_results[..] {
-            &[VerificationResult::GoodChecksum(..)] => Ok(()),
-            &[_] => Err(failure::err_msg("Bad verification result")),
-            &[] => Err(failure::err_msg("No verification results")),
+        match verification_results[..] {
+            [VerificationResult::GoodChecksum(..)] => Ok(()),
+            [_] => Err(failure::err_msg("Bad verification result")),
+            [] => Err(failure::err_msg("No verification results")),
             _ => Err(failure::err_msg("Multiple verification results")),
         }
     }
