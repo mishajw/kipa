@@ -121,13 +121,20 @@ impl GraphPayloadHandler {
 
     fn connect(&self, node: &Node, log: Logger) -> InternalResult<()> {
         remotery_scope!("graph_connect");
+        // Check we can contact the node first. This failing is the only way we report that the
+        // connection was a failure, as we don't use the result of the search below.
+        self.message_handler_client.send_request(
+            node,
+            RequestPayload::VerifyRequest(),
+            self.search_timeout,
+        )?;
         let callback = ConnectRequestCallback {
             neighbours_store: self.neighbours_store.clone(),
             wrapped_client: WrappedClient {
                 message_handler_client: self.message_handler_client.clone(),
                 local_key: self.local_key.clone(),
                 neighbours_store: self.neighbours_store.clone(),
-                timeout: self.search_timeout.clone(),
+                timeout: self.search_timeout,
             },
             log: log.new(o!("connect_callback" => true)),
         };
@@ -143,7 +150,6 @@ impl GraphPayloadHandler {
             log,
         );
         to_internal_result(result)?;
-        // TODO: Check if we successfully queried any nodes when connecting.
         Ok(())
     }
 }
