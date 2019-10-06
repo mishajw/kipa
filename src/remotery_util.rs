@@ -1,8 +1,6 @@
 //! Utility functions and macros for using the
 //! [Remotery](https://github.com/Celtoys/Remotery) profiling tool.
 
-#![macro_use]
-
 #[cfg(feature = "use-remotery")]
 use remotery;
 use slog::Logger;

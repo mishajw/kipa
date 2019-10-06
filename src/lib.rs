@@ -35,7 +35,7 @@ extern crate remotery;
 extern crate sequoia_openpgp;
 extern crate threadpool;
 
-// Defines globally used macros, must be first.
+#[macro_use]
 pub mod remotery_util;
 
 // Main API and building blocks.

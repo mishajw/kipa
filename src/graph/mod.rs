@@ -1,8 +1,12 @@
 //! Implement `PayloadHandler` using graph based searches through KIPA net
 
+#[macro_use]
+mod search_callback;
+
 pub mod neighbour_gc;
 mod neighbours_store;
 mod search;
+mod search_node;
 
 pub use graph::neighbours_store::{
     NeighboursStore, DEFAULT_ANGLE_WEIGHTING, DEFAULT_DISTANCE_WEIGHTING,
@@ -12,11 +16,13 @@ pub use graph::neighbours_store::{
 use api::{Address, Key, Node};
 use api::{RequestPayload, ResponsePayload};
 use error::*;
-use graph::search::{GetNeighboursFn, GraphSearch, SearchCallbackReturn};
+use graph::search::{GraphSearch, SearchParams};
 use key_space_manager::KeySpaceManager;
 use message_handler::MessageHandlerClient;
 use payload_handler::PayloadHandler;
 
+use graph::search_callback::SearchCallback;
+use graph::search_callback::SearchCallbackAction;
 use slog::Logger;
 use std::sync::Arc;
 use std::time::Duration;
@@ -38,11 +44,11 @@ pub const DEFAULT_SEARCH_THREAD_POOL_SIZE: &str = "10";
 
 /// Contains graph search information
 pub struct GraphPayloadHandler {
-    key: Key,
+    local_key: Key,
     search_breadth: usize,
     connect_search_breadth: usize,
     max_num_search_threads: usize,
-    search_timeout_sec: usize,
+    search_timeout: Duration,
     message_handler_client: Arc<MessageHandlerClient>,
     neighbours_store: Arc<NeighboursStore>,
     graph_search: Arc<GraphSearch>,
@@ -52,11 +58,11 @@ pub struct GraphPayloadHandler {
 impl GraphPayloadHandler {
     /// Create a new graph request handler
     ///
-    /// - `key` is the key for the local node.
+    /// - `local_key` is the key for the local node.
     /// - `remote_server` is used for communicating with other nodes.
     /// - `initial_node` is the initial other node in KIPA network.
     pub fn new(
-        key: &Key,
+        local_key: Key,
         search_breadth: usize,
         connect_search_breadth: usize,
         max_num_search_threads: usize,
@@ -68,11 +74,11 @@ impl GraphPayloadHandler {
         log: Logger,
     ) -> Self {
         GraphPayloadHandler {
-            key: key.clone(),
+            local_key,
             search_breadth,
             connect_search_breadth,
             max_num_search_threads,
-            search_timeout_sec,
+            search_timeout: Duration::from_secs(search_timeout_sec as u64),
             message_handler_client,
             graph_search: Arc::new(GraphSearch::new(key_space_manager, search_thread_pool_size)),
             neighbours_store,
@@ -80,133 +86,65 @@ impl GraphPayloadHandler {
         }
     }
 
-    fn search(&self, key: &Key, log: Logger) -> InternalResult<Option<Node>> {
+    fn search(&self, search_key: &Key, log: Logger) -> InternalResult<Option<Node>> {
         remotery_scope!("graph_search");
-
-        let callback_key = key.clone();
-        let found_log = self.log.new(o!());
-        let found_message_handler_server = self.message_handler_client.clone();
-        let found_timeout = Duration::from_secs(self.search_timeout_sec as u64);
-        let found_callback = move |n: &Node| {
-            trace!(
-                found_log, "Found node when searching"; "node" => %n);
-            if n.key == callback_key {
-                // Send verification message to the node to ensure that the
-                // discovered IP address is owned by the requested key
-                //
-                // If the verification fails, then log a warning but continue
-                // the search. If we exit here, it is possible to easily attack
-                // a search by returning fake nodes whenever you receive a query
-                if let Err(err) = found_message_handler_server.send_request(
-                    n,
-                    RequestPayload::VerifyRequest(),
-                    found_timeout,
-                ) {
-                    warn!(
-                        found_log, "Error when sending verification message \
-                        after finding correct node";
-                        "err" => %err, "node" => %n);
-                    return Ok(SearchCallbackReturn::Continue());
-                }
-
-                info!(found_log, "Search success"; "node" => %n);
-                Ok(SearchCallbackReturn::Return(n.clone()))
-            } else {
-                Ok(SearchCallbackReturn::Continue())
-            }
+        let callback = SearchRequestCallback {
+            search_key: search_key.clone(),
+            message_handler_client: self.message_handler_client.clone(),
+            timeout: self.search_timeout,
+            wrapped_client: WrappedClient {
+                message_handler_client: self.message_handler_client.clone(),
+                local_key: self.local_key.clone(),
+                neighbours_store: self.neighbours_store.clone(),
+                timeout: self.search_timeout,
+            },
+            log: log.new(o!("search_callback" => true)),
         };
-
-        let explored_log = self.log.new(o!());
-
-        let search_result = self.graph_search.search_with_breadth(
-            &key,
-            self.search_breadth,
+        let search_result = self.graph_search.search(
+            &search_key,
             vec![Node::new(
-                Address::new(vec![0, 0, 0, 0], 10842),
-                self.key.clone(),
+                // Address never used, when querying for self we return results straight from a
+                // NeighboursStore.
+                Address::new(vec![0, 0, 0, 0], 0),
+                self.local_key.clone(),
             )],
-            self.create_get_neighbours_fn(),
-            Arc::new(found_callback),
-            Arc::new(move |n| {
-                trace!(
-                    explored_log,
-                    "Explored node when searching";
-                    "node" => %n);
-                Ok(SearchCallbackReturn::Continue())
-            }),
-            self.max_num_search_threads,
-            self.search_timeout_sec,
+            callback,
+            SearchParams {
+                breadth: self.search_breadth,
+                max_num_active_threads: self.max_num_search_threads,
+                timeout: self.search_timeout,
+            },
             log,
         );
-
         to_internal_result(search_result)
     }
 
     fn connect(&self, node: &Node, log: Logger) -> InternalResult<()> {
         remotery_scope!("graph_connect");
-
-        let found_neighbours_store = self.neighbours_store.clone();
-        let found_log = self.log.new(o!());
-        let found_callback = move |n: &Node| {
-            trace!(
-                found_log,
-                "Found node when connecting";
-                "node" => %n);
-            // Consider the connected node as a candidate
-            found_neighbours_store.consider_candidate(n, false);
-            Ok(SearchCallbackReturn::Continue())
+        let callback = ConnectRequestCallback {
+            neighbours_store: self.neighbours_store.clone(),
+            wrapped_client: WrappedClient {
+                message_handler_client: self.message_handler_client.clone(),
+                local_key: self.local_key.clone(),
+                neighbours_store: self.neighbours_store.clone(),
+                timeout: self.search_timeout.clone(),
+            },
+            log: log.new(o!("connect_callback" => true)),
         };
-
-        let explored_log = self.log.new(o!());
-        let explored_callback = move |n: &Node| {
-            trace!(
-                explored_log,
-                "Explored node when connecting";
-                "node" => %n);
-            Ok(SearchCallbackReturn::Continue())
-        };
-
-        let result = self.graph_search.search_with_breadth::<()>(
-            &self.key,
-            self.connect_search_breadth,
+        let result: Result<Option<()>> = self.graph_search.search(
+            &self.local_key,
             vec![node.clone()],
-            self.create_get_neighbours_fn(),
-            Arc::new(found_callback),
-            Arc::new(explored_callback),
-            self.max_num_search_threads,
-            self.search_timeout_sec,
+            callback,
+            SearchParams {
+                breadth: self.connect_search_breadth,
+                max_num_active_threads: self.max_num_search_threads,
+                timeout: self.search_timeout,
+            },
             log,
         );
         to_internal_result(result)?;
-
+        // TODO: Check if we successfully queried any nodes when connecting.
         Ok(())
-    }
-
-    fn create_get_neighbours_fn(&self) -> GetNeighboursFn {
-        let neighbours_store = self.neighbours_store.clone();
-        let key = self.key.clone();
-        let timeout = Duration::from_secs(self.search_timeout_sec as u64);
-        let message_handler_client = self.message_handler_client.clone();
-        Arc::new(move |n, k: &Key| {
-            if n.key == key {
-                return Ok(neighbours_store.get_all());
-            }
-
-            let response = message_handler_client.send_request(
-                n,
-                RequestPayload::QueryRequest(k.clone()),
-                timeout,
-            );
-
-            match response {
-                Ok(ResponsePayload::QueryResponse(ref nodes)) => Ok(nodes.clone()),
-                Ok(_) => to_internal_result(Err(ErrorKind::ResponseError(
-                    "Incorrect response for query request".into(),
-                )
-                .into())),
-                Err(err) => Err(err),
-            }
-        })
     }
 }
 
@@ -305,6 +243,107 @@ impl PayloadHandler for GraphPayloadHandler {
                 trace!(self.log, "Received verify request");
                 Ok(ResponsePayload::VerifyResponse())
             }
+        }
+    }
+}
+
+/// Callback for performing `SearchRequest` searches.
+struct SearchRequestCallback {
+    search_key: Key,
+    message_handler_client: Arc<MessageHandlerClient>,
+    wrapped_client: WrappedClient,
+    timeout: Duration,
+    log: Logger,
+}
+
+impl SearchCallback<Node> for SearchRequestCallback {
+    fn get_neighbours(&self, node: &Node, search_key: &Key) -> InternalResult<Vec<Node>> {
+        self.wrapped_client.get_neighbours(node, search_key)
+    }
+
+    fn found_node(&self, node: &Node) -> Result<SearchCallbackAction<Node>> {
+        trace!(self.log, "Found node"; "node" => %node);
+        if node.key != self.search_key {
+            return Ok(SearchCallbackAction::Continue());
+        }
+
+        // Send verification message to the node to ensure that the discovered IP address is owned
+        // by the requested key.
+        if let Err(err) = self.message_handler_client.send_request(
+            node,
+            RequestPayload::VerifyRequest(),
+            self.timeout,
+        ) {
+            // If the verification fails, then log a warning but continue the search. If we exit
+            // here, it is possible to easily attack a search by returning fake nodes whenever you
+            // receive a query.
+            warn!(
+                self.log, "Error when sending verification message after finding correct node";
+                "err" => %err, "node" => %node);
+            return Ok(SearchCallbackAction::Continue());
+        }
+
+        info!(self.log, "Search success"; "node" => %node);
+        Ok(SearchCallbackAction::Return(node.clone()))
+    }
+
+    fn explored_node(&self, node: &Node) -> Result<SearchCallbackAction<Node>> {
+        trace!(self.log, "Explored node"; "node" => %node);
+        Ok(SearchCallbackAction::Continue())
+    }
+}
+
+/// Callback for performing `ConnectRequest` searches.
+struct ConnectRequestCallback {
+    neighbours_store: Arc<NeighboursStore>,
+    wrapped_client: WrappedClient,
+    log: Logger,
+}
+
+impl SearchCallback<()> for ConnectRequestCallback {
+    fn get_neighbours(&self, node: &Node, search_key: &Key) -> InternalResult<Vec<Node>> {
+        self.wrapped_client.get_neighbours(node, search_key)
+    }
+
+    fn found_node(&self, node: &Node) -> Result<SearchCallbackAction<()>> {
+        trace!(self.log, "Found node"; "node" => %node);
+        self.neighbours_store.consider_candidate(node, false);
+        Ok(SearchCallbackAction::Continue())
+    }
+
+    fn explored_node(&self, node: &Node) -> Result<SearchCallbackAction<()>> {
+        trace!(self.log, "Explored node"; "node" => %node);
+        Ok(SearchCallbackAction::Continue())
+    }
+}
+
+/// Wraps a `MessageHandlerClient` to get neighbours.
+struct WrappedClient {
+    message_handler_client: Arc<MessageHandlerClient>,
+    local_key: Key,
+    neighbours_store: Arc<NeighboursStore>,
+    timeout: Duration,
+}
+
+impl WrappedClient {
+    fn get_neighbours(&self, query_node: &Node, search_key: &Key) -> InternalResult<Vec<Node>> {
+        if query_node.key == self.local_key {
+            return Ok(self.neighbours_store.get_all());
+        }
+
+        let response = self.message_handler_client.send_request(
+            query_node,
+            RequestPayload::QueryRequest(search_key.clone()),
+            self.timeout,
+        );
+
+        match response {
+            Ok(ResponsePayload::QueryResponse(ref nodes)) => Ok(nodes.clone()),
+            Ok(_) => to_internal_result(Err(ErrorKind::ResponseError(
+                "Incorrect response for query request".into(),
+            )
+            .into())),
+            Err(err) => Err(err),
         }
     }
 }
