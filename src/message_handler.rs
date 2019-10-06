@@ -210,12 +210,6 @@ impl MessageHandlerClient {
         )?;
 
         if response_body.id != message_id {
-            // TODO: We need to reference `InternalError` here instead of
-            // `ResponseError` - seems that when you typedef enums, referencing
-            // the instances of the enum still needs to be done through the
-            // original enum type. Find a solution to this, and make sure that
-            // *all* mentions of `{Public,Private}Error` are to the correct enum
-            // type.
             return Err(InternalError::private(ErrorKind::ResponseError(format!(
                 "Response had incorrect ID, expected {}, received {}",
                 message_id, response_body.id
