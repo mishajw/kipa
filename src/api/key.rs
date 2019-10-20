@@ -4,6 +4,7 @@ use sequoia_openpgp::parse::PacketParser;
 use sequoia_openpgp::parse::Parse;
 use sequoia_openpgp::serialize::Serialize;
 use sequoia_openpgp::TPK;
+use serde;
 use std::fmt;
 
 /// Public key.
@@ -26,6 +27,15 @@ impl Key {
 impl fmt::Display for Key {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Key({})", self.key_id)
+    }
+}
+
+impl serde::Serialize for Key {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.key_id)
     }
 }
 

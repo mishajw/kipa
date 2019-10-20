@@ -11,6 +11,8 @@
 //! [`RequestPayload`]: ./enum.RequestPayload.html
 //! [`ResponsePayload`]: ./enum.ResponsePayload.html
 
+pub use serde::Serialize;
+
 pub mod address;
 mod key;
 mod key_space;
@@ -53,6 +55,7 @@ pub type RequestBody = MessageBody<RequestPayload>;
 pub type ResponseBody = MessageBody<error::ApiResult<ResponsePayload>>;
 
 /// Different types of requests and their payloads.
+#[derive(Clone, Serialize)]
 pub enum RequestPayload {
     /// Search for a key in the network.
     ///

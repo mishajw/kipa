@@ -33,6 +33,8 @@ extern crate rand;
 #[cfg(feature = "use-remotery")]
 extern crate remotery;
 extern crate sequoia_openpgp;
+extern crate serde;
+extern crate serde_json;
 extern crate threadpool;
 
 #[macro_use]
@@ -56,6 +58,7 @@ mod graph;
 // Utilities.
 pub mod creators;
 pub mod local_address_params;
+mod log_event;
 pub mod thread_manager;
 mod versioning;
 

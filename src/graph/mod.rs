@@ -18,6 +18,7 @@ use api::{RequestPayload, ResponsePayload};
 use error::*;
 use graph::search::{GraphSearch, SearchParams};
 use key_space_manager::KeySpaceManager;
+use log_event::LogEvent;
 use message_handler::MessageHandlerClient;
 use payload_handler::PayloadHandler;
 
@@ -97,6 +98,7 @@ impl GraphPayloadHandler {
                 local_key: self.local_key.clone(),
                 neighbours_store: self.neighbours_store.clone(),
                 timeout: self.search_timeout,
+                log: log.new(o!("wrapped_client" => true)),
             },
             log: log.new(o!("search_callback" => true)),
         };
@@ -114,8 +116,13 @@ impl GraphPayloadHandler {
                 max_num_active_threads: self.max_num_search_threads,
                 timeout: self.search_timeout,
             },
-            log,
+            log.clone(),
         );
+        match search_result {
+            Ok(Some(ref node)) => LogEvent::search_succeeded(node, &log),
+            Ok(None) => LogEvent::search_not_found(search_key, &log),
+            Err(_) => LogEvent::search_error(search_key, &log),
+        };
         to_internal_result(search_result)
     }
 
@@ -135,6 +142,7 @@ impl GraphPayloadHandler {
                 local_key: self.local_key.clone(),
                 neighbours_store: self.neighbours_store.clone(),
                 timeout: self.search_timeout,
+                log: log.new(o!("wrapped_client" => true)),
             },
             log: log.new(o!("connect_callback" => true)),
         };
@@ -162,12 +170,14 @@ impl PayloadHandler for GraphPayloadHandler {
         message_id: u32,
     ) -> InternalResult<ResponsePayload> {
         remotery_scope!("graph_receive");
+        let log = self.log.new(o!("message_id" => message_id));
 
         info!(
-            self.log,
+            log,
             "Received request";
             "sender" => sender.clone()
                 .map(|n| n.to_string()).unwrap_or_else(|| "none".into()));
+        LogEvent::receive_request(payload, &log);
 
         if let Some(n) = sender {
             remotery_scope!("consider_sender_for_neighbour");
@@ -178,12 +188,12 @@ impl PayloadHandler for GraphPayloadHandler {
             RequestPayload::QueryRequest(ref key) => {
                 remotery_scope!("graph_query_request");
                 trace!(
-                    self.log,
+                    log,
                     "Received query request";
                     "key" => %key);
                 let nodes = self.neighbours_store.get_n_closest(key, 3);
                 trace!(
-                    self.log,
+                    log,
                     "Replying";
                     "response" => nodes
                         .iter()
@@ -197,13 +207,12 @@ impl PayloadHandler for GraphPayloadHandler {
             RequestPayload::SearchRequest(ref key) => {
                 remotery_scope!("graph_search_request");
                 trace!(
-                    self.log,
+                    log,
                     "Received search request";
                     "key" => %key);
                 Ok(ResponsePayload::SearchResponse(self.search(
                     &key,
-                    self.log.new(o!(
-                        "message_id" => message_id,
+                    log.new(o!(
                         "search_request" => true,
                     )),
                 )?))
@@ -211,13 +220,12 @@ impl PayloadHandler for GraphPayloadHandler {
             RequestPayload::ConnectRequest(ref node) => {
                 remotery_scope!("graph_connect_request");
                 trace!(
-                    self.log,
+                    log,
                     "Received connect request";
                     "node" => %node);
                 self.connect(
                     node,
-                    self.log.new(o!(
-                        "message_id" => message_id,
+                    log.new(o!(
                         "connect_request" => true
                     )),
                 )?;
@@ -225,10 +233,10 @@ impl PayloadHandler for GraphPayloadHandler {
             }
             RequestPayload::ListNeighboursRequest() => {
                 remotery_scope!("graph_list_neighbours_request");
-                trace!(self.log, "Recieved list neigbours request");
+                trace!(log, "Received list neighbours request");
                 let neighbours = self.neighbours_store.get_all();
                 trace!(
-                    self.log,
+                    log,
                     "Replying to list neighbours request";
                     "list_neighbours" => true,
                     "reply" => true,
@@ -246,7 +254,7 @@ impl PayloadHandler for GraphPayloadHandler {
             }
             RequestPayload::VerifyRequest() => {
                 remotery_scope!("graph_verify_request");
-                trace!(self.log, "Received verify request");
+                trace!(log, "Received verify request");
                 Ok(ResponsePayload::VerifyResponse())
             }
         }
@@ -269,6 +277,7 @@ impl SearchCallback<Node> for SearchRequestCallback {
 
     fn found_node(&self, node: &Node) -> Result<SearchCallbackAction<Node>> {
         trace!(self.log, "Found node"; "node" => %node);
+        LogEvent::search_found(node, &self.log);
         if node.key != self.search_key {
             return Ok(SearchCallbackAction::Continue());
         }
@@ -286,6 +295,7 @@ impl SearchCallback<Node> for SearchRequestCallback {
             warn!(
                 self.log, "Error when sending verification message after finding correct node";
                 "err" => %err, "node" => %node);
+            LogEvent::search_verification_failed(node, &self.log);
             return Ok(SearchCallbackAction::Continue());
         }
 
@@ -295,6 +305,7 @@ impl SearchCallback<Node> for SearchRequestCallback {
 
     fn explored_node(&self, node: &Node) -> Result<SearchCallbackAction<Node>> {
         trace!(self.log, "Explored node"; "node" => %node);
+        LogEvent::search_explored(node, &self.log);
         Ok(SearchCallbackAction::Continue())
     }
 }
@@ -329,6 +340,7 @@ struct WrappedClient {
     local_key: Key,
     neighbours_store: Arc<NeighboursStore>,
     timeout: Duration,
+    log: Logger,
 }
 
 impl WrappedClient {
@@ -344,12 +356,18 @@ impl WrappedClient {
         );
 
         match response {
-            Ok(ResponsePayload::QueryResponse(ref nodes)) => Ok(nodes.clone()),
+            Ok(ResponsePayload::QueryResponse(ref nodes)) => {
+                LogEvent::query_succeeded(query_node, nodes, &self.log);
+                Ok(nodes.clone())
+            }
             Ok(_) => to_internal_result(Err(ErrorKind::ResponseError(
                 "Incorrect response for query request".into(),
             )
             .into())),
-            Err(err) => Err(err),
+            Err(err) => {
+                LogEvent::query_failed(query_node, &self.log);
+                Err(err)
+            }
         }
     }
 }

@@ -1,9 +1,10 @@
-use api::{Address, Key};
-
+use serde::Serialize;
 use std::fmt;
 
+use api::{Address, Key};
+
 /// A node (i.e. user) in the network.
-#[derive(Clone, Eq, PartialEq, Hash)]
+#[derive(Clone, Eq, PartialEq, Hash, Serialize)]
 pub struct Node {
     /// The address of the node.
     ///
