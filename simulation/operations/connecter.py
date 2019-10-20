@@ -38,5 +38,5 @@ def connect_network(network: Network, backend: Backend) -> None:
             for a, b in connections
         ]
         results = backend.run_commands(commands)
-        num_failed = sum(result.successful() for result in results)
-        log.info("Out of %d connections, %d failed", len(ids), num_failed)
+        num_failed = sum(not result.successful() for result in results)
+        log.info("Out of %d connections, %d failed", len(connections), num_failed)
