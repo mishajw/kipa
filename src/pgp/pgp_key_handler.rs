@@ -4,17 +4,17 @@ use error::*;
 use failure;
 use sequoia_openpgp;
 use sequoia_openpgp::constants::SymmetricAlgorithm;
+use sequoia_openpgp::crypto::KeyPair;
 use sequoia_openpgp::crypto::SessionKey;
-use sequoia_openpgp::packet::{PKESK, SKESK};
+use sequoia_openpgp::packet::key::{UnspecifiedRole, UnspecifiedSecret};
+use sequoia_openpgp::packet::{KeyFlags, PKESK, SKESK};
 use sequoia_openpgp::parse::stream::{
     DecryptionHelper, Decryptor, MessageLayer, MessageStructure, VerificationHelper,
     VerificationResult,
 };
 use sequoia_openpgp::parse::PacketParser;
 use sequoia_openpgp::parse::Parse;
-use sequoia_openpgp::serialize::stream::{
-    Cookie, EncryptionMode, Encryptor, LiteralWriter, Message, Signer,
-};
+use sequoia_openpgp::serialize::stream::{Cookie, Encryptor, LiteralWriter, Message, Signer};
 use sequoia_openpgp::serialize::writer::Stack;
 use sequoia_openpgp::{Fingerprint, KeyID, RevocationStatus, TPK};
 use slog::Logger;
@@ -54,25 +54,27 @@ impl PgpKeyHandler {
             &sender_tpk,
             &self.log.new(o!("encrypt" => true, "type" => "sender")),
         );
-        let mut key_pair = sender_tpk
-            .primary()
-            .clone()
-            .into_keypair()
+
+        let mut signing_key_pair = into_keypair(&sender_tpk)
             .map_err(to_gpg_error("Failed to get keypair from signing key"))?;
+
+        let encryption_recipients = recipient_tpk
+            .keys_valid()
+            .key_flags(
+                KeyFlags::default()
+                    .set_encrypt_at_rest(true)
+                    .set_encrypt_for_transport(true),
+            )
+            .map(|(_, _, key)| key.into())
+            .collect::<Vec<_>>();
 
         let mut encrypted = Vec::new();
         {
             let stack = Message::new(&mut encrypted);
-            let stack = Signer::new(stack, vec![&mut key_pair], None)
+            let stack = Signer::new(stack, vec![&mut signing_key_pair], None)
                 .map_err(to_gpg_error("Failed to init signer"))?;
-            let stack = Encryptor::new(
-                stack,
-                &[],
-                &[&recipient_tpk],
-                EncryptionMode::ForTransport,
-                None,
-            )
-            .map_err(to_gpg_error("Failed to init encryptor"))?;
+            let stack = Encryptor::new(stack, &[], &encryption_recipients, None, None)
+                .map_err(to_gpg_error("Failed to init encryptor"))?;
             write(stack, data)?;
         }
         Ok(encrypted)
@@ -127,15 +129,15 @@ impl<'a> VerificationHelper for GpgHelper<'a> {
         trace!(
             self.log, "Getting public key";
             "requested_key_ids" => format!("{:?}", key_ids),
-            "sender_key_id" => %self.sender.primary().keyid(),
-            "recipient_key_id" => %self.recipient.primary().keyid(),
+            "sender_key_id" => %self.sender.primary().component().keyid(),
+            "recipient_key_id" => %self.recipient.primary().component().keyid(),
         );
         Ok(key_ids
             .iter()
             .filter_map(|key_id| {
-                if *key_id == self.sender.primary().keyid() {
+                if *key_id == self.sender.primary().component().keyid() {
                     Some(self.sender.clone())
-                } else if *key_id == self.recipient.primary().keyid() {
+                } else if *key_id == self.recipient.primary().component().keyid() {
                     Some(self.recipient.clone())
                 } else {
                     None
@@ -171,9 +173,9 @@ impl<'a> DecryptionHelper for GpgHelper<'a> {
     where
         D: FnMut(SymmetricAlgorithm, &SessionKey) -> sequoia_openpgp::Result<()>,
     {
-        let key = self.recipient.primary().clone();
-        debug!(self.log, "Decrypting key"; "fingerprint" => key.fingerprint().to_string());
-        let mut pair = key.into_keypair()?;
+        let mut pair = into_keypair(self.recipient)?;
+        debug!(
+            self.log, "Decrypting key"; "fingerprint" => pair.public().fingerprint().to_string());
         pkesks[0]
             .decrypt(&mut pair)
             .and_then(|(algo, session_key)| decrypt(algo, &session_key))
@@ -202,6 +204,17 @@ fn write(stack: Stack<Cookie>, data: &[u8]) -> Result<()> {
     Ok(())
 }
 
+fn into_keypair(tpk: &TPK) -> sequoia_openpgp::Result<KeyPair<UnspecifiedRole>> {
+    let signing_key: UnspecifiedSecret = tpk
+        .keys_valid()
+        .signing_capable()
+        .nth(0)
+        .unwrap()
+        .2
+        .clone()
+        .into();
+    signing_key.into_keypair()
+}
 fn key_to_tpk(key_data: &[u8]) -> Result<TPK> {
     // TODO: This function gets called on every encr/decr operation. This isn't
     // too slow, but still should be fixed.
@@ -221,36 +234,26 @@ fn log_tpk(tpk: &TPK, log: &Logger) {
     trace!(log, "Printing TPK");
     trace!(
         log, "Found primary key";
-        "fingerprint" => tpk.primary().fingerprint().to_string(),
+        "fingerprint" => tpk.primary().component().fingerprint().to_string(),
     );
     for subkey_bindings in tpk.subkeys() {
         trace!(
             log, "Found subkey";
-            "fingerprint" => subkey_bindings.subkey().fingerprint().to_string(),
+            "fingerprint" => subkey_bindings.key().fingerprint().to_string(),
         );
     }
     for (_, revoked, key) in tpk.keys_all().unfiltered() {
         let secret = key.secret();
-        let keypair = key.clone().into_keypair();
         trace!(
             log, "Found key in all keys";
             "fingerprint" => key.fingerprint().to_string(),
             "revoked" => revoked != RevocationStatus::NotAsFarAsWeKnow,
             "has_secret" => secret.is_some(),
-            "has_keypair" => keypair.is_ok(),
         );
         if let Some(secret) = secret {
             trace!(
                 log, "Found secret key";
                 "encrypted" => secret.is_encrypted(),
-            );
-        }
-        if let Ok(keypair) = keypair {
-            trace!(
-                log, "Found keypair";
-                "public_fingerprint" => keypair.public().fingerprint().to_string(),
-                "public_has_secret" => keypair.public().secret().is_some(),
-                "public_has_keypair" => keypair.public().clone().into_keypair().is_ok(),
             );
         }
     }
