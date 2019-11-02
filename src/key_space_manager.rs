@@ -25,7 +25,8 @@ impl KeySpaceManager {
     /// Creates a location in key space from a key.
     pub fn create_from_key(&self, key: &Key) -> KeySpace {
         let chunk_size = (size_of::<i32>() * self.num_key_space_dims) / size_of::<u8>();
-        let chunks = key.data.chunks(chunk_size);
+        let key_data = key.key_data();
+        let chunks = key_data.chunks(chunk_size);
         let mut chunks_transpose = vec![vec![]; chunk_size];
         for cs in chunks {
             for (i, c) in cs.iter().enumerate() {

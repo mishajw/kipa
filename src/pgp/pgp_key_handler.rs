@@ -12,8 +12,6 @@ use sequoia_openpgp::parse::stream::{
     DecryptionHelper, Decryptor, MessageLayer, MessageStructure, VerificationHelper,
     VerificationResult,
 };
-use sequoia_openpgp::parse::PacketParser;
-use sequoia_openpgp::parse::Parse;
 use sequoia_openpgp::serialize::stream::{Cookie, Encryptor, LiteralWriter, Message, Signer};
 use sequoia_openpgp::serialize::writer::Stack;
 use sequoia_openpgp::{Fingerprint, KeyID, RevocationStatus, TPK};
@@ -44,21 +42,20 @@ impl PgpKeyHandler {
             self.log, "Encrypting data";
             "length" => data.len(), "sender" => %sender, "recipient" => %recipient);
 
-        let recipient_tpk = key_to_tpk(&recipient.data)?;
         log_tpk(
-            &recipient_tpk,
+            &recipient.sequoia_tpk,
             &self.log.new(o!("encrypt" => true, "type" => "recipient")),
         );
-        let sender_tpk = key_to_tpk(sender.secret_key_data_yes_really())?;
         log_tpk(
-            &sender_tpk,
+            &sender.secret_key_yes_really(),
             &self.log.new(o!("encrypt" => true, "type" => "sender")),
         );
 
-        let mut signing_key_pair = into_keypair(&sender_tpk)
+        let mut signing_key_pair = into_keypair(&sender.secret_key_yes_really())
             .map_err(to_gpg_error("Failed to get keypair from signing key"))?;
 
-        let encryption_recipients = recipient_tpk
+        let encryption_recipients = recipient
+            .sequoia_tpk
             .keys_valid()
             .key_flags(
                 KeyFlags::default()
@@ -92,19 +89,17 @@ impl PgpKeyHandler {
             self.log, "Decrypting data";
             "length" => data.len(), "sender" => %sender, "recipient" => %recipient);
 
-        let sender_tpk = key_to_tpk(&sender.data)?;
         log_tpk(
-            &sender_tpk,
+            &sender.sequoia_tpk,
             &self.log.new(o!("decrypt" => true, "type" => "sender")),
         );
-        let recipient_tpk = key_to_tpk(recipient.secret_key_data_yes_really())?;
         log_tpk(
-            &recipient_tpk,
+            &recipient.secret_key_yes_really(),
             &self.log.new(o!("decrypt" => true, "type" => "recipient")),
         );
         let helper = GpgHelper {
-            sender: &sender_tpk,
-            recipient: &recipient_tpk,
+            sender: &sender.sequoia_tpk,
+            recipient: &recipient.secret_key_yes_really(),
             log: self.log.new(o!("helper" => true)),
         };
         let mut decryptor = Decryptor::from_bytes(data, helper, None)
@@ -214,14 +209,6 @@ fn into_keypair(tpk: &TPK) -> sequoia_openpgp::Result<KeyPair<UnspecifiedRole>> 
         .clone()
         .into();
     signing_key.into_keypair()
-}
-fn key_to_tpk(key_data: &[u8]) -> Result<TPK> {
-    // TODO: This function gets called on every encr/decr operation. This isn't
-    // too slow, but still should be fixed.
-    remotery_scope!("gpg_parse_tpk");
-    PacketParser::from_bytes(&key_data)
-        .and_then(TPK::from_packet_parser)
-        .map_err(|_| ErrorKind::ParseError("Failed to parse bytes as TPK".into()).into())
 }
 
 fn log_tpk(tpk: &TPK, log: &Logger) {

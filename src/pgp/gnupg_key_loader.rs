@@ -41,7 +41,7 @@ impl GnupgKeyLoader {
         let key_data = self
             .get_private_key_data(&key_id, &secret)
             .map_err(InternalError::private)?;
-        Ok(SecretKey::new(key_id, key_data))
+        Ok(SecretKey::new(key_id, key_data).map_err(InternalError::private)?)
     }
 
     /// Gets the public key of a recipient.
@@ -54,7 +54,7 @@ impl GnupgKeyLoader {
         let key_data = self
             .get_public_key_data(&key_id)
             .map_err(InternalError::private)?;
-        Ok(Key::new(key_id, key_data))
+        Ok(Key::new(key_id, key_data).map_err(InternalError::private)?)
     }
 
     /// Gets private key data from user's GnuPG directory, without passphrase.
