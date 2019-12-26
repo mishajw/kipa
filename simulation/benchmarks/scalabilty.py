@@ -16,5 +16,8 @@ class ScalabilityBenchmark(SuccessSpeedBenchmark):
         super().__init__("scalability", NETWORK_SIZES, "Network size", output_directory)
 
     def get_network(self, network: Network, network_size: int) -> Network:
-        nodes = [random.sample(network.nodes) for _ in range(network_size)]
+        assert len(network.nodes) >= max(
+            NETWORK_SIZES
+        ), "Configured network must be larger than max network size test."
+        nodes = random.sample(network.nodes, network_size)
         return network.replace(nodes=nodes)
