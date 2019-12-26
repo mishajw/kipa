@@ -34,25 +34,19 @@ class DockerBackend(ParallelBackend):
         self.__api_client = docker.APIClient()
         self.__network: Optional[Network] = None
 
-    def initialize_network(
-        self, network: Network, node_builds: Dict[NodeId, Build]
-    ) -> None:
+    def initialize_network(self, network: Network, node_builds: Dict[NodeId, Build]) -> None:
         self.__network = self.__create_network(network)
 
         log.info("Creating docker images")
         builds = set(node_builds.values())
-        build_to_image = {
-            build: self.__create_docker_image(build) for build in builds
-        }
+        build_to_image = {build: self.__create_docker_image(build) for build in builds}
 
         log.info(f"Creating {len(network.nodes)} containers")
         self.__containers = {}
         self.__ip_addresses = {}
         for node in network.nodes:
             image = build_to_image[node_builds[node.id]]
-            container, ip_address = self.__create_container(
-                node, image, network
-            )
+            container, ip_address = self.__create_container(node, image, network)
             self.__containers[node.id] = container
             self.__ip_addresses[node.id] = ip_address
             # FIXME: If we don't sleep, we run out of memory when GPG reads keys, causing daemon
@@ -66,16 +60,12 @@ class DockerBackend(ParallelBackend):
 
     def run_command(self, command: CliCommand) -> CliCommandResult:
         start_sec = time.time()
-        output = self.__run_container_command(
-            command.node_id, ["/root/kipa_cli", *command.args]
-        )
+        output = self.__run_container_command(command.node_id, ["/root/kipa_cli", *command.args])
         duration_sec = time.time() - start_sec
         if output is None:
             return CliCommandResult.failed(command)
 
-        res = CliCommandResult(
-            command, output, self.get_cli_logs(command.node_id), duration_sec
-        )
+        res = CliCommandResult(command, output, self.get_cli_logs(command.node_id), duration_sec)
         return res
 
     def stop_networking(self, node_id: NodeId):
@@ -88,12 +78,8 @@ class DockerBackend(ParallelBackend):
         return self.__get_logs_from_file(node_id, "/root/logs/log-cli.json")
 
     def get_human_readable_logs(self, node_id: NodeId) -> bytes:
-        logs = self.__containers[node_id].attach(
-            stdout=True, stderr=True, stream=False, logs=True
-        )
-        assert isinstance(
-            logs, bytes
-        ), f"Logs returned from docker was not bytes: {logs}"
+        logs = self.__containers[node_id].attach(stdout=True, stderr=True, stream=False, logs=True)
+        assert isinstance(logs, bytes), f"Logs returned from docker was not bytes: {logs}"
         return logs
 
     def clean(self) -> None:
@@ -137,9 +123,7 @@ class DockerBackend(ParallelBackend):
         # TODO: Docker requires COPY files to be in the docker directory,
         # meaning we copy the builds twice.
         shutil.copy(str(build.cli_path), str(docker_directory / "kipa_cli"))
-        shutil.copy(
-            str(build.daemon_path), str(docker_directory / "kipa_daemon")
-        )
+        shutil.copy(str(build.daemon_path), str(docker_directory / "kipa_daemon"))
 
         log.debug("Creating Dockerfile")
         with open(docker_directory / "Dockerfile", "w") as f:
@@ -168,9 +152,7 @@ class DockerBackend(ParallelBackend):
 
         image_name = f"{IMAGE_PREFIX}_{build.id()}"
         log.info(f"Building KIPA image {image_name} (may take a while)")
-        self.__client.images.build(
-            path=str(docker_directory), tag=image_name, quiet=False
-        )
+        self.__client.images.build(path=str(docker_directory), tag=image_name, quiet=False)
 
         log.info(f"Removing docker directory at {docker_directory}")
         shutil.rmtree(docker_directory)
@@ -191,10 +173,7 @@ class DockerBackend(ParallelBackend):
             privileged=True,  # Needed for faking poor connections
             mounts=[
                 docker.types.Mount(
-                    source=GPG_HOME,
-                    target="/root/.gnupg",
-                    type="bind",
-                    read_only=False,
+                    source=GPG_HOME, target="/root/.gnupg", type="bind", read_only=False,
                 )
             ],
             environment={
@@ -206,9 +185,9 @@ class DockerBackend(ParallelBackend):
             },
         )
 
-        network_details = self.__api_client.inspect_container(container.name)[
-            "NetworkSettings"
-        ]["Networks"][self.__network.name]
+        network_details = self.__api_client.inspect_container(container.name)["NetworkSettings"][
+            "Networks"
+        ][self.__network.name]
         if not network.ipv6:
             ip_address = f"{network_details['IPAddress']}:10842"
         else:
@@ -217,9 +196,7 @@ class DockerBackend(ParallelBackend):
 
         return container, ip_address
 
-    def __run_container_command(
-        self, node_id: NodeId, command: List[str]
-    ) -> Optional[str]:
+    def __run_container_command(self, node_id: NodeId, command: List[str]) -> Optional[str]:
         try:
             (exit_code, output) = self.__containers[node_id].exec_run(command)
         except docker.errors.APIError as error:
@@ -234,17 +211,14 @@ class DockerBackend(ParallelBackend):
         output = output.decode()
         if exit_code != 0:
             log.error(
-                f"Bad return code when executing command: {command}. "
-                f"Output was: {output}"
+                f"Bad return code when executing command: {command}. " f"Output was: {output}"
             )
             # TODO: Correct behaviour?
             return None
 
         return output
 
-    def __get_logs_from_file(
-        self, node_id: NodeId, file_name: str
-    ) -> List[Dict]:
+    def __get_logs_from_file(self, node_id: NodeId, file_name: str) -> List[Dict]:
         raw_logs = self.__run_container_command(node_id, ["cat", file_name])
         logs: List[dict] = []
         for line in raw_logs.split("\n"):
@@ -258,9 +232,7 @@ class DockerBackend(ParallelBackend):
             logs.append(json_dict)
         return logs
 
-    def __fake_poor_connection(
-        self, quality: Optional[ConnectionQuality]
-    ) -> None:
+    def __fake_poor_connection(self, quality: Optional[ConnectionQuality]) -> None:
         if quality is None:
             return
 

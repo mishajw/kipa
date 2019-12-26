@@ -176,8 +176,10 @@ impl TryInto<proto_api::ResponseBody> for ResponseBody {
             }
             Ok(ResponsePayload::ListNeighboursResponse(ref nodes)) => {
                 let mut list = proto_api::ListNeighboursResponse::new();
-                let kipa_nodes: Vec<proto_api::Node> =
-                    nodes.iter().map(|n| n.clone().try_into()).collect::<Result<Vec<_>>>()?;
+                let kipa_nodes: Vec<proto_api::Node> = nodes
+                    .iter()
+                    .map(|n| n.clone().try_into())
+                    .collect::<Result<Vec<_>>>()?;
                 list.set_nodes(RepeatedField::from_vec(kipa_nodes));
                 proto_body.set_list_neighbours_response(list);
             }

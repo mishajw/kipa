@@ -13,9 +13,7 @@ NETWORK_SIZES = list(range(20, 201, 20))
 
 class ScalabilityBenchmark(SuccessSpeedBenchmark):
     def __init__(self, output_directory: Path):
-        super().__init__(
-            "scalability", NETWORK_SIZES, "Network size", output_directory
-        )
+        super().__init__("scalability", NETWORK_SIZES, "Network size", output_directory)
 
     def get_network(self, network: Network, network_size: int) -> Network:
         nodes = [random.sample(network.nodes) for _ in range(network_size)]

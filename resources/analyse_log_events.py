@@ -35,9 +35,7 @@ def main():
 def get_events(json_log: Path) -> List[Dict]:
     events = [e for e in json.loads(json_log.read_text()) if "log_event" in e]
     assert all("message_id" in e for e in events), "All events must have a message_id"
-    events = [
-        {**json.loads(e["log_event"]), "message_id": e["message_id"]} for e in events
-    ]
+    events = [{**json.loads(e["log_event"]), "message_id": e["message_id"]} for e in events]
     return events
 
 
