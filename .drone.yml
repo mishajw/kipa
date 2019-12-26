@@ -1,18 +1,22 @@
 pipeline:
   main:
     image: alpine:edge
-    environment:
-      # Fail build if there are warnings
-      - RUSTFLAGS=-D warnings
     commands:
-      # Get packages needed for building
-      - >-
-         apk -U add
-         rust cargo gnupg gettext file make automake autoconf protobuf bash
-         python3
-      # TODO: Check code is formatted correctly. This requires a nightly rust
-      # tool chain, which is not available in alpine currently.
-      # Check that we can build and test all configurations
-      - ./resources/build-configurations.py
-      # TODO: Run python end-to-end tests
-
+      # Install prerequisites.
+      - apk add --update-cache
+      - apk add gettext file make automake autoconf pkgconfig curl nettle-dev clang-dev gmp-dev
+      - apk add protobuf bash gnupg
+      - apk add cargo python3
+      - curl -sSf https://sh.rustup.rs | sh -s -- -y
+      # Check rust code compiles without warnings.
+      - RUSTFLAGS='-D warnings' cargo check --all --tests
+      # Check rust code compiles with different features.
+      - cargo check --no-default-features --features "use-graph use-protobuf use-tcp use-unix-socket"
+      - cargo check --no-default-features --features "use-protobuf use-tcp use-unix-socket use-black-hole"
+      - cargo check --no-default-features --features "use-protobuf use-tcp use-unix-socket use-random-response"
+      # Check rust code passes unit tests.
+      - cargo test
+      # Check rust code is formatted correctly.
+      - cargo fmt -- --check
+      # TODO: Enable clippy checks after fixing all issues.
+      # TODO: Run python end-to-end tests.
