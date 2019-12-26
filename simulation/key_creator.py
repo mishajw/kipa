@@ -1,7 +1,9 @@
 import logging
 import os
+import re
 import subprocess
 import tempfile
+from pathlib import Path
 from typing import List, Set
 
 log = logging.getLogger(__name__)
@@ -67,15 +69,14 @@ class KeyCreator:
                 # Generate the key with the saved GPG commands
                 "--generate-key",
                 gpg_commands.name,
-            ]
+            ],
+            stderr=subprocess.STDOUT,
         )
         log.debug("Finished making key")
 
-        for line in gpg_output.decode().split("\n"):
-            if not line.startswith("fpr"):
-                continue
-            return line.split(":")[-2]
-        raise AssertionError("Failed to find key in GPG output")
+        match = re.search(r"key ([A-F0-9]+) marked as ultimately trusted", gpg_output.decode())
+        assert match, f"Failed to find key in GPG output: {gpg_output}"
+        return match.group(1)[-8:]  # Get last 8 characters of fingerprint.
 
     @staticmethod
     def __existing_key_ids() -> Set[str]:
