@@ -119,5 +119,5 @@ impl fmt::Display for SecretKey {
 fn parse_tpk(data: &[u8]) -> Result<TPK> {
     PacketParser::from_bytes(data)
         .and_then(TPK::from_packet_parser)
-        .map_err(|_| ErrorKind::ParseError("Failed to parse bytes as TPK".into()).into())
+        .map_err(|e| ErrorKind::GpgError("Failed to parse bytes as TPK".into(), e).into())
 }
