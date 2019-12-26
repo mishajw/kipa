@@ -164,6 +164,14 @@ class DockerBackend(ParallelBackend):
     ) -> Tuple[Container, str]:
         container_name = f"{DOCKER_PREFIX}_{node.id}"
 
+        daemon_args = {
+            k: (str(v) if type(v) != bool else str(v).lower()) for k, v in node.daemon_args.items()
+        }
+        daemon_args = {k.replace("_", "-"): v for k, v in daemon_args.items()}
+        daemon_args = [f"--{k} {v}" for k, v in daemon_args.items()]
+        daemon_args = " ".join(daemon_args)
+        log.debug(f"Daemon args: {daemon_args}")
+
         log.info(f"Creating container with name {container_name}")
         container = self.__client.containers.run(
             image=image_name,
@@ -176,13 +184,7 @@ class DockerBackend(ParallelBackend):
                     source=GPG_HOME, target="/root/.gnupg", type="bind", read_only=False,
                 )
             ],
-            environment={
-                "KIPA_KEY_ID": node.key_id(),
-                "KIPA_ARGS": " ".join(
-                    f"--{k.replace('_', '-')} {v}"
-                    for k, v in node.daemon_args.items()
-                ),
-            },
+            environment={"KIPA_KEY_ID": node.key_id(), "KIPA_ARGS": daemon_args},
         )
 
         network_details = self.__api_client.inspect_container(container.name)["NetworkSettings"][
