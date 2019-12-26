@@ -20,23 +20,27 @@ use std::fmt;
 
 error_chain! {
     errors {
-        /// Error in parsing some data
+        /// Error in parsing some data.
         ParseError(s: String) { display("Parse error: {}", s) }
-        /// Error in joining on a thread
+        /// Error in joining on a thread.
         JoinError(s: String) { display("Join error: {}", s) }
-        /// Error in configuration set up
+        /// Error in configuration set up.
         ConfigError(s: String) { display("Configuration error: {}", s) }
-        /// Error in the request
+        /// Error in the request.
         RequestError(s: String) { display("Request error: {}", s) }
-        /// Error in the response type
+        /// Error in the response type.
         ResponseError(s: String) { display("Response error: {}", s) }
-        /// Error in retrieving IP address
+        /// Error in retrieving IP address.
         IpAddressError(s: String) { display("IP address error: {}", s) }
-        /// Error due to unimplemented functionality
+        /// Error due to unimplemented functionality.
         UnimplementedError(s: String) { display("Unimplemented error: {}", s) }
-        /// Error due to GPGME
+        /// Error due to GPGME.
         GpgError(s: String, error: failure::Error) {
             display("GPG error: {}. Caused by: {}", s, error)
+        }
+        /// Error on running command.
+        CommandError(s: String) {
+            display("Command error: {}", s)
         }
     }
 }

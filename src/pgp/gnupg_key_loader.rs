@@ -5,17 +5,16 @@ use pgp::SecretLoader;
 use slog::Logger;
 use std::io::{BufReader, BufWriter};
 use std::io::{Read, Write};
-use std::process::{Command, Stdio};
+use std::process::{Command, Output, Stdio};
 
 /// Loads GnuPG keys from the user's directory.
 ///
-/// This struct does *not* use GPGME, but instead has a raw call to
-/// `gpg`. This is because GPGME does not seem to respect the loopback
-/// pinentry mode when exporting private keys, and always resorts to
-/// using the GPG agent.
+/// This struct does *not* use GPGME, but instead has a raw call to `gpg`. This is because GPGME
+/// does not seem to respect the loopback pinentry mode when exporting private keys, and always
+/// resorts to using the GPG agent.
 ///
-/// Also, rust GPGME implementation doesn't seem to support static linking,
-/// which means the GPGME libs must be installed on each system KIPA is deployed on.
+/// Also, rust GPGME implementation doesn't seem to support static linking, which means the GPGME
+/// libs must be installed on each system KIPA is deployed on.
 pub struct GnupgKeyLoader {
     log: Logger,
 }
@@ -73,27 +72,24 @@ impl GnupgKeyLoader {
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
-
-        let child = command
+        let mut child = command
             .spawn()
             .chain_err(|| "Error on spawn gpg command to export key data")?;
 
-        let mut stdin = BufWriter::new(child.stdin.chain_err(|| "Failed to get stdin")?);
-        let mut stdout = BufReader::new(child.stdout.chain_err(|| "Failed to get stdout")?);
-        let stderr = BufReader::new(child.stderr.chain_err(|| "Failed to get stderr")?);
-
         // Write the passphrase to stdin.
+        let mut stdin = BufWriter::new(child.stdin.as_mut().chain_err(|| "Failed to get stdin")?);
         stdin
             .write(&format!("{}\n", secret).as_bytes())
             .chain_err(|| "Error on writing secret to gpg command")?;
         stdin.flush().chain_err(|| "Error on flushing gpg stdin")?;
+        drop(stdin);
 
-        let mut key_data = Vec::new();
-        stdout
-            .read_to_end(&mut key_data)
-            .chain_err(|| "Error on reading key data from gpg command")?;
-        self.log_stderr(stderr)?;
-        Ok(key_data)
+        let output = child
+            .wait_with_output()
+            .chain_err(|| "Failed to wait for gpg and get output")?;
+        self.check_output(&output)?;
+        // Key data is written to stdout.
+        Ok(output.stdout)
     }
 
     /// Gets public key data from user's GnuPG directory.
@@ -104,32 +100,26 @@ impl GnupgKeyLoader {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
 
-        let child = command
+        let output = command
             .spawn()
-            .chain_err(|| "Error on spawn gpg command to export public key data")?;
-
-        let mut stdout = BufReader::new(child.stdout.chain_err(|| "Failed to get stdout")?);
-        let stderr = BufReader::new(child.stderr.chain_err(|| "Failed to get stderr")?);
-
-        let mut key_data = Vec::new();
-        stdout
-            .read_to_end(&mut key_data)
-            .chain_err(|| "Error on reading public key data")?;
-        self.log_stderr(stderr)?;
-        Ok(key_data)
+            .chain_err(|| "Error on spawn gpg command to export public key data")?
+            .wait_with_output()
+            .chain_err(|| "Failed to wait for gpg and get output")?;
+        self.check_output(&output)?;
+        // Key data is written to stdout.
+        Ok(output.stdout)
     }
 
-    /// Checks if anything was printed to stderr.
-    fn log_stderr(&self, mut stderr: impl Read) -> Result<()> {
-        let mut stderr_logs = Vec::new();
-        stderr
-            .read_to_end(&mut stderr_logs)
-            .chain_err(|| "Failed to read stderr")?;
-        if !stderr_logs.is_empty() {
+    /// Checks that the output of a process is healthy.
+    fn check_output(&self, output: &Output) -> Result<()> {
+        if !output.stderr.is_empty() {
             warn!(
                 self.log, "GPG command for exporting keys printed to stderr";
-                "stderr" => ::std::str::from_utf8(&stderr_logs)
+                "stderr" => ::std::str::from_utf8(&output.stderr)
                     .unwrap_or("invalid utf8"));
+        }
+        if !output.status.success() {
+            return Err(ErrorKind::CommandError("Non-successful exit code from gpg".into()).into());
         }
         Ok(())
     }
