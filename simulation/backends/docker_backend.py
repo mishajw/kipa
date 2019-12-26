@@ -55,6 +55,9 @@ class DockerBackend(ParallelBackend):
             )
             self.__containers[node.id] = container
             self.__ip_addresses[node.id] = ip_address
+            # FIXME: If we don't sleep, we run out of memory when GPG reads keys, causing daemon
+            # startups to fail.
+            time.sleep(1)
 
         self.__fake_poor_connection(network.connection_quality)
 
