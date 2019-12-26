@@ -8,7 +8,7 @@ from simulation.networks import Network
 log = logging.getLogger(__name__)
 
 NUM_ATTEMPTS = 10
-ATTEMPT_WAIT_SECS = 2
+ATTEMPT_WAIT_SECS = 10
 
 
 def ensure_all_alive(network: Network, backend: Backend) -> None:

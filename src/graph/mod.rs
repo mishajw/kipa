@@ -38,7 +38,7 @@ pub const DEFAULT_CONNECT_SEARCH_BREADTH: &str = "3";
 pub const DEFAULT_MAX_NUM_SEARCH_THREADS: &str = "3";
 
 /// The default timeout for queries when performing a search
-pub const DEFAULT_SEARCH_TIMEOUT_SEC: &str = "2";
+pub const DEFAULT_SEARCH_TIMEOUT_SEC: &str = "5";
 
 /// Default size of thread pool for conducting searches
 pub const DEFAULT_SEARCH_THREAD_POOL_SIZE: &str = "10";
@@ -191,7 +191,8 @@ impl PayloadHandler for GraphPayloadHandler {
                     log,
                     "Received query request";
                     "key" => %key);
-                let nodes = self.neighbours_store.get_n_closest(key, 3);
+                // TODO: Make configurable.
+                let nodes = self.neighbours_store.get_n_closest(key, 5);
                 trace!(
                     log,
                     "Replying";

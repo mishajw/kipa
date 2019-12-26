@@ -9,7 +9,7 @@ use std::ops::{BitXor, Deref};
 use byteorder::{BigEndian, ReadBytesExt};
 
 /// The default number of dimensions in key space.
-pub const DEFAULT_KEY_SPACE_SIZE: &str = "2";
+pub const DEFAULT_KEY_SPACE_SIZE: &str = "10";
 
 /// Manages locations in `KeySpace`, including their creation and distance metrics.
 pub struct KeySpaceManager {
