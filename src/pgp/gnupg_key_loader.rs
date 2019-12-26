@@ -3,8 +3,8 @@ use error::*;
 
 use pgp::SecretLoader;
 use slog::Logger;
-use std::io::{BufReader, BufWriter};
-use std::io::{Read, Write};
+use std::io::BufWriter;
+use std::io::Write;
 use std::process::{Command, Output, Stdio};
 
 /// Loads GnuPG keys from the user's directory.

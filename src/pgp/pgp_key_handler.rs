@@ -14,7 +14,7 @@ use sequoia_openpgp::parse::stream::{
 };
 use sequoia_openpgp::serialize::stream::{Cookie, Encryptor, LiteralWriter, Message, Signer};
 use sequoia_openpgp::serialize::writer::Stack;
-use sequoia_openpgp::{Fingerprint, KeyID, RevocationStatus, TPK};
+use sequoia_openpgp::{Fingerprint, KeyID, TPK};
 use slog::Logger;
 use std::io;
 use std::io::Write;
@@ -41,15 +41,6 @@ impl PgpKeyHandler {
         debug!(
             self.log, "Encrypting data";
             "length" => data.len(), "sender" => %sender, "recipient" => %recipient);
-
-        log_tpk(
-            &recipient.sequoia_tpk,
-            &self.log.new(o!("encrypt" => true, "type" => "recipient")),
-        );
-        log_tpk(
-            &sender.secret_key_yes_really(),
-            &self.log.new(o!("encrypt" => true, "type" => "sender")),
-        );
 
         let mut signing_key_pair = into_keypair(&sender.secret_key_yes_really())
             .map_err(to_gpg_error("Failed to get keypair from signing key"))?;
@@ -89,14 +80,6 @@ impl PgpKeyHandler {
             self.log, "Decrypting data";
             "length" => data.len(), "sender" => %sender, "recipient" => %recipient);
 
-        log_tpk(
-            &sender.sequoia_tpk,
-            &self.log.new(o!("decrypt" => true, "type" => "sender")),
-        );
-        log_tpk(
-            &recipient.secret_key_yes_really(),
-            &self.log.new(o!("decrypt" => true, "type" => "recipient")),
-        );
         let helper = GpgHelper {
             sender: &sender.sequoia_tpk,
             recipient: &recipient.secret_key_yes_really(),
@@ -209,39 +192,4 @@ fn into_keypair(tpk: &TPK) -> sequoia_openpgp::Result<KeyPair<UnspecifiedRole>> 
         .clone()
         .into();
     signing_key.into_keypair()
-}
-
-fn log_tpk(tpk: &TPK, log: &Logger) {
-    remotery_scope!("gpg_log_tpk");
-    let log = log.new(o!(
-        "tpk" => true,
-        "fingerprint" => tpk.fingerprint().to_string(),
-        "is_tsk" => tpk.is_tsk(),
-    ));
-    trace!(log, "Printing TPK");
-    trace!(
-        log, "Found primary key";
-        "fingerprint" => tpk.primary().component().fingerprint().to_string(),
-    );
-    for subkey_bindings in tpk.subkeys() {
-        trace!(
-            log, "Found subkey";
-            "fingerprint" => subkey_bindings.key().fingerprint().to_string(),
-        );
-    }
-    for (_, revoked, key) in tpk.keys_all().unfiltered() {
-        let secret = key.secret();
-        trace!(
-            log, "Found key in all keys";
-            "fingerprint" => key.fingerprint().to_string(),
-            "revoked" => revoked != RevocationStatus::NotAsFarAsWeKnow,
-            "has_secret" => secret.is_some(),
-        );
-        if let Some(secret) = secret {
-            trace!(
-                log, "Found secret key";
-                "encrypted" => secret.is_encrypted(),
-            );
-        }
-    }
 }
