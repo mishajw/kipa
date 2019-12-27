@@ -80,12 +80,12 @@ impl PgpKeyHandler {
             self.log, "Decrypting data";
             "length" => data.len(), "sender" => %sender, "recipient" => %recipient);
 
-        let helper = GpgHelper {
+        let gpg_helper = GpgHelper {
             sender: &sender.sequoia_tpk,
             recipient: &recipient.secret_key_yes_really(),
-            log: self.log.new(o!("helper" => true)),
+            log: self.log.new(o!("gpg_helper" => true)),
         };
-        let mut decryptor = Decryptor::from_bytes(data, helper, None)
+        let mut decryptor = Decryptor::from_bytes(data, gpg_helper, None)
             .map_err(to_gpg_error("Failed to init decryptor"))?;
 
         let mut decrypted_data = Vec::new();
