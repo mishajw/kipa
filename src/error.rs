@@ -114,9 +114,15 @@ pub fn api_to_internal_result<T>(result: ApiResult<T>) -> InternalResult<T> {
 /// Turn an internal result into a public-facing `ApiResult`
 pub fn to_api_result<T>(result: InternalResult<T>, log: &Logger) -> ApiResult<T> {
     result.map_err(|err| match err {
-        InternalError::PublicError(err, _) => err,
+        InternalError::PublicError(err, Some(internal_err)) => {
+            error!(
+                log, "Internal error with public error";
+                "err" => %internal_err.display_chain());
+            err
+        }
+        InternalError::PublicError(err, None) => err,
         InternalError::PrivateError(err) => {
-            info!(
+            error!(
                 log, "Private error when casting to API error";
                 "err" => %err.display_chain());
             ApiError::new("Internal error".into(), ApiErrorType::Internal)
