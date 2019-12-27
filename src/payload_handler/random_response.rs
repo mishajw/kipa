@@ -16,7 +16,7 @@ pub struct RandomResponsePayloadHandler {
 impl RandomResponsePayloadHandler {
     /// Create a new black hole request handler
     pub fn new(log: Logger) -> Self {
-        RandomResponsePayloadHandler { log: log }
+        RandomResponsePayloadHandler { log }
     }
 
     fn get_random_node() -> Node {
@@ -26,7 +26,10 @@ impl RandomResponsePayloadHandler {
         let key_id: String = (0..4).map(|_| format!("{:02X}", rng.gen::<u8>())).collect();
         let key_data: Vec<u8> = (0..1024).map(|_| rng.gen()).collect();
 
-        Node::new(Address::new(ip_data, port), Key::new(key_id, key_data))
+        Node::new(
+            Address::new(ip_data, port),
+            Key::new(key_id, key_data).unwrap(),
+        )
     }
 }
 
@@ -43,7 +46,7 @@ impl PayloadHandler for RandomResponsePayloadHandler {
                 // Generate a random number of random nodes
                 let mut rng = thread_rng();
                 Ok(ResponsePayload::QueryResponse(
-                    (0..rng.gen_range::<i32>(0, 10))
+                    (0..rng.gen_range(0, 10))
                         .map(|_| Self::get_random_node())
                         .collect(),
                 ))
