@@ -121,6 +121,9 @@ impl GnupgKeyLoader {
         if !output.status.success() {
             return Err(ErrorKind::CommandError("Non-successful exit code from gpg".into()).into());
         }
+        if output.stdout.is_empty() {
+            return Err(ErrorKind::CommandError("Nothing returned from gpg".into()).into());
+        }
         Ok(())
     }
 }
