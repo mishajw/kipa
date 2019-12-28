@@ -53,7 +53,6 @@ impl MessageHandlerServer {
     /// `ApiError<_>` value in the encoded bytes.
     pub fn receive_bytes(&self, request_data: &[u8], address: Option<Address>) -> Result<Vec<u8>> {
         remotery_scope!("message_handler_receive_bytes");
-
         debug!(self.log, "Received bytes"; "from_cli" => address.is_none());
 
         match address {
@@ -76,10 +75,9 @@ impl MessageHandlerServer {
 
     fn receive_request(&self, request: Request) -> Result<Response> {
         remotery_scope!("message_handler_receive_request");
+        debug!(self.log, "Received message");
 
-        debug!(self.log, "Received secure message");
-
-        let decrypted_body_data = self.pgp_key_handler.decrypt_and_sign(
+        let decrypted_body_data = self.pgp_key_handler.decrypt_and_verify(
             &request.encrypted_body,
             &request.sender.key,
             &self.local_secret_key,
@@ -100,7 +98,6 @@ impl MessageHandlerServer {
     /// Receive and handle a request message, returning a response message.
     fn receive_body(&self, body: RequestBody, sender: Option<Node>) -> Result<ResponseBody> {
         remotery_scope!("message_handler_receive_body");
-
         debug!(self.log, "Received request body");
 
         // Check the visibility of the request is correct
@@ -165,10 +162,9 @@ impl MessageHandlerClient {
         timeout: Duration,
     ) -> InternalResult<ResponsePayload> {
         remotery_scope!("message_handler_client_send_request");
-
         let message_id: u32 = thread_rng().gen();
-        debug!(
-            self.log, "Sending private request"; "message_id" => message_id);
+        debug!(self.log, "Sending request"; "node" => %node, "message_id" => message_id);
+
         let body = RequestBody::new(payload, message_id, versioning::get_version());
 
         let body_data = to_internal_result(self.data_transformer.encode_request_body(body))?;
@@ -191,7 +187,7 @@ impl MessageHandlerClient {
 
         let response_body_data = self
             .pgp_key_handler
-            .decrypt_and_sign(
+            .decrypt_and_verify(
                 &response_message.encrypted_body,
                 &node.key,
                 &self.local_secret_key,

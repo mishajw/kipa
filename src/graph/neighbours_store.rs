@@ -135,6 +135,9 @@ impl NeighboursStore {
 
         // If we have space for the new node, add it and return
         if self.neighbours.lock().unwrap().len() < self.max_num_neighbours {
+            debug!(
+                self.log, "Trying to keep potential neighbour, as we have less than the max";
+                "node" => %node);
             self.add_neighbour(node.clone(), key_space, trusted);
             return;
         }
@@ -152,6 +155,9 @@ impl NeighboursStore {
         // If the new node has *not* got the worst score, remove the node with
         // the worst score and add the new node
         if min_key_id != &node.key.key_id {
+            debug!(
+                self.log, "Trying to keep potential neighbour, as score is more than others";
+                "node" => %node);
             if self.add_neighbour(node.clone(), key_space, trusted) {
                 self.neighbours
                     .lock()
@@ -193,6 +199,7 @@ impl NeighboursStore {
 
     /// Check if the node is valid, must be used before adding a new neighbour
     fn verify_neighbour(&self, neighbour: &Node) -> bool {
+        debug!(self.log, "Verifying node before adding as neighbour"; "node" => %neighbour);
         let verify_response = (*self.verify_neighbour_fn)(&neighbour);
 
         if let Err(ref err) = &verify_response {

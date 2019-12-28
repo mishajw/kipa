@@ -37,9 +37,9 @@ impl PgpKeyHandler {
         sender: &SecretKey,
         recipient: &Key,
     ) -> Result<Vec<u8>> {
-        remotery_scope!("gpg_encrypt");
+        remotery_scope!("gpg_encrypt_and_sign");
         debug!(
-            self.log, "Encrypting data";
+            self.log, "Encrypting and signing data";
             "length" => data.len(), "sender" => %sender, "recipient" => %recipient);
 
         let mut signing_key_pair = into_keypair(&sender.secret_key_yes_really())
@@ -69,15 +69,15 @@ impl PgpKeyHandler {
     }
 
     /// Decrypt data for the local key, verifying it's from the sender.
-    pub fn decrypt_and_sign(
+    pub fn decrypt_and_verify(
         &self,
         data: &[u8],
         sender: &Key,
         recipient: &SecretKey,
     ) -> Result<Vec<u8>> {
-        remotery_scope!("gpg_decrypt");
+        remotery_scope!("gpg_decrypt_and_verify");
         debug!(
-            self.log, "Decrypting data";
+            self.log, "Decrypting and verifying data";
             "length" => data.len(), "sender" => %sender, "recipient" => %recipient);
 
         let gpg_helper = GpgHelper {

@@ -89,6 +89,7 @@ impl GraphPayloadHandler {
 
     fn search(&self, search_key: &Key, log: Logger) -> InternalResult<Option<Node>> {
         remotery_scope!("graph_search");
+        debug!(self.log, "Running graph search"; "search_key" => %search_key);
         let callback = SearchRequestCallback {
             search_key: search_key.clone(),
             message_handler_client: self.message_handler_client.clone(),
@@ -128,8 +129,10 @@ impl GraphPayloadHandler {
 
     fn connect(&self, node: &Node, log: Logger) -> InternalResult<()> {
         remotery_scope!("graph_connect");
+        debug!(self.log, "Running graph connect"; "node" => %node);
         // Check we can contact the node first. This failing is the only way we report that the
         // connection was a failure, as we don't use the result of the search below.
+        debug!(self.log, "Verifying initial connect node for failure reporting"; "node" => %node);
         self.message_handler_client.send_request(
             node,
             RequestPayload::VerifyRequest(),
