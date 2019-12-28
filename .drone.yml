@@ -9,7 +9,7 @@ pipeline:
       - apk add cargo python3
       - curl -sSf https://sh.rustup.rs | sh -s -- -y
       # Check rust code compiles without warnings.
-      - RUSTFLAGS='-D warnings' cargo check --all --tests
+      - RUSTFLAGS='-D warnings' cargo check --all
       # Check rust code compiles with different features.
       - cargo check --no-default-features --features "use-graph use-protobuf use-tcp use-unix-socket"
       - cargo check --no-default-features --features "use-protobuf use-tcp use-unix-socket use-black-hole"
