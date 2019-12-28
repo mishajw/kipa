@@ -205,9 +205,11 @@ def __get_location_dict(
             ((i - _min) / (_max - _min))
             for i, _max, _min in zip(ps, max_points, min_points)
         ]
+        if len(normalized) == 1:
+            normalized.append(0)
         if len(normalized) != 2:
             log.warning(
-                f"No support for drawing >2 dimensions, "
+                f"No support for drawing !=2 dimensions, "
                 f"found {len(normalized)}"
             )
             normalized = normalized[:2]
