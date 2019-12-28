@@ -151,10 +151,21 @@ impl<'a> DecryptionHelper for GpgHelper<'a> {
     where
         D: FnMut(SymmetricAlgorithm, &SessionKey) -> sequoia_openpgp::Result<()>,
     {
+        let first_session_key = pkesks
+            .into_iter()
+            .next()
+            .ok_or(failure::err_msg("No PKESKS for decryption"))?;
+        if *first_session_key.recipient() != self.recipient.keyid() {
+            return Err(failure::err_msg(format!(
+                "Session key was for incorrect recipient, expected {}, was {}",
+                self.recipient.keyid(),
+                first_session_key.recipient()
+            )));
+        }
         let mut pair = into_keypair(self.recipient)?;
         debug!(
             self.log, "Decrypting key"; "fingerprint" => pair.public().fingerprint().to_string());
-        pkesks[0]
+        first_session_key
             .decrypt(&mut pair)
             .and_then(|(algo, session_key)| decrypt(algo, &session_key))
             .map(|_| None)
