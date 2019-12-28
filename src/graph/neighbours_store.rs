@@ -84,6 +84,8 @@ impl NeighboursStore {
     }
 
     /// Given a node, consider keeping it as a neighbour
+    // TODO: Run this code in parallel, as it can cause a lot of computation and send requests to
+    // other nodes.
     pub fn consider_candidate(&self, node: &Node, trusted: bool) {
         let key_space = self.key_space_manager.create_from_key(&node.key);
 
