@@ -46,17 +46,20 @@ def simulate(network: Network, output_directory: Path) -> TestResult:
     backend.clean()
 
     log.info("Creating search graphs")
-    main_graph_path, query_graph_paths = __write_graphs(
-        test_results, logs, output_directory
-    )
+    main_graph_path, query_graph_paths = __write_graphs(test_results, logs, output_directory)
 
     log.info("Writing out test results")
-    report = __build_report(
-        network, test_results, main_graph_path, query_graph_paths
-    )
+    report = __build_report(network, test_results, main_graph_path, query_graph_paths)
     with open(str(output_directory / "report.yaml"), "w") as file:
         yaml.dump(report, file, default_flow_style=False)
     write_logs(logs, output_directory)
+
+    log.info(
+        "Results: %.2f%% successful, %.2fs avg, %.2f avg requests",
+        test_results.success_percentage * 100,
+        test_results.average_search_times_sec,
+        test_results.average_num_requests,
+    )
     return test_results
 
 
@@ -76,11 +79,7 @@ def __write_graphs(
     for result in results.search_results:
         query_graph_path = graph_directory / f"{result.message_id}.png"
         draw_query_graph(
-            logs,
-            result.from_id,
-            result.to_id,
-            result.message_id,
-            query_graph_path,
+            logs, result.from_id, result.to_id, result.message_id, query_graph_path,
         )
         query_graph_paths[result.message_id] = query_graph_path
     return main_graph_path, query_graph_paths
