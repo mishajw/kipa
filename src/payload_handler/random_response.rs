@@ -23,13 +23,9 @@ impl RandomResponsePayloadHandler {
         let mut rng = thread_rng();
         let ip_data: Vec<u8> = (0..4).map(|_| rng.gen()).collect();
         let port: u16 = rng.gen();
-        let key_id: String = (0..4).map(|_| format!("{:02X}", rng.gen::<u8>())).collect();
         let key_data: Vec<u8> = (0..1024).map(|_| rng.gen()).collect();
 
-        Node::new(
-            Address::new(ip_data, port),
-            Key::new(key_id, key_data).unwrap(),
-        )
+        Node::new(Address::new(ip_data, port), Key::new(key_data).unwrap())
     }
 }
 

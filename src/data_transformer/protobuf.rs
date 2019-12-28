@@ -246,7 +246,6 @@ impl TryInto<proto_api::Key> for Key {
     type Error = Error;
     fn try_into(self) -> Result<proto_api::Key> {
         let mut kipa_key = proto_api::Key::new();
-        kipa_key.set_key_id(self.key_id.clone());
         kipa_key.set_data(self.key_data());
         Ok(kipa_key)
     }
@@ -255,7 +254,7 @@ impl TryInto<proto_api::Key> for Key {
 impl TryFrom<proto_api::Key> for Key {
     type Error = Error;
     fn try_from(kipa_key: proto_api::Key) -> Result<Key> {
-        Key::new(kipa_key.get_key_id().into(), kipa_key.data.clone())
+        Key::new(kipa_key.data.clone())
     }
 }
 

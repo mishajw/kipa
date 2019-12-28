@@ -82,12 +82,12 @@ impl NeighbourGc {
         // Update the statuses of all neighbours
         let mut key_ids = HashSet::new();
         for neighbour in self.store.get_all() {
-            key_ids.insert(neighbour.key.key_id.clone());
+            key_ids.insert(neighbour.key.key_id());
             let message_handler_client = self.message_handler_client.clone();
             let log = self.log.clone();
             let status = self
                 .neighbour_statuses
-                .entry(neighbour.key.key_id.clone())
+                .entry(neighbour.key.key_id())
                 .or_insert_with(NeighbourStatus::new);
             Self::update_neighbour_status(&neighbour, status, message_handler_client, log)
         }

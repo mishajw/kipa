@@ -156,7 +156,7 @@ impl NeighboursStore {
 
         // If the new node has *not* got the worst score, remove the node with
         // the worst score and add the new node
-        if min_key_id != &node.key.key_id {
+        if min_key_id != &node.key.key_id() {
             debug!(
                 self.log, "Trying to keep potential neighbour, as score is more than others";
                 "node" => %node);
@@ -164,7 +164,7 @@ impl NeighboursStore {
                 self.neighbours
                     .lock()
                     .unwrap()
-                    .retain(|(node, _)| &node.key.key_id != min_key_id);
+                    .retain(|(node, _)| &node.key.key_id() != min_key_id);
             }
         } else {
             debug!(
@@ -181,7 +181,7 @@ impl NeighboursStore {
         self.neighbours
             .lock()
             .unwrap()
-            .retain(|(n, _)| n.key.key_id != key_id);
+            .retain(|(n, _)| n.key.key_id() != key_id);
     }
 
     /// Add a neighbour to the list, first verifying it exists. Returns true if
@@ -274,7 +274,7 @@ impl NeighboursStore {
         // Put the scores into a map
         let mut scores_map = HashMap::new();
         for (&(ref n, _), s) in neighbours.iter().zip(scores) {
-            scores_map.insert(n.key.key_id.clone(), s);
+            scores_map.insert(n.key.key_id(), s);
         }
         scores_map
     }
@@ -290,85 +290,83 @@ mod test {
 
     // TODO: Re-enable test when key mocking is supported.
     // #[test]
-    #[allow(unused)]
-    fn test_consider_candidates() {
-        let test_log = Logger::root(slog::Discard, o!());
+    // fn test_consider_candidates() {
+    //     let test_log = Logger::root(slog::Discard, o!());
 
-        let keys = vec![
-            Key::new("00000001".to_string(), vec![1]).unwrap(),
-            Key::new("00000002".to_string(), vec![2]).unwrap(),
-            Key::new("00000003".to_string(), vec![3]).unwrap(),
-            Key::new("00000004".to_string(), vec![4]).unwrap(),
-            Key::new("00000005".to_string(), vec![5]).unwrap(),
-            Key::new("00000006".to_string(), vec![6]).unwrap(),
-            Key::new("00000007".to_string(), vec![7]).unwrap(),
-        ];
+    //     let keys = vec![
+    //         Key::new("00000001".to_string(), vec![1]).unwrap(),
+    //         Key::new("00000002".to_string(), vec![2]).unwrap(),
+    //         Key::new("00000003".to_string(), vec![3]).unwrap(),
+    //         Key::new("00000004".to_string(), vec![4]).unwrap(),
+    //         Key::new("00000005".to_string(), vec![5]).unwrap(),
+    //         Key::new("00000006".to_string(), vec![6]).unwrap(),
+    //         Key::new("00000007".to_string(), vec![7]).unwrap(),
+    //     ];
 
-        let ns = NeighboursStore::new(
-            &keys[keys.len() - 1],
-            3,
-            1.0,
-            0.0,
-            Arc::new(KeySpaceManager::new(1)),
-            Arc::new(|_| Ok(())),
-            test_log,
-        );
-        for i in 0..keys.len() - 1 {
-            ns.consider_candidate(
-                &Node::new(Address::new(vec![0, 0, 0, 0], 0), keys[i].clone()),
-                true,
-            );
-        }
+    //     let ns = NeighboursStore::new(
+    //         &keys[keys.len() - 1],
+    //         3,
+    //         1.0,
+    //         0.0,
+    //         Arc::new(KeySpaceManager::new(1)),
+    //         Arc::new(|_| Ok(())),
+    //         test_log,
+    //     );
+    //     for i in 0..keys.len() - 1 {
+    //         ns.consider_candidate(
+    //             &Node::new(Address::new(vec![0, 0, 0, 0], 0), keys[i].clone()),
+    //             true,
+    //         );
+    //     }
 
-        let mut data = ns
-            .get_all()
-            .iter()
-            .map(|n| n.key.key_id.clone())
-            .collect::<Vec<String>>();
-        data.sort();
-        assert_that!(data).is_equal_to(vec![
-            "00000004".to_string(),
-            "00000005".to_string(),
-            "00000006".to_string(),
-        ]);
-    }
+    //     let mut data = ns
+    //         .get_all()
+    //         .iter()
+    //         .map(|n| n.key.key_id())
+    //         .collect::<Vec<String>>();
+    //     data.sort();
+    //     assert_that!(data).is_equal_to(vec![
+    //         "00000004".to_string(),
+    //         "00000005".to_string(),
+    //         "00000006".to_string(),
+    //     ]);
+    // }
 
     // TODO: Re-enable test when key mocking is supported.
     // #[test]
-    #[allow(unused)]
-    fn test_consider_candidates_angles() {
-        let test_log = Logger::root(slog::Discard, o!());
+    // fn test_consider_candidates_angles() {
+    //     let test_log = Logger::root(slog::Discard, o!());
 
-        let keys = vec![
-            Key::new("00000001".to_string(), vec![0, 0, 0, 1]).unwrap(),
-            Key::new("00000002".to_string(), vec![0, 0, 0, 2]).unwrap(),
-            Key::new("00000003".to_string(), vec![0, 0, 0, 3]).unwrap(),
-            Key::new("00000004".to_string(), vec![0, 0, 0, 6]).unwrap(),
-        ];
+    //     let keys = vec![
+    //         Key::new(vec![0, 0, 0, 1]).unwrap(),
+    //         Key::new(vec![0, 0, 0, 2]).unwrap(),
+    //         Key::new(vec![0, 0, 0, 3]).unwrap(),
+    //         Key::new(vec![0, 0, 0, 6]).unwrap(),
+    //     ];
 
-        let ns = NeighboursStore::new(
-            &keys[2],
-            2,
-            0.5,
-            0.5,
-            Arc::new(KeySpaceManager::new(1)),
-            Arc::new(|_| Ok(())),
-            test_log,
-        );
+    //     let ns = NeighboursStore::new(
+    //         &keys[2],
+    //         2,
+    //         0.5,
+    //         0.5,
+    //         Arc::new(KeySpaceManager::new(1)),
+    //         Arc::new(|_| Ok(())),
+    //         test_log,
+    //     );
 
-        for k in keys {
-            ns.consider_candidate(
-                &Node::new(Address::new(vec![0, 0, 0, 0], 0), k.clone()),
-                true,
-            );
-        }
+    //     for k in keys {
+    //         ns.consider_candidate(
+    //             &Node::new(Address::new(vec![0, 0, 0, 0], 0), k.clone()),
+    //             true,
+    //         );
+    //     }
 
-        let mut data = ns
-            .get_all()
-            .iter()
-            .map(|n| n.key.key_id.clone())
-            .collect::<Vec<String>>();
-        data.sort();
-        assert_that!(data).is_equal_to(vec!["00000002".to_string(), "00000006".to_string()]);
-    }
+    //     let mut data = ns
+    //         .get_all()
+    //         .iter()
+    //         .map(|n| n.key.key_id())
+    //         .collect::<Vec<String>>();
+    //     data.sort();
+    //     assert_that!(data).is_equal_to(vec!["00000002".to_string(), "00000006".to_string()]);
+    // }
 }

@@ -196,7 +196,7 @@ impl GraphSearch {
                 "current_cost" => current_node.cost,
                 "previously_found" => found
                     .iter()
-                    .map(|k| k.key_id.clone())
+                    .map(|k| k.key_id())
                     .collect::<Vec<String>>()
                     .join(", "),
                 "left_to_explore" => to_explore.len(),
@@ -228,7 +228,7 @@ impl GraphSearch {
                         "node" => %current_node.node,
                         "neighbours" => neighbours
                             .iter()
-                            .map(|n| n.key.key_id.clone())
+                            .map(|n| n.key.key_id())
                             .collect::<Vec<String>>()
                             .join(", ")),
                     Err(ref err) => warn!(
@@ -338,80 +338,79 @@ mod test {
 
     // TODO: Re-enable test when key mocking is supported.
     // #[test]
-    #[allow(unused)]
-    fn test_search_order() {
-        let test_log = Logger::root(slog::Discard, o!());
-        let nodes = (0..NUM_NODES)
-            .map(|i| {
-                Node::new(
-                    Address::new(vec![0, 0, 0, i as u8], i as u16),
-                    Key::new(format!("{:08}", i), vec![i as u8]).unwrap(),
-                )
-            })
-            .collect::<Vec<_>>();
-        let nodes = Arc::new(nodes);
+    // fn test_search_order() {
+    //     let test_log = Logger::root(slog::Discard, o!());
+    //     let nodes = (0..NUM_NODES)
+    //         .map(|i| {
+    //             Node::new(
+    //                 Address::new(vec![0, 0, 0, i as u8], i as u16),
+    //                 Key::new(format!("{:08}", i), vec![i as u8]).unwrap(),
+    //             )
+    //         })
+    //         .collect::<Vec<_>>();
+    //     let nodes = Arc::new(nodes);
 
-        let search = GraphSearch::new(Arc::new(KeySpaceManager::new(1)), 1);
-        let explored_nodes = Arc::new(Mutex::new(vec![]));
+    //     let search = GraphSearch::new(Arc::new(KeySpaceManager::new(1)), 1);
+    //     let explored_nodes = Arc::new(Mutex::new(vec![]));
 
-        search
-            .search(
-                &nodes[0].key,
-                vec![nodes[START_INDEX].clone(), nodes[START_INDEX + 1].clone()],
-                TestCallback {
-                    nodes: nodes.clone(),
-                    explored_nodes: explored_nodes.clone(),
-                },
-                SearchParams {
-                    breadth: 100,
-                    max_num_active_threads: 1,
-                    timeout: Duration::from_secs(1),
-                },
-                test_log,
-            )
-            .unwrap();
+    //     search
+    //         .search(
+    //             &nodes[0].key,
+    //             vec![nodes[START_INDEX].clone(), nodes[START_INDEX + 1].clone()],
+    //             TestCallback {
+    //                 nodes: nodes.clone(),
+    //                 explored_nodes: explored_nodes.clone(),
+    //             },
+    //             SearchParams {
+    //                 breadth: 100,
+    //                 max_num_active_threads: 1,
+    //                 timeout: Duration::from_secs(1),
+    //             },
+    //             test_log,
+    //         )
+    //         .unwrap();
 
-        let found_indices: Vec<usize> = explored_nodes
-            .lock()
-            .unwrap()
-            .iter()
-            .map(|n| n.address.port as usize)
-            .collect();
-        let mut expected_found: Vec<usize> = (0..START_INDEX + 1).rev().collect();
-        expected_found.extend((START_INDEX + 1..NUM_NODES).collect::<Vec<usize>>());
-        assert_that!(expected_found).is_equal_to(found_indices);
-    }
+    //     let found_indices: Vec<usize> = explored_nodes
+    //         .lock()
+    //         .unwrap()
+    //         .iter()
+    //         .map(|n| n.address.port as usize)
+    //         .collect();
+    //     let mut expected_found: Vec<usize> = (0..START_INDEX + 1).rev().collect();
+    //     expected_found.extend((START_INDEX + 1..NUM_NODES).collect::<Vec<usize>>());
+    //     assert_that!(expected_found).is_equal_to(found_indices);
+    // }
 
-    struct TestCallback {
-        nodes: Arc<Vec<Node>>,
-        explored_nodes: Arc<Mutex<Vec<Node>>>,
-    }
+    // struct TestCallback {
+    //     nodes: Arc<Vec<Node>>,
+    //     explored_nodes: Arc<Mutex<Vec<Node>>>,
+    // }
 
-    impl SearchCallback<Node> for TestCallback {
-        fn get_neighbours(&self, node: &Node, _search_key: &Key) -> InternalResult<Vec<Node>> {
-            let node_index = node.address.port as usize;
-            let neighbours: Vec<Node> = if node_index > 0 && node_index < NUM_NODES - 1 {
-                vec![
-                    self.nodes[node_index - 1].clone(),
-                    self.nodes[node_index + 1].clone(),
-                ]
-            } else if node_index <= 0 {
-                vec![self.nodes[node_index + 1].clone()]
-            } else if node_index >= NUM_NODES - 1 {
-                vec![self.nodes[node_index - 1].clone()]
-            } else {
-                vec![]
-            };
-            Ok(neighbours)
-        }
+    // impl SearchCallback<Node> for TestCallback {
+    //     fn get_neighbours(&self, node: &Node, _search_key: &Key) -> InternalResult<Vec<Node>> {
+    //         let node_index = node.address.port as usize;
+    //         let neighbours: Vec<Node> = if node_index > 0 && node_index < NUM_NODES - 1 {
+    //             vec![
+    //                 self.nodes[node_index - 1].clone(),
+    //                 self.nodes[node_index + 1].clone(),
+    //             ]
+    //         } else if node_index <= 0 {
+    //             vec![self.nodes[node_index + 1].clone()]
+    //         } else if node_index >= NUM_NODES - 1 {
+    //             vec![self.nodes[node_index - 1].clone()]
+    //         } else {
+    //             vec![]
+    //         };
+    //         Ok(neighbours)
+    //     }
 
-        fn found_node(&self, _node: &Node) -> Result<SearchCallbackAction<Node>> {
-            Ok(SearchCallbackAction::Continue())
-        }
+    //     fn found_node(&self, _node: &Node) -> Result<SearchCallbackAction<Node>> {
+    //         Ok(SearchCallbackAction::Continue())
+    //     }
 
-        fn explored_node(&self, node: &Node) -> Result<SearchCallbackAction<Node>> {
-            self.explored_nodes.lock().unwrap().push(node.clone());
-            Ok(SearchCallbackAction::Continue())
-        }
-    }
+    //     fn explored_node(&self, node: &Node) -> Result<SearchCallbackAction<Node>> {
+    //         self.explored_nodes.lock().unwrap().push(node.clone());
+    //         Ok(SearchCallbackAction::Continue())
+    //     }
+    // }
 }

@@ -11,8 +11,6 @@ use std::hash::{Hash, Hasher};
 /// Public key.
 #[derive(Clone)]
 pub struct Key {
-    /// Key ID, 8 characters long.
-    pub key_id: String,
     /// The sequoia representation of the key.
     ///
     /// We leak the implementation here so we don't have to deserialize the key data on every
@@ -22,10 +20,8 @@ pub struct Key {
 
 impl Key {
     #[allow(missing_docs)]
-    pub fn new(key_id: String, data: Vec<u8>) -> Result<Self> {
-        assert_eq!(key_id.len(), 8);
+    pub fn new(data: Vec<u8>) -> Result<Self> {
         Ok(Key {
-            key_id,
             sequoia_tpk: parse_tpk(&data)?,
         })
     }
@@ -37,6 +33,13 @@ impl Key {
             .serialize(&mut public_key_data)
             .expect("Failed to serialize TPK");
         public_key_data
+    }
+
+    /// Gets the key ID string (8 characters long).
+    pub fn key_id(&self) -> String {
+        let sequoia_key_id = self.sequoia_tpk.keyid().to_hex();
+        assert_eq!(sequoia_key_id.len(), 16);
+        sequoia_key_id[8..].to_string()
     }
 }
 
@@ -56,7 +59,7 @@ impl Hash for Key {
 
 impl fmt::Display for Key {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Key({})", self.key_id)
+        write!(f, "Key({})", self.key_id())
     }
 }
 
@@ -65,15 +68,13 @@ impl serde::Serialize for Key {
     where
         S: serde::Serializer,
     {
-        serializer.serialize_str(&self.key_id)
+        serializer.serialize_str(&self.key_id())
     }
 }
 
 /// Public and private key, should not be sent anywhere.
 #[derive(Clone, PartialEq)]
 pub struct SecretKey {
-    /// Key ID, 8 characters long.
-    pub key_id: String,
     /// The sequoia representation of the key.
     ///
     /// We leak the implementation here so we don't have to deserialize the key data on every
@@ -83,10 +84,8 @@ pub struct SecretKey {
 
 impl SecretKey {
     #[allow(missing_docs)]
-    pub fn new(key_id: String, data: Vec<u8>) -> Result<Self> {
-        assert_eq!(key_id.len(), 8);
+    pub fn new(data: Vec<u8>) -> Result<Self> {
         Ok(SecretKey {
-            key_id,
             sequoia_tpk: parse_tpk(&data)?,
         })
     }
@@ -101,18 +100,25 @@ impl SecretKey {
             .map_err(|e| -> Error {
                 ErrorKind::GpgError("Failed to serialize TPK".into(), e).into()
             })?;
-        Key::new(self.key_id.clone(), public_key_data)
+        Key::new(public_key_data)
     }
 
     /// Gets the secret cryptographic key data.
     pub fn secret_key_yes_really(&self) -> &TPK {
         &self.sequoia_tpk
     }
+
+    /// Gets the key ID string (8 characters long).
+    pub fn key_id(&self) -> String {
+        let sequoia_key_id = self.sequoia_tpk.keyid().to_hex();
+        assert_eq!(sequoia_key_id.len(), 16);
+        sequoia_key_id[8..].to_string()
+    }
 }
 
 impl fmt::Display for SecretKey {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "SecretKey({})", self.key_id)
+        write!(f, "SecretKey({})", self.key_id())
     }
 }
 
