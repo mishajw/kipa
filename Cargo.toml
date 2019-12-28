@@ -8,17 +8,18 @@ repository = "https://github.com/mishajw/kipa"
 readme = "README.md"
 keywords = ["distributed", "network", "dns"]
 license = "GPL-3.0"
+default-run = "kipa"
 
 [lib]
 name = "kipa_lib"
 path = "src/lib.rs"
 
 [[bin]]
-name = "kipa_cli"
+name = "kipa"
 path = "src/cli.rs"
 
 [[bin]]
-name = "kipa_daemon"
+name = "kipa-daemon"
 path = "src/daemon.rs"
 
 [features]

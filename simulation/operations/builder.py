@@ -64,14 +64,14 @@ def __create_build(args: BuildArgs) -> Build:
     else:
         binary_directory = Path("target/release")
 
-    log.debug("Extracting daemon binary")
-    daemon_path = binary_directory / "kipa_daemon"
-    assert os.path.isfile(daemon_path)
-    shutil.copyfile(daemon_path, directory / "kipa_daemon")
-
     log.debug("Extracting cli binary")
-    cli_path = binary_directory / "kipa_cli"
+    cli_path = binary_directory / "kipa"
     assert os.path.isfile(cli_path)
-    shutil.copyfile(cli_path, directory / "kipa_cli")
+    shutil.copyfile(cli_path, directory / "kipa")
+
+    log.debug("Extracting daemon binary")
+    daemon_path = binary_directory / "kipa-daemon"
+    assert os.path.isfile(daemon_path)
+    shutil.copyfile(daemon_path, directory / "kipa-daemon")
 
     return Build(cli_path, daemon_path)

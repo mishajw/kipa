@@ -37,7 +37,7 @@ fn main() -> ApiResult<()> {
     creator_args.append(&mut SecretLoader::get_clap_args());
     creator_args.append(&mut KeySpaceManager::get_clap_args());
 
-    let args = clap::App::new("kipa_daemon")
+    let args = clap::App::new("kipa-daemon")
         .arg(
             clap::Arg::with_name("key_id")
                 .long("key-id")

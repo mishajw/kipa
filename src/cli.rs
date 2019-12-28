@@ -29,7 +29,7 @@ fn main() -> ApiResult<()> {
     creator_args.append(&mut LocalServer::get_clap_args());
     creator_args.append(&mut LocalClient::get_clap_args());
 
-    let args = clap::App::new("kipa_cli")
+    let args = clap::App::new("kipa-cli")
         .subcommand(
             clap::SubCommand::with_name("search")
                 .about("Search for a node given a key")

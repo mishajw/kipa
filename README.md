@@ -66,7 +66,7 @@ computers when IP addresses are not known, but public keys are:
 # Run on receiver
 nc -l -p 8080 > file.txt
 # Run on sender
-cat file.txt > nc $(kipa_cli search --key-id $RECEIVER_KEY_ID --print ip) 8080
+cat file.txt > nc $(kipa search --key-id $RECEIVER_KEY_ID --print ip) 8080
 ```
 
 Any use of KIPA requires that keys are already known in the system - it does
@@ -105,14 +105,14 @@ git clone https://github.com/mishajw/kipa.git && cd kipa
 cargo build --release
 
 # Run KIPA daemon
-./target/release/kipa_daemon --key-id $YOUR_KEY_ID &
+./target/release/kipa-daemon --key-id $YOUR_KEY_ID &
 
 # Connect to a KIPA network
-./target/release/kipa_cli connect \
+./target/release/kipa connect \
     --key-id <root key ID> --address <root address>
 
 # Example query
-./target/release/kipa_cli search \
+./target/release/kipa search \
     --key-id $THEIR_KEY_ID
 
 # Run tests

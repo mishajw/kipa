@@ -60,7 +60,7 @@ class DockerBackend(ParallelBackend):
 
     def run_command(self, command: CliCommand) -> CliCommandResult:
         start_sec = time.time()
-        output = self.__run_container_command(command.node_id, ["/root/kipa_cli", *command.args])
+        output = self.__run_container_command(command.node_id, ["/root/kipa", *command.args])
         duration_sec = time.time() - start_sec
         if output is None:
             return CliCommandResult.failed(command)
@@ -122,8 +122,8 @@ class DockerBackend(ParallelBackend):
 
         # TODO: Docker requires COPY files to be in the docker directory,
         # meaning we copy the builds twice.
-        shutil.copy(str(build.cli_path), str(docker_directory / "kipa_cli"))
-        shutil.copy(str(build.daemon_path), str(docker_directory / "kipa_daemon"))
+        shutil.copy(str(build.cli_path), str(docker_directory / "kipa"))
+        shutil.copy(str(build.daemon_path), str(docker_directory / "kipa-daemon"))
 
         log.debug("Creating Dockerfile")
         with open(docker_directory / "Dockerfile", "w") as f:
@@ -136,14 +136,14 @@ class DockerBackend(ParallelBackend):
                 ENV KIPA_ARGS ""
                 RUN \\
                     apt-get update && apt-get --yes install gpg iproute2
-                COPY kipa_daemon /root/kipa_daemon
-                COPY kipa_cli /root/kipa_cli
+                COPY kipa /root/kipa
+                COPY kipa-daemon /root/kipa-daemon
                 WORKDIR /root
                 RUN \\
-                    chmod +x kipa_daemon && \\
-                    chmod +x kipa_cli && \\
+                    chmod +x kipa && \\
+                    chmod +x kipa-daemon && \\
                     echo "p@ssword" >> secret.txt
-                CMD RUST_BACKTRACE=1 ./kipa_daemon \\
+                CMD RUST_BACKTRACE=1 ./kipa-daemon \\
                     -vvvv \\
                     --key-id $KIPA_KEY_ID \\
                     $KIPA_ARGS
