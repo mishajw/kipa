@@ -29,9 +29,7 @@ class Network(NamedTuple):
             for node in Node.from_config(group_config, key_creator)
         ]
         connection_quality = (
-            ConnectionQuality.from_config(
-                config.get("connection_quality", "cyclical")
-            )
+            ConnectionQuality.from_config(config.get("connection_quality", "cyclical"))
             if "connection_quality" in config
             else None
         )
@@ -88,6 +86,4 @@ class ConnectionQuality:
 
     @classmethod
     def from_config(cls, config: dict) -> "ConnectionQuality":
-        return cls(
-            config.get("loss", 0), config.get("delay", 0), config.get("rate", 0)
-        )
+        return cls(config.get("loss", 0), config.get("delay", 0), config.get("rate", 0))

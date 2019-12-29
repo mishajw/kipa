@@ -23,11 +23,7 @@ class KeySpace(NamedTuple):
     def random(cls, key_space_dimensions: int) -> "KeySpace":
         return KeySpace(
             tuple(
-                float(
-                    random.uniform(
-                        constants.KEY_SPACE_LOWER, constants.KEY_SPACE_UPPER
-                    )
-                )
+                float(random.uniform(constants.KEY_SPACE_LOWER, constants.KEY_SPACE_UPPER))
                 for _ in range(key_space_dimensions)
             )
         )
@@ -40,11 +36,7 @@ class GraphArgs(NamedTuple):
 
     def __str__(self) -> str:
         return ",".join(
-            [
-                f"n={self.num_nodes}",
-                f"e={self.max_neighbours}",
-                f"d={self.key_space_dimensions}",
-            ]
+            [f"n={self.num_nodes}", f"e={self.max_neighbours}", f"d={self.key_space_dimensions}",]
         )
 
 
@@ -55,11 +47,7 @@ class StrategyArgs(NamedTuple):
 
     def __str__(self) -> str:
         return ",".join(
-            [
-                self.neighbour_strategy_name,
-                self.distance_name,
-                self.test_strategy_name,
-            ]
+            [self.neighbour_strategy_name, self.distance_name, self.test_strategy_name,]
         )
 
 

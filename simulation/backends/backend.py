@@ -7,9 +7,7 @@ from simulation.networks import Network, NodeId
 
 class Backend(ABC):
     @abstractmethod
-    def initialize_network(
-        self, network: Network, node_builds: Dict[NodeId, Build]
-    ) -> None:
+    def initialize_network(self, network: Network, node_builds: Dict[NodeId, Build]) -> None:
         pass
 
     @abstractmethod
@@ -17,9 +15,7 @@ class Backend(ABC):
         pass
 
     @abstractmethod
-    def run_commands(
-        self, commands: List["CliCommand"]
-    ) -> List["CliCommandResult"]:
+    def run_commands(self, commands: List["CliCommand"]) -> List["CliCommandResult"]:
         pass
 
     @abstractmethod

@@ -12,9 +12,7 @@ class NeighbourStrategy(ABC):
         self.args = args
 
     @classmethod
-    def get(
-        cls, name: str, distance: Distance, args: GraphArgs
-    ) -> "NeighbourStrategy":
+    def get(cls, name: str, distance: Distance, args: GraphArgs) -> "NeighbourStrategy":
         if name == "random":
             return Random(distance, args)
         elif name == "closest":
@@ -27,33 +25,23 @@ class NeighbourStrategy(ABC):
             raise AssertionError(f"Unknown neighbour strategy: {name}")
 
     def apply(
-        self,
-        node: Node,
-        new_neighbours: FrozenSet[Node],
-        all_nodes: FrozenSet[Node],
+        self, node: Node, new_neighbours: FrozenSet[Node], all_nodes: FrozenSet[Node],
     ) -> Node:
         """
         Applies the neighbour selection strategy to `node` with a
         potential `new_neighbour`.
         """
         assert len(node.neighbours) <= self.args.max_neighbours
-        current_neighbours = frozenset(
-            n for n in all_nodes if n.index in node.neighbours
-        )
+        current_neighbours = frozenset(n for n in all_nodes if n.index in node.neighbours)
         selected_neighbours = self.select_neighbours(
             node.key_space, current_neighbours, new_neighbours
         )
         assert len(selected_neighbours) <= self.args.max_neighbours
-        return node.with_neighbours(
-            frozenset(n.index for n in selected_neighbours)
-        )
+        return node.with_neighbours(frozenset(n.index for n in selected_neighbours))
 
     @abstractmethod
     def select_neighbours(
-        self,
-        local: KeySpace,
-        current_neighbours: FrozenSet[Node],
-        new_neighbours: FrozenSet[Node],
+        self, local: KeySpace, current_neighbours: FrozenSet[Node], new_neighbours: FrozenSet[Node],
     ) -> FrozenSet[Node]:
         """
         Selects which neighbours to keep out of the current and a new one.
@@ -73,14 +61,10 @@ class MetricNeighbourStrategy(NeighbourStrategy, ABC):
     """
 
     def select_neighbours(
-        self,
-        local: KeySpace,
-        current_neighbours: FrozenSet[Node],
-        new_neighbours: FrozenSet[Node],
+        self, local: KeySpace, current_neighbours: FrozenSet[Node], new_neighbours: FrozenSet[Node],
     ) -> FrozenSet[Node]:
         sorted_by_metric = sorted(
-            [*current_neighbours, *new_neighbours],
-            key=lambda n: self.metric(local, n),
+            [*current_neighbours, *new_neighbours], key=lambda n: self.metric(local, n),
         )
         sorted_by_metric = islice(sorted_by_metric, self.args.max_neighbours)
         return frozenset(sorted_by_metric)
@@ -97,10 +81,7 @@ class ContextMetricNeighbourStrategy(NeighbourStrategy, ABC):
     """
 
     def select_neighbours(
-        self,
-        local: KeySpace,
-        current_neighbours: FrozenSet[Node],
-        new_neighbours: FrozenSet[Node],
+        self, local: KeySpace, current_neighbours: FrozenSet[Node], new_neighbours: FrozenSet[Node],
     ) -> FrozenSet[Node]:
         all_nodes = current_neighbours.union(new_neighbours)
         sorted_by_metric = sorted(
@@ -111,9 +92,7 @@ class ContextMetricNeighbourStrategy(NeighbourStrategy, ABC):
         return frozenset(sorted_by_metric)
 
     @abstractmethod
-    def metric(
-        self, local: KeySpace, node: Node, others: FrozenSet[Node]
-    ) -> float:
+    def metric(self, local: KeySpace, node: Node, others: FrozenSet[Node]) -> float:
         raise NotImplementedError()
 
 

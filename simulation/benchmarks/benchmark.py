@@ -11,9 +11,7 @@ from simulation.operations import simulator
 
 class Benchmark(ABC):
     def __init__(self, title: str, output_directory: Path) -> None:
-        output_directory = (
-            output_directory / "benchmarks" / title / utils.get_formatted_time()
-        )
+        output_directory = output_directory / "benchmarks" / title / utils.get_formatted_time()
         if not output_directory.is_dir():
             output_directory.mkdir(parents=True)
 
@@ -27,11 +25,7 @@ class Benchmark(ABC):
 
 class SuccessSpeedBenchmark(Benchmark, ABC):
     def __init__(
-        self,
-        title: str,
-        parameters: List[Any],
-        x_title: str,
-        output_directory: Path,
+        self, title: str, parameters: List[Any], x_title: str, output_directory: Path,
     ):
         super().__init__(title, output_directory)
         self.parameters = parameters
@@ -41,8 +35,7 @@ class SuccessSpeedBenchmark(Benchmark, ABC):
         # Get results
         results = [
             simulator.simulate(
-                self.get_network(network, p),
-                self.output_directory / self.format_parameter(p),
+                self.get_network(network, p), self.output_directory / self.format_parameter(p),
             )
             for p in self.parameters
         ]
@@ -60,9 +53,7 @@ class SuccessSpeedBenchmark(Benchmark, ABC):
         success_axes.set_ylabel("Search success (%)")
         success_axes.tick_params("y", colors="r")
         success_axes.plot(
-            formatted_parameters,
-            [result.success_percentage * 100 for result in results],
-            "r-",
+            formatted_parameters, [result.success_percentage * 100 for result in results], "r-",
         )
 
         # Add speed plot
@@ -70,9 +61,7 @@ class SuccessSpeedBenchmark(Benchmark, ABC):
         speed_axes.set_ylabel("Successful search time (seconds)")
         speed_axes.tick_params("y", colors="b")
         speed_axes.plot(
-            formatted_parameters,
-            [result.average_search_times_sec for result in results],
-            "b-",
+            formatted_parameters, [result.average_search_times_sec for result in results], "b-",
         )
 
         # Save the figure

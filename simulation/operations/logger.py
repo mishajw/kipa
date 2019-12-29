@@ -34,10 +34,7 @@ def get_logs(network: Network, backend: Backend) -> NetworkLogs:
 
     return NetworkLogs(
         {
-            node.id: NodeLogs(
-                backend.get_logs(node.id),
-                backend.get_human_readable_logs(node.id),
-            )
+            node.id: NodeLogs(backend.get_logs(node.id), backend.get_human_readable_logs(node.id),)
             for node in network.nodes
         }
     )

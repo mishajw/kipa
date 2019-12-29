@@ -42,8 +42,7 @@ def main():
         type=str,
         choices=["reliability", "resilience", "speed", "scalability"],
         default=None,
-        help="Run a benchmark to see how well a configuration performs under "
-        "varying conditions",
+        help="Run a benchmark to see how well a configuration performs under " "varying conditions",
     )
 
     args = parser.parse_args()

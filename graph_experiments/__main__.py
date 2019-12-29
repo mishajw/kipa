@@ -37,15 +37,11 @@ from graph_experiments.tester import ConnectednessResults, test_nodes
 
 def main():
     parser = ArgumentParser("graph_experiments")
-    parser.add_argument(
-        "--neighbour-strategy", type=str, required=True, nargs="+"
-    )
+    parser.add_argument("--neighbour-strategy", type=str, required=True, nargs="+")
     parser.add_argument("--distance", type=str, required=True, nargs="+")
     parser.add_argument("--test-strategy", type=str, required=True, nargs="+")
     parser.add_argument("--num-nodes", type=int, default=[100], nargs="+")
-    parser.add_argument(
-        "--key-space-dimensions", type=int, default=[2], nargs="+"
-    )
+    parser.add_argument("--key-space-dimensions", type=int, default=[2], nargs="+")
     parser.add_argument("--max-neighbours", type=int, default=[10], nargs="+")
     parser.add_argument("--num-search-tests", type=int, default=100)
     parser.add_argument("--num-graph-tests", type=int, default=1)
@@ -55,30 +51,21 @@ def main():
     all_strategy_args = [
         StrategyArgs(*args)
         for args in product(
-            parser_args.neighbour_strategy,
-            parser_args.distance,
-            parser_args.test_strategy,
+            parser_args.neighbour_strategy, parser_args.distance, parser_args.test_strategy,
         )
     ]
 
     all_graph_args = [
         GraphArgs(*args)
         for args in product(
-            parser_args.num_nodes,
-            parser_args.key_space_dimensions,
-            parser_args.max_neighbours,
+            parser_args.num_nodes, parser_args.key_space_dimensions, parser_args.max_neighbours,
         )
     ]
 
-    test_args = TestArgs(
-        parser_args.num_search_tests, parser_args.num_graph_tests
-    )
+    test_args = TestArgs(parser_args.num_search_tests, parser_args.num_graph_tests)
 
     for strategy_args in all_strategy_args:
-        results = [
-            run(strategy_args, graph_args, test_args)
-            for graph_args in all_graph_args
-        ]
+        results = [run(strategy_args, graph_args, test_args) for graph_args in all_graph_args]
         plt.plot([r.mean_num_requests for r in results])
 
     plt.xticks(list(range(len(all_graph_args))), all_graph_args, rotation=45)

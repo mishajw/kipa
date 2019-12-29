@@ -13,14 +13,10 @@ class ParallelBackend(Backend, ABC):
     def __init__(self, num_threads: int):
         self.pool = ThreadPool(processes=num_threads)
 
-    def run_commands(
-        self, commands: List[CliCommand]
-    ) -> List[CliCommandResult]:
+    def run_commands(self, commands: List[CliCommand]) -> List[CliCommandResult]:
         def run(pair: Tuple[int, CliCommand]) -> CliCommandResult:
             index, command = pair
-            log.info(
-                "Running command %d/%d: %s", index + 1, len(commands), command
-            )
+            log.info("Running command %d/%d: %s", index + 1, len(commands), command)
             result = self.run_command(command)
             log.info(
                 "Finished running command %d/%d, %f seconds, success=%s",

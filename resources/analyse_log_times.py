@@ -17,31 +17,28 @@ def main(log_path: str):
 
     # Get the slowest 100 logs individually
     slowest_individual = itertools.islice(
-        sorted(elapsed_times_sec, key=lambda t: t[1], reverse=True),
-        100)
+        sorted(elapsed_times_sec, key=lambda t: t[1], reverse=True), 100
+    )
 
     slowest_grouped = sorted(
         [
             (message, sum(t for _, t in logs))
-            for message, logs in
-            itertools.groupby(
-                sorted(elapsed_times_sec, key=lambda t: t[0]["msg"]),
-                key=lambda t: t[0]["msg"])],
+            for message, logs in itertools.groupby(
+                sorted(elapsed_times_sec, key=lambda t: t[0]["msg"]), key=lambda t: t[0]["msg"]
+            )
+        ],
         key=lambda t: t[1],
-        reverse=True)
+        reverse=True,
+    )
 
     print("Slowest individual:")
     for i, (log, elapsed_time_sec) in enumerate(slowest_individual):
-        print(
-            f"#{i + 1}: Took {elapsed_time_sec} seconds, "
-            f"message: {log['msg']}")
+        print(f"#{i + 1}: Took {elapsed_time_sec} seconds, " f"message: {log['msg']}")
         print(f"Full log: {log}")
 
     print("Slowest grouped:")
     for i, (message, elapsed_time_sec) in enumerate(slowest_grouped):
-        print(
-            f"#{i + 1}: Took {elapsed_time_sec} seconds, "
-            f"message: {message}")
+        print(f"#{i + 1}: Took {elapsed_time_sec} seconds, " f"message: {message}")
 
 
 def __get_elapsed_times_sec(logs: Iterator[dict]) -> Iterator[Tuple[dict, int]]:

@@ -52,10 +52,7 @@ class Wrapped(Distance):
         return total ** 0.5
 
     def max_distance(self) -> float:
-        return (
-            ((constants.KEY_SPACE_WIDTH / 2) ** 2)
-            * self.args.key_space_dimensions
-        ) ** 0.5
+        return (((constants.KEY_SPACE_WIDTH / 2) ** 2) * self.args.key_space_dimensions) ** 0.5
 
 
 class ManhattanWrapped(Distance):
@@ -72,9 +69,7 @@ class ManhattanWrapped(Distance):
         return total
 
     def max_distance(self) -> float:
-        return (
-            (constants.KEY_SPACE_WIDTH / 2) ** 2
-        ) * self.args.key_space_dimensions
+        return ((constants.KEY_SPACE_WIDTH / 2) ** 2) * self.args.key_space_dimensions
 
 
 class Unwrapped(Distance):
@@ -84,10 +79,7 @@ class Unwrapped(Distance):
         return total ** 0.5
 
     def max_distance(self) -> float:
-        return (
-            ((constants.KEY_SPACE_WIDTH / 2) ** 2)
-            * self.args.key_space_dimensions
-        ) ** 0.5
+        return (((constants.KEY_SPACE_WIDTH / 2) ** 2) * self.args.key_space_dimensions) ** 0.5
 
 
 class Ring(Distance):
@@ -100,12 +92,7 @@ class Ring(Distance):
         radius, *a_position = a.position
         _, *b_position = b.position
         radius = abs(radius)
-        return abs(
-            radius
-            - self.underlying.distance(
-                KeySpace(a_position), KeySpace(b_position)
-            )
-        )
+        return abs(radius - self.underlying.distance(KeySpace(a_position), KeySpace(b_position)))
 
     def max_distance(self) -> float:
         return self.underlying.max_distance()
@@ -117,12 +104,7 @@ class Lattice(Distance):
         self.num_symbols = num_symbols
 
     def distance(self, a: KeySpace, b: KeySpace) -> float:
-        return float(
-            sum(
-                a != b
-                for a, b in zip(self.__to_symbols(a), self.__to_symbols(b))
-            )
-        )
+        return float(sum(a != b for a, b in zip(self.__to_symbols(a), self.__to_symbols(b))))
 
     def max_distance(self) -> float:
         return self.args.key_space_dimensions

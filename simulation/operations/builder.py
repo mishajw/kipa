@@ -20,26 +20,14 @@ class BuildArgs(NamedTuple):
 
 def create_builds(nodes: List[Node]) -> Dict[NodeId, Build]:
     node_to_args = dict(
-        (
-            node.id,
-            BuildArgs(
-                node.additional_features,
-                node.clear_default_features,
-                node.debug,
-            ),
-        )
+        (node.id, BuildArgs(node.additional_features, node.clear_default_features, node.debug,),)
         for node in nodes
     )
 
     build_args = set(node_to_args.values())
-    builds_to_directories = dict(
-        (args, __create_build(args)) for args in build_args
-    )
+    builds_to_directories = dict((args, __create_build(args)) for args in build_args)
 
-    return {
-        node_id: builds_to_directories[args]
-        for node_id, args in node_to_args.items()
-    }
+    return {node_id: builds_to_directories[args] for node_id, args in node_to_args.items()}
 
 
 def __create_build(args: BuildArgs) -> Build:

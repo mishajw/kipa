@@ -34,17 +34,11 @@ def draw_main_graph(logs: NetworkLogs, save_path: Path) -> None:
 
 
 def draw_query_graph(
-    logs: NetworkLogs,
-    from_id: NodeId,
-    to_id: NodeId,
-    message_id: str,
-    save_path: Path,
+    logs: NetworkLogs, from_id: NodeId, to_id: NodeId, message_id: str, save_path: Path,
 ) -> None:
     key_to_node = {node.key_id: node for node in logs.node_ids()}
     graph = list(__get_nodes(logs))
-    message_neighbours = list(
-        __get_message_neighbours(logs.get(from_id), message_id, key_to_node)
-    )
+    message_neighbours = list(__get_message_neighbours(logs.get(from_id), message_id, key_to_node))
     message_neighbours = __remove_fake_neighbours(graph, message_neighbours)
     location_dict = __get_location_dict(graph, IMAGE_DIMS)
     image = Image.new("RGBA", tuple(IMAGE_DIMS), color="white")
@@ -69,9 +63,7 @@ def draw_query_graph(
 
 
 def __draw_nodes(
-    graph: List[GraphNode],
-    location_dict: Dict[NodeId, Tuple[float, float]],
-    draw: ImageDraw,
+    graph: List[GraphNode], location_dict: Dict[NodeId, Tuple[float, float]], draw: ImageDraw,
 ):
     """Draw all nodes as circles"""
 
@@ -85,13 +77,10 @@ def __draw_nodes(
         draw.text((x, y), n.node_id.key_id, fill="black")
 
 
-def __draw_node_circle(
-    centre: Tuple[float, float], draw: ImageDraw, color: str = "green"
-):
+def __draw_node_circle(centre: Tuple[float, float], draw: ImageDraw, color: str = "green"):
     x, y = centre
     draw.ellipse(
-        (x - NODE_RADIUS, y - NODE_RADIUS, x + NODE_RADIUS, y + NODE_RADIUS),
-        fill=color,
+        (x - NODE_RADIUS, y - NODE_RADIUS, x + NODE_RADIUS, y + NODE_RADIUS), fill=color,
     )
 
 
@@ -121,14 +110,10 @@ def __draw_neighbours(
 def __get_nodes(logs: NetworkLogs) -> Iterator[GraphNode]:
     for node_id in logs.node_ids():
         ns_logs = filter(
-            lambda l: "neighbours_store" in l
-            and l["neighbours_store"]
-            and "local_key_space" in l,
+            lambda l: "neighbours_store" in l and l["neighbours_store"] and "local_key_space" in l,
             logs.get(node_id).logs,
         )
-        key_space_logs = list(
-            map(operator.itemgetter("local_key_space"), ns_logs)
-        )
+        key_space_logs = list(map(operator.itemgetter("local_key_space"), ns_logs))
         if len(key_space_logs) == 0:
             continue
         groups = re.match(r"KeySpace\(([-0-9, ]+)\)", key_space_logs[0])
@@ -143,10 +128,7 @@ def __get_neighbours(
     for node_id in logs.node_ids():
         flags = ["list_neighbours", "reply"]
         neighbours_logs = list(
-            filter(
-                lambda l: all(map(lambda f: f in l and l[f], flags)),
-                logs.get(node_id).logs,
-            )
+            filter(lambda l: all(map(lambda f: f in l and l[f], flags)), logs.get(node_id).logs,)
         )
         if len(neighbours_logs) == 0:
             return iter([])
@@ -163,18 +145,14 @@ def __get_message_neighbours(
     node_logs: NodeLogs, message_id: str, key_to_node: Dict[str, NodeId]
 ) -> Iterator[Tuple[NodeId, NodeId]]:
     message_logs = [
-        l
-        for l in node_logs.logs
-        if "message_id" in l and l["message_id"] == message_id
+        l for l in node_logs.logs if "message_id" in l and l["message_id"] == message_id
     ]
 
     for l in message_logs:
         if "found" not in l:
             continue
         key_id = __get_key_id_from_string(l["node"])
-        neighbours = (
-            l["neighbours"].split(", ") if l["neighbours"] != "" else []
-        )
+        neighbours = l["neighbours"].split(", ") if l["neighbours"] != "" else []
         yield from [(key_to_node[key_id], key_to_node[n]) for n in neighbours]
 
 
@@ -191,31 +169,23 @@ def __get_location_dict(
 
     # Add a padding of 10% around the bounds
     max_points = [
-        _max + (_max - _min) * 0.1
-        for _max, _min in zip(unpadded_max_points, unpadded_min_points)
+        _max + (_max - _min) * 0.1 for _max, _min in zip(unpadded_max_points, unpadded_min_points)
     ]
     min_points = [
-        _min - (_max - _min) * 0.1
-        for _max, _min in zip(unpadded_max_points, unpadded_min_points)
+        _min - (_max - _min) * 0.1 for _max, _min in zip(unpadded_max_points, unpadded_min_points)
     ]
 
     # Normalize the points within the bounds
     def normalize_point(ps: List[int]) -> Tuple[float, float]:
         normalized = [
-            ((i - _min) / (_max - _min))
-            for i, _max, _min in zip(ps, max_points, min_points)
+            ((i - _min) / (_max - _min)) for i, _max, _min in zip(ps, max_points, min_points)
         ]
         if len(normalized) == 1:
             normalized.append(0)
         if len(normalized) != 2:
-            log.warning(
-                f"No support for drawing !=2 dimensions, "
-                f"found {len(normalized)}"
-            )
+            log.warning(f"No support for drawing !=2 dimensions, " f"found {len(normalized)}")
             normalized = normalized[:2]
-        return tuple(float(i * dim) for i, dim in zip(normalized, image_dims))[
-            :2
-        ]
+        return tuple(float(i * dim) for i, dim in zip(normalized, image_dims))[:2]
 
     return dict((n.node_id, normalize_point(n.position)) for n in graph)
 

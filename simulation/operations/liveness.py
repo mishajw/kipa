@@ -19,11 +19,7 @@ def ensure_all_alive(network: Network, backend: Backend) -> None:
     for attempt in range(NUM_ATTEMPTS):
         commands = [CliCommand(node_id, ["list-neighbours"]) for node_id in ids]
         results = backend.run_commands(commands)
-        ids = [
-            result.command.node_id
-            for result in results
-            if not result.successful()
-        ]
+        ids = [result.command.node_id for result in results if not result.successful()]
         if not ids:
             log.debug("All nodes ensured alive")
             return
@@ -36,6 +32,4 @@ def ensure_all_alive(network: Network, backend: Backend) -> None:
         )
         time.sleep(ATTEMPT_WAIT_SECS)
 
-    raise AssertionError(
-        f"{len(ids)} nodes still didn't reply after all attempts"
-    )
+    raise AssertionError(f"{len(ids)} nodes still didn't reply after all attempts")
