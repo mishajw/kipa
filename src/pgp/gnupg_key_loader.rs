@@ -53,6 +53,7 @@ impl GnupgKeyLoader {
         let key_data = self
             .get_public_key_data(&key_id)
             .map_err(InternalError::private)?;
+        // TODO: Return clear error when key doesn't exist.
         Ok(Key::new(key_data).map_err(InternalError::private)?)
     }
 

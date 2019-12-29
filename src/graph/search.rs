@@ -168,6 +168,8 @@ impl GraphSearch {
                 // If we have nothing left to explore, and no working threads,
                 // the search has failed
                 info!(log, "Failed to find key"; "key" => %key);
+                // TODO: Looks like we get QuerySucceeded events *after* returning here. Is the
+                // num_active_threads code accurate?
                 return Ok(None);
             } else if to_explore.is_empty() && num_active_threads > 0 {
                 // If there's nothing left to explore, we can wait for a thread
