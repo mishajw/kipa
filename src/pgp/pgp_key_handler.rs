@@ -60,9 +60,9 @@ impl PgpKeyHandler {
         {
             let stack = Message::new(&mut encrypted);
             let stack = Signer::new(stack, vec![&mut signing_key_pair], None)
-                .map_err(to_gpg_error("Failed to init signer"))?;
+                .map_err(to_gpg_error("Failed to sign data"))?;
             let stack = Encryptor::new(stack, &[], &encryption_recipients, None, None)
-                .map_err(to_gpg_error("Failed to init encryptor"))?;
+                .map_err(to_gpg_error("Failed to encrypt data"))?;
             write(stack, data)?;
         }
         Ok(encrypted)
@@ -86,7 +86,7 @@ impl PgpKeyHandler {
             log: self.log.new(o!("gpg_helper" => true)),
         };
         let mut decryptor = Decryptor::from_bytes(data, gpg_helper, None)
-            .map_err(to_gpg_error("Failed to init decryptor"))?;
+            .map_err(to_gpg_error("Failed to decrypt and verify data"))?;
 
         let mut decrypted_data = Vec::new();
         io::copy(&mut decryptor, &mut decrypted_data)
