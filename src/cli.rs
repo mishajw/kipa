@@ -166,9 +166,9 @@ fn message_daemon(args: &clap::ArgMatches, log: &slog::Logger) -> InternalResult
 
         match response {
             ResponsePayload::ListNeighboursResponse(ref neighbours) => {
-                println!("Found neighbours:");
+                println!("Neighbours:");
                 for n in neighbours {
-                    println!("{}", n);
+                    println!("- {}", n);
                 }
                 Ok(())
             }
