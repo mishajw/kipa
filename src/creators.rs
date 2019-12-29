@@ -18,11 +18,12 @@ use versioning;
 
 use clap;
 use slog;
-use slog::Drain;
+use slog::{Drain, Fuse};
 use slog::{Level, LevelFilter, Logger};
 use slog_async;
 use slog_json;
 use slog_term;
+use std::fmt::Debug;
 use std::fs;
 use std::path::Path;
 #[allow(unused)]
@@ -94,6 +95,11 @@ impl Creator for Logger {
 
     fn get_clap_args<'a, 'b>() -> Vec<clap::Arg<'a, 'b>> {
         vec![
+            clap::Arg::with_name("write_logs")
+                .long("write-logs")
+                .help("Whether to write logs to a file")
+                .default_value("false")
+                .takes_value(true),
             clap::Arg::with_name("log_directory")
                 .long("log-directory")
                 .help("Directory to write logs to")
@@ -112,15 +118,6 @@ impl Creator for Logger {
         args: &clap::ArgMatches,
         _log: Logger,
     ) -> InternalResult<Box<Self>> {
-        parse_with_err!(log_directory, String, args);
-        fs::create_dir_all(&log_directory).map_err(|err| {
-            InternalError::public_with_error(
-                "Failed to create log directory",
-                ApiErrorType::External,
-                err,
-            )
-        })?;
-
         let verbose_level = args.occurrences_of("verbose");
         let filter_level = match verbose_level {
             0 => Level::Error,
@@ -130,23 +127,50 @@ impl Creator for Logger {
             _ => Level::Trace,
         };
 
-        // Create log file
+        // Create terminal logs.
+        parse_with_err!(write_logs, bool, args);
+        let stdout = slog_term::TermDecorator::new().build();
+        let stdout_drain = slog_term::CompactFormat::new(stdout).build().fuse();
+        let stdout_drain = LevelFilter::new(stdout_drain, filter_level).fuse();
+
+        // We need to create this function for DRY with different types of loggers depending on
+        // write_logs.
+        fn create_logger<T: Drain + Send + 'static>(
+            name: String,
+            drain: Fuse<T>,
+        ) -> InternalResult<Box<Logger>>
+        where
+            T::Err: Debug,
+        {
+            let drain = slog_async::Async::new(drain).build().fuse();
+            Ok(Box::new(slog::Logger::root(
+                Arc::new(drain),
+                o!("name" => name, "version" => versioning::get_version()),
+            )))
+        };
+
+        if !write_logs {
+            return create_logger(name, stdout_drain);
+        }
+
+        // Create log directory.
+        parse_with_err!(log_directory, String, args);
+        fs::create_dir_all(&log_directory).map_err(|err| {
+            InternalError::public_with_error(
+                "Failed to create log directory",
+                ApiErrorType::External,
+                err,
+            )
+        })?;
+
+        // Create log file.
         let file_name = &format!("log-{}.json", name);
         let file_directory = Path::new(&log_directory);
         let log_file =
             fs::File::create(file_directory.join(file_name)).expect("Error on creating log file");
 
-        // Set up log output
-        let stdout = slog_term::TermDecorator::new().build();
-        let stdout_drain = slog_term::CompactFormat::new(stdout).build().fuse();
-        let stdout_drain = LevelFilter::new(stdout_drain, filter_level);
         let file_drain = slog_json::Json::new(log_file).add_default_keys().build();
-        let drain = slog::Duplicate(file_drain, stdout_drain).fuse();
-        let drain = slog_async::Async::new(drain).build().fuse();
-        Ok(Box::new(slog::Logger::root(
-            Arc::new(drain),
-            o!("name" => name, "version" => versioning::get_version()),
-        )))
+        create_logger(name, slog::Duplicate(file_drain, stdout_drain).fuse())
     }
 }
 

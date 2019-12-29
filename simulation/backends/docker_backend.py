@@ -60,7 +60,9 @@ class DockerBackend(ParallelBackend):
 
     def run_command(self, command: CliCommand) -> CliCommandResult:
         start_sec = time.time()
-        output = self.__run_container_command(command.node_id, ["/root/kipa", *command.args])
+        output = self.__run_container_command(
+            command.node_id, ["/root/kipa", "--write-logs", "true", *command.args]
+        )
         duration_sec = time.time() - start_sec
         if output is None:
             return CliCommandResult.failed(command)
@@ -145,6 +147,7 @@ class DockerBackend(ParallelBackend):
                     echo "p@ssword" >> secret.txt
                 CMD RUST_BACKTRACE=1 ./kipa-daemon \\
                     -vvvv \\
+                    --write-logs true \\
                     --key-id $KIPA_KEY_ID \\
                     $KIPA_ARGS
             """
