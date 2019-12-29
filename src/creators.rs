@@ -99,11 +99,13 @@ impl Creator for Logger {
                 .long("write-logs")
                 .help("Whether to write logs to a file")
                 .default_value("false")
+                .empty_values(false)
                 .takes_value(true),
             clap::Arg::with_name("log_directory")
                 .long("log-directory")
                 .help("Directory to write logs to")
                 .default_value("logs")
+                .empty_values(false)
                 .takes_value(true),
             clap::Arg::with_name("verbose")
                 .long("verbose")
@@ -185,17 +187,20 @@ impl Creator for LocalAddressParams {
                 .short("p")
                 .help("Port exposed for communicating with other nodes")
                 .default_value(DEFAULT_PORT)
+                .empty_values(false)
                 .takes_value(true),
             clap::Arg::with_name("interface_name")
                 .long("interface-name")
                 .short("i")
                 .help("Interface to operate on")
                 .default_value("none")
+                .empty_values(false)
                 .takes_value(true),
             clap::Arg::with_name("force_ipv6")
                 .long("force-ipv6")
                 .help("Only pick IPv6 addresses to listen on")
                 .default_value("false")
+                .empty_values(false)
                 .takes_value(true),
         ]
     }
@@ -266,6 +271,7 @@ impl Creator for SecretLoader {
         vec![clap::Arg::with_name("secret_path")
             .long("secret-path")
             .help("File containing password for GPG keys")
+            .empty_values(false)
             .takes_value(true)
             .default_value(DEFAULT_SECRET_PATH)]
     }
@@ -322,6 +328,7 @@ impl Creator for dyn LocalServer {
             .long("socket-path")
             .short("s")
             .help("Socket to listen for local queries from CLI from")
+            .empty_values(false)
             .takes_value(true)
             .default_value(DEFAULT_UNIX_SOCKET_PATH)]
     }
@@ -434,6 +441,7 @@ impl Creator for KeySpaceManager {
         vec![clap::Arg::with_name("key_space_size")
             .long("key-space-size")
             .help("Number of dimensions to use for key space")
+            .empty_values(false)
             .takes_value(true)
             .default_value(DEFAULT_KEY_SPACE_SIZE)]
     }
@@ -461,16 +469,19 @@ impl Creator for NeighboursStore {
             clap::Arg::with_name("neighbours_size")
                 .long("neighbours-size")
                 .help("Maximum number of neighbours to store")
+                .empty_values(false)
                 .takes_value(true)
                 .default_value(DEFAULT_MAX_NUM_NEIGHBOURS),
             clap::Arg::with_name("distance_weighting")
                 .long("distance-weighting")
                 .help("Weight of the distance when considering neighbours")
+                .empty_values(false)
                 .takes_value(true)
                 .default_value(DEFAULT_DISTANCE_WEIGHTING),
             clap::Arg::with_name("angle_weighting")
                 .long("angle-weighting")
                 .help("Weight of the angle when considering neighbours")
+                .empty_values(false)
                 .takes_value(true)
                 .default_value(DEFAULT_ANGLE_WEIGHTING),
         ]
@@ -520,21 +531,25 @@ impl Creator for dyn PayloadHandler {
             clap::Arg::with_name("search_breadth")
                 .long("search-breadth")
                 .help("Breadth of the search when searching for keys")
+                .empty_values(false)
                 .takes_value(true)
                 .default_value(DEFAULT_SEARCH_BREADTH),
             clap::Arg::with_name("connect_search_breadth")
                 .long("connect-search-breadth")
                 .help("Breadth of the search when connecting to the network")
+                .empty_values(false)
                 .takes_value(true)
                 .default_value(DEFAULT_CONNECT_SEARCH_BREADTH),
             clap::Arg::with_name("max_num_search_threads")
                 .long("max-num-search-threads")
                 .help("Maximum number of threads to spawn when searching")
+                .empty_values(false)
                 .takes_value(true)
                 .default_value(DEFAULT_MAX_NUM_SEARCH_THREADS),
             clap::Arg::with_name("search_timeout_sec")
                 .long("search-timeout-sec")
                 .help("Timeout for querying other node's neighbours")
+                .empty_values(false)
                 .takes_value(true)
                 .default_value(DEFAULT_SEARCH_TIMEOUT_SEC),
             clap::Arg::with_name("neighbour_gc_frequency_sec")
@@ -543,6 +558,7 @@ impl Creator for dyn PayloadHandler {
                     "How often to check if neighbours are still responding to \
                      requests",
                 )
+                .empty_values(false)
                 .takes_value(true)
                 .default_value(DEFAULT_FREQUENCY_SEC),
             clap::Arg::with_name("neighbour_gc_num_retries")
@@ -551,11 +567,13 @@ impl Creator for dyn PayloadHandler {
                     "Number of retries to attempt before regarding a \
                      neighbour as unresponsive",
                 )
+                .empty_values(false)
                 .takes_value(true)
                 .default_value(DEFAULT_NUM_RETRIES),
             clap::Arg::with_name("neighbour_gc_enabled")
                 .long("neighbour-gc-enabled")
                 .help("Enable garbage collection of unresponsive neighbours")
+                .empty_values(false)
                 .takes_value(true)
                 .default_value(DEFAULT_ENABLED),
             clap::Arg::with_name("search_thread_pool_size")
@@ -564,6 +582,7 @@ impl Creator for dyn PayloadHandler {
                     "Thread pool size shared between search operations for \
                      spawning querying threads",
                 )
+                .empty_values(false)
                 .takes_value(true)
                 .default_value(DEFAULT_SEARCH_THREAD_POOL_SIZE),
         ];
