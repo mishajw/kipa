@@ -16,6 +16,9 @@ use sequoia_openpgp::serialize::stream::{Cookie, Encryptor, LiteralWriter, Messa
 use sequoia_openpgp::serialize::writer::Stack;
 use sequoia_openpgp::{Fingerprint, KeyID, TPK};
 use slog::Logger;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::Hash;
+use std::hash::Hasher;
 use std::io;
 use std::io::Write;
 
@@ -40,7 +43,15 @@ impl PgpKeyHandler {
         remotery_scope!("gpg_encrypt_and_sign");
         debug!(
             self.log, "Encrypting and signing data";
-            "length" => data.len(), "sender" => %sender, "recipient" => %recipient);
+            "sender" => %sender,
+            "recipient" => %recipient);
+        log_key(
+            &self.log,
+            "Decryption sender",
+            &sender.secret_key_yes_really(),
+        );
+        log_key(&self.log, "Decryption recipient", &recipient.sequoia_tpk);
+        log_data(&self.log, "Data before encryption", data);
 
         let mut signing_key_pair = into_keypair(&sender.secret_key_yes_really())
             .map_err(to_gpg_error("Failed to get keypair from signing key"))?;
@@ -65,6 +76,11 @@ impl PgpKeyHandler {
                 .map_err(to_gpg_error("Failed to encrypt data"))?;
             write(stack, data)?;
         }
+        debug!(
+            self.log, "Finished encrypting and signing data";
+            "sender" => %sender,
+            "recipient" => %recipient);
+        log_data(&self.log, "Data after encryption", &encrypted);
         Ok(encrypted)
     }
 
@@ -78,7 +94,15 @@ impl PgpKeyHandler {
         remotery_scope!("gpg_decrypt_and_verify");
         debug!(
             self.log, "Decrypting and verifying data";
-            "length" => data.len(), "sender" => %sender, "recipient" => %recipient);
+            "sender" => %sender,
+            "recipient" => %recipient);
+        log_key(&self.log, "Decryption sender", &sender.sequoia_tpk);
+        log_key(
+            &self.log,
+            "Decryption recipient",
+            &recipient.secret_key_yes_really(),
+        );
+        log_data(&self.log, "Data before decryption", data);
 
         let gpg_helper = GpgHelper {
             sender: &sender.sequoia_tpk,
@@ -88,10 +112,15 @@ impl PgpKeyHandler {
         let mut decryptor = Decryptor::from_bytes(data, gpg_helper, None)
             .map_err(to_gpg_error("Failed to decrypt and verify data"))?;
 
-        let mut decrypted_data = Vec::new();
-        io::copy(&mut decryptor, &mut decrypted_data)
-            .chain_err(|| "Failed to copy decrypted data")?;
-        Ok(decrypted_data)
+        let mut decrypted = Vec::new();
+        io::copy(&mut decryptor, &mut decrypted).chain_err(|| "Failed to copy decrypted data")?;
+
+        debug!(
+            self.log, "Finished decrypting and verifying data";
+            "sender" => %sender,
+            "recipient" => %recipient);
+        log_data(&self.log, "Data after decryption", &decrypted);
+        Ok(decrypted)
     }
 }
 
@@ -203,4 +232,24 @@ fn into_keypair(tpk: &TPK) -> sequoia_openpgp::Result<KeyPair<UnspecifiedRole>> 
         .clone()
         .into();
     signing_key.into_keypair()
+}
+
+fn log_key(log: &Logger, message: &str, key: &TPK) {
+    let subkey_fingerprints: Vec<String> = key
+        .subkeys()
+        .map(|key| key.component().fingerprint().to_hex())
+        .collect();
+    trace!(
+        log, "{}", message;
+        "key_id" => key.keyid().to_hex(),
+        "fingerprint" => key.fingerprint().to_hex(),
+        "primary_fingerprint" => key.primary().component().fingerprint().to_hex(),
+        "subkey_fingerprints" => subkey_fingerprints.join(", "));
+}
+
+fn log_data(log: &Logger, message: &str, data: &[u8]) {
+    let mut hasher = DefaultHasher::new();
+    data.hash(&mut hasher);
+    let hash = hasher.finish();
+    trace!(log, "{}", message; "length" => data.len(), "hash" => hash);
 }
