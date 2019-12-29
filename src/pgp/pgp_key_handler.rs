@@ -47,13 +47,13 @@ impl PgpKeyHandler {
             "recipient" => %recipient);
         log_key(
             &self.log,
-            "Decryption sender",
+            "Encryption sender",
             &sender.secret_key_yes_really(),
         );
-        log_key(&self.log, "Decryption recipient", &recipient.sequoia_tpk);
+        log_key(&self.log, "Encryption recipient", &recipient.sequoia_tpk);
         log_data(&self.log, "Data before encryption", data);
 
-        let mut signing_key_pair = into_keypair(&sender.secret_key_yes_really())
+        let mut signing_key_pair = signing_keypair(&sender.secret_key_yes_really())
             .map_err(to_gpg_error("Failed to get keypair from signing key"))?;
 
         let encryption_recipients = recipient
@@ -180,22 +180,15 @@ impl<'a> DecryptionHelper for GpgHelper<'a> {
     where
         D: FnMut(SymmetricAlgorithm, &SessionKey) -> sequoia_openpgp::Result<()>,
     {
-        let first_session_key = pkesks
+        let (pkesk, subkey) = pkesks
             .into_iter()
+            .flat_map(|pkesk| self.recipient.subkeys().map(move |subkey| (pkesk, subkey)))
+            .filter(|(pkesk, subkey)| *pkesk.recipient() == subkey.component().keyid())
             .next()
-            .ok_or(failure::err_msg("No PKESKS for decryption"))?;
-        if *first_session_key.recipient() != self.recipient.keyid() {
-            return Err(failure::err_msg(format!(
-                "Session key was for incorrect recipient, expected {}, was {}",
-                self.recipient.keyid(),
-                first_session_key.recipient()
-            )));
-        }
-        let mut pair = into_keypair(self.recipient)?;
-        debug!(
-            self.log, "Decrypting key"; "fingerprint" => pair.public().fingerprint().to_string());
-        first_session_key
-            .decrypt(&mut pair)
+            .ok_or(failure::err_msg("No PKESKs matched recipient subkeys."))?;
+        let mut keypair = subkey.key().clone().mark_parts_secret().into_keypair()?;
+        pkesk
+            .decrypt(&mut keypair)
             .and_then(|(algo, session_key)| decrypt(algo, &session_key))
             .map(|_| None)
     }
@@ -222,12 +215,12 @@ fn write(stack: Stack<Cookie>, data: &[u8]) -> Result<()> {
     Ok(())
 }
 
-fn into_keypair(tpk: &TPK) -> sequoia_openpgp::Result<KeyPair<UnspecifiedRole>> {
+fn signing_keypair(tpk: &TPK) -> sequoia_openpgp::Result<KeyPair<UnspecifiedRole>> {
     let signing_key: UnspecifiedSecret = tpk
         .keys_valid()
         .signing_capable()
-        .nth(0)
-        .unwrap()
+        .next()
+        .ok_or(failure::err_msg("No signing capable subkeys found"))?
         .2
         .clone()
         .into();
