@@ -77,6 +77,12 @@ impl MessageHandlerServer {
         remotery_scope!("message_handler_receive_request");
         debug!(self.log, "Received message");
 
+        if request.sender.key.key_id() == self.local_secret_key.key_id() {
+            bail!(ErrorKind::RequestError(
+                "Sender key was equivalent to local key".into()
+            ));
+        }
+
         let decrypted_body_data = self.pgp_key_handler.decrypt_and_verify(
             &request.encrypted_body,
             &request.sender.key,
