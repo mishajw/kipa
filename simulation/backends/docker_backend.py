@@ -51,7 +51,7 @@ class DockerBackend(ParallelBackend):
             self.__ip_addresses[node.id] = ip_address
             # FIXME: If we don't sleep, we run out of memory when GPG reads keys, causing daemon
             # startups to fail.
-            time.sleep(1)
+            time.sleep(0.3)
 
         self.__fake_poor_connection(network.connection_quality)
 
@@ -141,15 +141,16 @@ class DockerBackend(ParallelBackend):
                 COPY kipa /root/kipa
                 COPY kipa-daemon /root/kipa-daemon
                 WORKDIR /root
+                ENV RUST_BACKTRACE=1
                 RUN \\
                     chmod +x kipa && \\
                     chmod +x kipa-daemon && \\
                     echo "p@ssword" >> secret.txt
-                CMD RUST_BACKTRACE=1 ./kipa-daemon \\
-                    -vvvv \\
-                    --write-logs true \\
-                    --key-id $KIPA_KEY_ID \\
-                    $KIPA_ARGS
+                CMD \\
+                    for _ in $(seq 3); do \\
+                        ./kipa-daemon -vvvv --write-logs true --key-id $KIPA_KEY_ID $KIPA_ARGS; \\
+                        sleep 5; \\
+                    done
             """
             )
 
