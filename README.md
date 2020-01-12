@@ -9,8 +9,8 @@ A distributed Key to IP Address query network.
 ## What is KIPA?
 
 KIPA is a look-up service for finding out which IP addresses belong to a public
-key. Each node on the KIPA network allows itself to be looked up by its key, and
-is used for looking up other nodes in the network.
+key. Everyone on the KIPA network allows themselves to be looked up by their
+key, and is helps to look up others in the network.
 
 It is **distributed**, meaning that there is no single server on which the
 network relies (backed up by [benchmarks](./docs/benchmarks.md#reliability)).
@@ -22,9 +22,8 @@ network is still secure and reliable (backed up by
 It is **fast**, with look-ups taking (TODO add figures) (backed up by
 [benchmarks](./docs/benchmarks.md#speed)).
 
-KIPA is still a work in progress, and should not be used for any serious cases.
-It is recommended that you generate a new key to try out KIPA. For a list of
-unimplemented planned features, see [here](./docs/todo.md).
+*KIPA is still a work in progress, and should be used with caution.  It is
+recommended that you generate a new key to try out KIPA.*
 
 ## How does it work?
 
