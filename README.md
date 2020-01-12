@@ -30,6 +30,8 @@ recommended that you generate a new key to try out KIPA.*
 When a node joins the KIPA network, its public key is mapped to an
 _n_-dimensional space, where _n_ is constant throughout the network. The mapping
 is done uniformly and deterministically. This space is called **key space**.
+(For a discussion on the value of _n_, see [selecting
+dimensions](./resources/selecting_dimensions.py)).
 
 Each node will attempt to find the IP addresses of other nodes which are close
 to it in key space, and set those nodes to be its **neighbours**. Once this is
