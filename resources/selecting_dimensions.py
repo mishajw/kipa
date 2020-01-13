@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-# This script helps select the number of dimensions to use in KIPA.
+# This script helps select the number of dimensions to use for KIPA's key space.
 #
-# Let's outline the problem, in graph theory terms:
+# Let's outline the problem:
 # - We have an N-dimensional euclidean space.
 # - The space contains a fixed number of nodes.
 # - Each node is connected to the K nodes closest to it.
@@ -34,6 +34,7 @@ import numpy as np
 np.set_printoptions(suppress=True)
 SPACE_WIDTH = 1
 
+
 # The first step in solving this problem, is to find a way to calculate the expected number of steps
 # between nodes, given the number of dimensions (`dims`), the number of nodes (`nodes`) and the
 # number of edges on each node (`edges`).
@@ -42,12 +43,13 @@ def calc_num_steps(dims: int, nodes: int, edges: int) -> float:
     # we use are difficult to calculate the inverse of, as they use gamma and beta functions. As I'm
     # not great at maths, we approximate the inverse.
     # Equations from: http://docsdrive.com/pdfs/ansinet/ajms/2011/66-70.pdf
-    calc_sphere_volume = lambda r: ((math.pi ** (dims / 2)) / gamma((dims / 2) + 1)) * (r ** dims)
-    calc_sphere_filled = lambda a: 0.5 * betainc((dims + 1) / 2, 0.5, math.sin(a) ** 2)
-    calc_sphere_radius = approx_inverse(calc_sphere_volume, np.linspace(0, 1, 100))
-    calc_sphere_angle = approx_inverse(calc_sphere_filled, np.linspace(0, math.pi / 2, 100))
+    calc_sphere_volume = lambda r: (math.pi ** (dims / 2)) / gamma((dims / 2) + 1) * (r ** dims)
+    calc_sphere_radius = approx_inverse(calc_sphere_volume, list(np.linspace(0, 100, 1000)))
+    calc_sphere_filled = lambda a: 1 - (0.5 * betainc((dims + 1) / 2, 0.5, math.sin(a) ** 2))
+    calc_sphere_angle = approx_inverse(calc_sphere_filled, list(np.linspace(0, math.pi / 2, 10)))
 
-    # In order to do this, we stop thinking about the graph, and instead think about a single node.
+    # In order to do this, we stop thinking about the graph, and instead think about a single node
+    # and it's direct neighbours.
     #
     # Each node has a set of neighbours, typically surrounding the node like so:
     #     +-------------------+
@@ -69,7 +71,7 @@ def calc_num_steps(dims: int, nodes: int, edges: int) -> float:
     #     |       .....       |
     #     |     ..     ..     |
     #     |    .         .    |
-    #     |   .     S     .   |
+    #     |   .     x     .   |
     #     |    .         .    |
     #     |     ..     ..     |
     #     |       .....       |
@@ -107,17 +109,17 @@ def calc_num_steps(dims: int, nodes: int, edges: int) -> float:
     # We want to calculate the expected distance between `x` and neighbour 4.
     #
     # We can figure this out using a few pieces of information:
-    # - All of our neighbours are *uniformly distributed* across the sphere.
-    # - Given a list of N random numbers from 0-1, the expected largest number is `1/(N+1)`.
+    # - All of our neighbours are *uniformly distributed* within the sphere.
+    # - Given a list of N random numbers from 0-1, the expected largest number is `N/(N+1)`.
     #
     # This means that we can expect our furthest neighbour to be at the edge of the "+" part of the
-    # sphere, where the "+" takes up `1/(N+1)`% of the *volume* of the sphere:
+    # sphere, where the "+" takes up `N/(N+1)`% of the *volume* of the sphere:
     #     +-------------------+
     #     |                   |
     #     |       .....       |
     #     |     ..+++++..     |
     #     |    .+++++++++.    |
-    #     |   .+++++S+++++.   |
+    #     |   .+++++x+++++.   |
     #     |    .+++++++++.    |
     #     |     ..     ..     |
     #     |       .....       |
@@ -126,7 +128,7 @@ def calc_num_steps(dims: int, nodes: int, edges: int) -> float:
     #
     # So, we need to figure out how far away edge of the "+" part is from the node. We do this by
     # first calculating how much of the sphere should be filled with "+".
-    sphere_filled = 1 / (edges + 1)
+    sphere_filled = edges / (edges + 1)
 
     # We then figure out the angle between the sphere's centre and the edge of the sphere where the
     # "+" stops:
