@@ -1,7 +1,9 @@
 connect_type: cyclical
-num_connects: 1
-num_search_tests: 200
+num_connects: 2
+num_search_tests: 50
 groups:
-  - size: 100
-    daemon_args:
-      neighbours_size: 10
+- size: 200
+  daemon_args:
+    neighbours_size: 10
+    search_breadth: 10
+    neighbour_gc_enabled: false
