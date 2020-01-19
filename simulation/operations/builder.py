@@ -55,11 +55,13 @@ def __create_build(args: BuildArgs) -> Build:
     log.debug("Extracting cli binary")
     cli_path = binary_directory / "kipa"
     assert os.path.isfile(cli_path)
-    shutil.copyfile(cli_path, directory / "kipa")
+    output_cli_path = directory / "kipa"
+    shutil.copyfile(cli_path, output_cli_path)
 
     log.debug("Extracting daemon binary")
     daemon_path = binary_directory / "kipa-daemon"
     assert os.path.isfile(daemon_path)
-    shutil.copyfile(daemon_path, directory / "kipa-daemon")
+    output_daemon_path = directory / "kipa-daemon"
+    shutil.copyfile(daemon_path, output_daemon_path)
 
-    return Build(cli_path, daemon_path)
+    return Build(output_cli_path, output_daemon_path)
