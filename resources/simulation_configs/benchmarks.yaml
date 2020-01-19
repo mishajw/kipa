@@ -4,6 +4,4 @@ num_search_tests: 50
 groups:
 - size: 200
   daemon_args:
-    neighbours_size: 10
-    search_breadth: 10
     neighbour_gc_enabled: false

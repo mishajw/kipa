@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 /// The default size of the neighbours store
-pub const DEFAULT_MAX_NUM_NEIGHBOURS: &str = "3";
+pub const DEFAULT_MAX_NUM_NEIGHBOURS: &str = "10";
 
 /// The default weight for distance when considering neighbours
 pub const DEFAULT_DISTANCE_WEIGHTING: &str = "0.5";

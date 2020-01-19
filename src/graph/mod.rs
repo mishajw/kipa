@@ -29,7 +29,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 /// The default breadth to use when searching
-pub const DEFAULT_SEARCH_BREADTH: &str = "3";
+pub const DEFAULT_SEARCH_BREADTH: &str = "10";
 
 /// The default breadth of the search to use when connecting
 pub const DEFAULT_CONNECT_SEARCH_BREADTH: &str = "3";
