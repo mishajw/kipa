@@ -3,7 +3,6 @@ import os
 import re
 import subprocess
 import tempfile
-from pathlib import Path
 from typing import List, Set
 
 log = logging.getLogger(__name__)

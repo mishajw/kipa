@@ -1,29 +1,34 @@
 import logging
-import os
 import unittest
+from pathlib import Path
 
-from simulation import networks, utils
+from simulation import utils
+from simulation.key_creator import KeyCreator
+from simulation.networks import Network
+from simulation.operations import simulator
 
 log = logging.getLogger(__name__)
 
 
 class TestCyclicSearch(unittest.TestCase):
     def test_all_searches(self):
-        results = networks.configuration.Configuration(
-            [networks.configuration.GroupConfiguration(5)],
-            connect_type=networks.configuration.ConnectType.CYCLICAL,
-            num_connects=1,
-        ).run(os.path.join("simulation_output/tests/cyclic", f"{utils.get_formatted_time()}",))
+        network = Network.from_config(
+            {"connect_type": "cyclical", "num_search_tests": 10, "groups": [{"size": 10}]},
+            KeyCreator(),
+        )
+        path = Path("simulation_output/tests/ipv6") / f"{utils.get_formatted_time()}"
 
-        self.assertEqual(results["percentage_success"], 1)
+        result = simulator.simulate(network, path)
+        self.assertEqual(result.success_percentage, 1)
 
 
 class TestRootedSearch(unittest.TestCase):
     def test_all_searches(self):
-        results = networks.configuration.Configuration(
-            [networks.configuration.GroupConfiguration(5)],
-            connect_type=networks.configuration.ConnectType.ROOTED,
-            num_connects=1,
-        ).run(os.path.join("simulation_output/tests/rooted", f"{utils.get_formatted_time()}",))
+        network = Network.from_config(
+            {"connect_type": "rooted", "num_search_tests": 10, "groups": [{"size": 10}]},
+            KeyCreator(),
+        )
+        path = Path("simulation_output/tests/ipv6") / f"{utils.get_formatted_time()}"
 
-        self.assertEqual(results["percentage_success"], 1)
+        result = simulator.simulate(network, path)
+        self.assertEqual(result.success_percentage, 1)

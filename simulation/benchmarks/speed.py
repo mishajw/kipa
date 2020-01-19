@@ -1,10 +1,8 @@
 import logging
 from pathlib import Path
-from typing import Iterator
 
 from simulation.benchmarks import SuccessSpeedBenchmark
 from simulation.networks import Network, ConnectionQuality
-from simulation.operations import simulator
 
 log = logging.getLogger(__name__)
 

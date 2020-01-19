@@ -1,10 +1,8 @@
 import random
 from pathlib import Path
-from typing import Any
 
 from simulation.benchmarks import SuccessSpeedBenchmark
 from simulation.networks import Network
-from simulation.operations import simulator, TestResult
 
 DISCONNECT_PROBABILITIES = [x / 10 for x in range(10)]
 
