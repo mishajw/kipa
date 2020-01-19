@@ -16,7 +16,7 @@ class TestCyclicSearch(unittest.TestCase):
             {"connect_type": "cyclical", "num_search_tests": 10, "groups": [{"size": 10}]},
             KeyCreator(),
         )
-        path = Path("simulation_output/tests/ipv6") / f"{utils.get_formatted_time()}"
+        path = Path("simulation_output/tests/cyclical") / f"{utils.get_formatted_time()}"
 
         result = simulator.simulate(network, path)
         self.assertEqual(result.success_percentage, 1)
@@ -28,7 +28,7 @@ class TestRootedSearch(unittest.TestCase):
             {"connect_type": "rooted", "num_search_tests": 10, "groups": [{"size": 10}]},
             KeyCreator(),
         )
-        path = Path("simulation_output/tests/ipv6") / f"{utils.get_formatted_time()}"
+        path = Path("simulation_output/tests/rooted") / f"{utils.get_formatted_time()}"
 
         result = simulator.simulate(network, path)
         self.assertEqual(result.success_percentage, 1)
