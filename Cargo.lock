@@ -467,7 +467,7 @@ dependencies = [
 
 [[package]]
 name = "kipa"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -480,7 +480,7 @@ dependencies = [
  "pnet 0.22.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "protobuf 2.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "protoc-rust 2.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "rand 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "remotery 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "sequoia-openpgp 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
