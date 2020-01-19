@@ -24,11 +24,14 @@ def sample_test_searches(network: Network, backend: Backend, num_searches: int) 
     search_results: List[SearchResult] = []
     for (from_node, to_node), result in zip(random_node_pairs, command_results):
         success = result.successful() and "Search unsuccessful" not in result.stdout
+        if result.cli_logs is None:
+            search_results.append(SearchResult(from_node.id, to_node.id, False, "", 0, 0))
+            continue
 
         message_id = set([l["message_id"] for l in result.cli_logs if "message_id" in l])
-        assert len(message_id) == 1, (
-            "Couldn't find exactly one `message_id` when testing search, " f"found: {message_id}"
-        )
+        assert (
+            len(message_id) == 1
+        ), "Couldn't find exactly one `message_id` when testing search, found: {message_id}"
         message_id = next(iter(message_id))
 
         num_requests = sum(
