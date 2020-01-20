@@ -101,22 +101,20 @@ Prerequisites:
   - `gpgme` crate requires `autogen`, `gettext` to build
 
 ```bash
-# Download and build
-git clone https://github.com/mishajw/kipa.git && cd kipa
-cargo build --release
+# KIPA is a work in progress - to be cautious, make a KIPA-specific key when trying it out.
+gpg --generate-key
 
-# Run KIPA daemon
-./target/release/kipa-daemon --key-id $YOUR_KEY_ID &
+# Install & start up the daemon.
+cargo install kipa
+kipa-daemon --key-id $MY_KEY_ID &
 
-# Connect to a KIPA network
-./target/release/kipa connect \
-    --key-id <root key ID> --address <root address>
+# To connect, you need to know the address and key of a single device in the network.
+kipa connect --address $KNOWN_ADDRESS --key-id $KNOWN_KEY_ID
 
-# Example query
-./target/release/kipa search \
-    --key-id $THEIR_KEY_ID
+# Now you can search for key IDs that you have in GPG!
+kipa search --key-id $THEIR_KEY_ID
 
-# Run tests
+# Run rust unit tests.
 cargo test
 ```
 
