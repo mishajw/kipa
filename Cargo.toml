@@ -33,38 +33,38 @@ use-random-response = []
 use-remotery = ["remotery"]
 
 [dependencies]
-error-chain = "*"
-protobuf = "*"
-sequoia-openpgp = "*"
-clap = "*"
-byteorder = "*"
+error-chain = "0.12.1"
+protobuf = "2.8.1"
+sequoia-openpgp = "0.10.0"
+clap = "2.33.0"
+byteorder = "1.3.2"
 pnet = "0.22.0"
-slog-term = "*"
-slog-async = "*"
-slog-json = "*"
-rand = "*"
-spectral = "*"
-regex = "*"
-lazy_static = "*"
-periodic = "*"
-threadpool = "*"
-num_cpus = "*"
-failure = "*"
-serde = { version = "*", features = ["derive"] }
-serde_json = "*"
+slog-term = "2.4.1"
+slog-async = "2.3.0"
+slog-json = "2.3.0"
+rand = "0.4.6"
+spectral = "0.6.0"
+regex = "1.0.6"
+lazy_static = "1.4.0"
+periodic = "0.1.1"
+threadpool = "1.7.1"
+num_cpus = "1.10.1"
+failure = "0.1.6"
+serde = { version = "1.0.101", features = ["derive"] }
+serde_json = "1.0.41"
 
-remotery = { version = "*", optional = true }
+remotery = { version = "0.1.2", optional = true }
 
 [dependencies.slog]
-version = "*"
+version = "2.5.2"
 default-features = false
 features = ["release_max_level_trace", "max_level_trace"]
 
 # Set vendored feature for nettle to statically link.
 [dependencies.nettle-sys]
-version = "*"
+version = "2.0.3"
 features = ["vendored"]
 
 [build-dependencies]
-protoc-rust = "*"
+protoc-rust = "2.8.1"
 
