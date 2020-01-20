@@ -1,6 +1,6 @@
 [package]
 name = "kipa"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Misha Wagner <mishajw@gmail.com>"]
 build = "build.rs"
 description = "Distributed Key to IP Address (KIPA) query network"
