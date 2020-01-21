@@ -78,11 +78,13 @@ class ConnectType(Enum):
 
 
 class ConnectionQuality:
-    def __init__(self, loss: float, delay: float, rate: float) -> None:
-        self.loss = loss
-        self.delay = delay
-        self.rate = rate
+    def __init__(self, loss_perc: float, delay_millis: float, rate_kbps: float) -> None:
+        self.loss_perc = loss_perc
+        self.delay_millis = delay_millis
+        self.rate_kbps = rate_kbps
 
     @classmethod
     def from_config(cls, config: dict) -> "ConnectionQuality":
-        return cls(config.get("loss", 0), config.get("delay", 0), config.get("rate", 0))
+        return cls(
+            config.get("loss_perc", 0), config.get("delay_millis", 0), config.get("rate_kbps", 0)
+        )

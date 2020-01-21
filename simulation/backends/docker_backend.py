@@ -244,16 +244,16 @@ class DockerBackend(ParallelBackend):
 
         log.debug(
             "Faking a poor connection between all containers with "
-            f"loss {quality.loss * 100:.3f}%, "
-            f"delay {quality.delay}, and "
-            f"rate of {quality.rate}Kbps"
+            f"loss {quality.loss_perc * 100:.3f}%, "
+            f"delay {quality.delay_millis}, and "
+            f"rate of {quality.rate_kbps}Kbps"
         )
 
         command = (
             f"tc qdisc add dev eth0 root netem "
-            + (f"loss {quality.loss * 100}% " if quality.loss != 0 else "")
-            + (f"delay {quality.delay} " if quality.delay != 0 else "")
-            + (f"rate {quality.rate}kbit" if quality.rate != 0 else "")
+            + (f"loss {quality.loss_perc * 100}% " if quality.loss_perc != 0 else "")
+            + (f"delay {quality.delay_millis} " if quality.delay_millis != 0 else "")
+            + (f"rate {quality.rate_kbps}kbit" if quality.rate_kbps != 0 else "")
         )
 
         for container in self.__containers.values():

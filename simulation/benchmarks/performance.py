@@ -8,8 +8,7 @@ log = logging.getLogger(__name__)
 
 CONNECTION_QUALITIES = [x / 100 for x in range(0, 100, 10)]
 """
-Network qualities ranging from 0% loss, 0ms delay, and 1mbps, to 90% loss, 1
-second delay, and 10kbps
+Network qualities ranging from 0% loss, 0ms delay, and 1mbps, to 15% loss, 250ms delay, and 10kbps.
 """
 
 
@@ -21,7 +20,9 @@ class PerformanceBenchmark(SuccessSpeedBenchmark):
 
     def get_network(self, network: Network, quality_rating: float) -> Network:
         quality = ConnectionQuality(
-            loss=quality_rating, delay=quality_rating * 1000, rate=(1 - quality_rating) * 1000,
+            loss_perc=quality_rating * 0.15,
+            delay_millis=quality_rating * 250,
+            rate_kbps=(1 - quality_rating) * 1000,
         )
         quality_network = network._replace(connection_quality=quality)
 
