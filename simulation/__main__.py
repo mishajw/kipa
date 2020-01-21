@@ -40,7 +40,7 @@ def main():
     parser.add_argument(
         "--benchmark",
         type=str,
-        choices=["reliability", "resilience", "speed", "scalability"],
+        choices=["reliability", "resilience", "performance", "scalability"],
         default=None,
         help="Run a benchmark to see how well a configuration performs under " "varying conditions",
     )
@@ -58,8 +58,8 @@ def main():
             benchmark = benchmarks.ReliabilityBenchmark(output_directory)
         elif args.benchmark == "resilience":
             benchmark = benchmarks.ResilienceBenchmark(output_directory)
-        elif args.benchmark == "speed":
-            benchmark = benchmarks.SpeedBenchmark(output_directory)
+        elif args.benchmark == "performance":
+            benchmark = benchmarks.PerformanceBenchmark(output_directory)
         elif args.benchmark == "scalability":
             benchmark = benchmarks.ScalabilityBenchmark(output_directory)
         else:
