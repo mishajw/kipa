@@ -48,7 +48,7 @@ search for itself in the network (in a similar style to above), and selects the
 closest nodes it encounters.
 
 You can find a more detailed overview of KIPA's design
-[here](./docs/design.md).
+[here](./docs/design.md), and a summary of planned future work [here](./docs/future-work.md).
 
 ## Why does it exist?
 
