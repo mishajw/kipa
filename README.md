@@ -15,12 +15,11 @@ key, and is helps to look up others in the network.
 It is **distributed**, meaning that there is no single server on which the
 network relies (backed up by [benchmarks](./docs/benchmarks.md#reliability)).
 
-It is **zero-trust**, meaning that even with malicious nodes in the network, the
-network is still secure and reliable (backed up by
-[benchmarks](./docs/benchmarks.md#resilience)).
+It is **zero-trust**, meaning it is resilient against [bad actors](./docs/design.md#zero-trust).
 
-It is **fast**, with look-ups taking (TODO add figures) (backed up by
-[benchmarks](./docs/benchmarks.md#speed)).
+It is **scalable**, performing well with large network sizes (backed up by
+[benchmarks](./docs/benchmarks.md#scalability)) and slow network speeds (backed up by
+[benchmarks](./docs/benchmarks.md#performance)).
 
 *KIPA is still a work in progress, and should be used with caution.  It is
 recommended that you generate a new key to try out KIPA.*
