@@ -35,7 +35,7 @@ pub const DEFAULT_SEARCH_BREADTH: &str = "10";
 pub const DEFAULT_CONNECT_SEARCH_BREADTH: &str = "3";
 
 /// The default maximum number of concurrent threads to have when searching
-pub const DEFAULT_MAX_NUM_SEARCH_THREADS: &str = "3";
+pub const DEFAULT_MAX_NUM_SEARCH_THREADS: &str = "10";
 
 /// The default timeout for queries when performing a search
 pub const DEFAULT_SEARCH_TIMEOUT_SEC: &str = "5";
