@@ -99,16 +99,40 @@ gpg --generate-key
 
 # Install & start up the daemon.
 cargo install kipa
-kipa-daemon --key-id $MY_KEY_ID &
+kipa-daemon --key-id "$MY_KEY_ID" &
 
 # To connect, you need to know the address and key of a single device in the network.
-kipa connect --address $KNOWN_ADDRESS --key-id $KNOWN_KEY_ID
+kipa connect --address "$KNOWN_ADDRESS" --key-id "$KNOWN_KEY_ID"
+# Or, connect to a default node.
+cd path-to-this-repository && ./resources/connect-to-default.sh
 
 # Now you can search for key IDs that you have in GPG!
-kipa search --key-id $THEIR_KEY_ID
+kipa search --key-id "$THEIR_KEY_ID"
+```
 
-# Run rust unit tests.
-cargo test
+### Docker
+
+You can also set up a daemon in a Docker container.
+
+```bash
+# Set up a new key, export it to a file, and export the password to a file.
+gpg --generate-key
+gpg --export-secret-keys --output secret-key "$KEY_ID"
+echo "my-secret-key-p@ssword" > secret-key-password
+
+# Build & start the container.
+docker build -t kipa https://github.com/mishajw/kipa.git
+docker run --name kipa \
+    --mount type=bind,source=$KEY_PATH,target=/root/key \
+    --mount type=bind,source=$KEY_PASSWORD_PATH,target=/root/key-password \
+    kipa $KEY_ID
+
+# To connect, you need to know the address and key of a single device in the network.
+docker exec kipa \
+    kipa connect --address "$KNOWN_ADDRESS" --key-id "$KNOWN_KEY_ID"
+# Or, connect to a default node.
+docker exec kipa \
+    sh -c "$(cat ./resources/connect-to-default.sh)"
 ```
 
 ### Simulations
