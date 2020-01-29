@@ -22,7 +22,7 @@ use std::sync::Arc;
 // TODO: Change from returning `ApiResult<()>` to an error code linked to
 // `ApiErrorType` - should be possible with `std::process::Termination`, but
 // this is only available in nightly. Keep an eye on issue #43301
-fn main() -> ApiResult<()> {
+fn main() -> std::result::Result<(), String> {
     let mut creator_args = vec![];
     creator_args.append(&mut slog::Logger::get_clap_args());
     creator_args.append(&mut DataTransformer::get_clap_args());
@@ -88,17 +88,13 @@ fn main() -> ApiResult<()> {
                     log, "Error occurred when performing command";
                     "err_message" => %priv_err.display_chain());
             }
-            println!("Error: {}", err.message);
-            Err(err)
+            Err(format!("Error: {}", err.message))
         }
         Err(InternalError::PrivateError(err)) => {
             crit!(
                 log, "Error occurred when performing command";
                 "err_message" => %err.display_chain());
-            Err(ApiError::new(
-                "Internal error (check logs)".into(),
-                ApiErrorType::Internal,
-            ))
+            Err("Internal error (check logs)".into())
         }
     }
 }

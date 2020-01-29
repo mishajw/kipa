@@ -24,7 +24,7 @@ use kipa_lib::thread_manager::ThreadManager;
 use error_chain::ChainedError;
 use std::sync::Arc;
 
-fn main() -> ApiResult<()> {
+fn main() -> std::result::Result<(), String> {
     let mut creator_args = vec![];
     creator_args.append(&mut slog::Logger::get_clap_args());
     creator_args.append(&mut LocalAddressParams::get_clap_args());
@@ -70,17 +70,13 @@ fn main() -> ApiResult<()> {
                     log, "Error occured when starting daemon";
                     "err_message" => %priv_err.display_chain());
             }
-            println!("Error: {}", err.message);
-            Err(err)
+            Err(format!("Error: {}", err.message))
         }
         Err(InternalError::PrivateError(err)) => {
             crit!(
                 log, "Error occured when starting daemon";
                 "err_message" => err.display_chain().to_string());
-            Err(ApiError::new(
-                "Internal error (check logs)".into(),
-                ApiErrorType::Internal,
-            ))
+            Err("Internal error (check logs)".into())
         }
     }
 }
