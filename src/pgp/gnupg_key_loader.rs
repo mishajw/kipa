@@ -36,6 +36,8 @@ impl GnupgKeyLoader {
             self.log, "Requested local private key ID";
             "key_id" => &key_id);
 
+        self.check_key_id_in_gnupg(&key_id, true)?;
+
         let secret = secret_loader.load()?;
         let key_data = self
             .get_private_key_data(&key_id, &secret)
@@ -49,6 +51,8 @@ impl GnupgKeyLoader {
         trace!(
             self.log, "Requested recipient public key ID";
             "key_id" => &key_id);
+
+        self.check_key_id_in_gnupg(&key_id, false)?;
 
         let key_data = self
             .get_public_key_data(&key_id)
@@ -109,6 +113,55 @@ impl GnupgKeyLoader {
         self.check_output(&output)?;
         // Key data is written to stdout.
         Ok(output.stdout)
+    }
+
+    /// Checks whether `key_id` exists in GnuPG keys.
+    fn check_key_id_in_gnupg(&self, key_id: &str, secret_keys: bool) -> InternalResult<()> {
+        let key_ids = self
+            .get_key_id_list(secret_keys)
+            .map_err(InternalError::private)?;
+        let key_id_in_gnupg = key_ids.into_iter().any(|id| id.ends_with(key_id));
+        if !key_id_in_gnupg {
+            return Err(InternalError::public(
+                &format!("Key ID {} was not found in GnuPG.", key_id),
+                ApiErrorType::Configuration,
+            ));
+        }
+        Ok(())
+    }
+
+    /// Gets a list of public or secret key IDs.
+    fn get_key_id_list(&self, secret_keys: bool) -> Result<Vec<String>> {
+        let list_argument = if secret_keys {
+            "--list-secret-keys"
+        } else {
+            "--list-keys"
+        };
+
+        let mut command = Command::new("gpg");
+        command
+            .args(&[list_argument, "--with-colons"])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+
+        let output = command
+            .spawn()
+            .chain_err(|| "Error on spawn gpg command to get key list")?
+            .wait_with_output()
+            .chain_err(|| "Failed to wait for gpg and get output")?;
+        self.check_output(&output)?;
+
+        let stdout = String::from_utf8(output.stdout)
+            .chain_err(|| "Failed to pass gpg key list as UTF-8.")?;
+        // Parse the --with-colons output. In this case, we're interested in the fingerprint tag,
+        // and the key ID is in column 9.
+        Ok(stdout
+            .split("\n")
+            .filter(|line| line.starts_with("fpr:"))
+            .flat_map(|line| line.split(":").nth(9).into_iter())
+            .map(String::from)
+            .filter(|s| !s.is_empty())
+            .collect())
     }
 
     /// Checks that the output of a process is healthy.
