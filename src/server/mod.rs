@@ -29,7 +29,7 @@ pub trait Server: Send + Sync {
 /// Listen for requests from other KIPA nodes
 pub trait Client: Send + Sync {
     /// Send a request to another `Node` and get the `Response`
-    fn send(&self, node: &Node, request_data: &[u8], timeout: Duration) -> Result<Vec<u8>>;
+    fn send(&self, node: &Node, request_data: &[u8], timeout: Duration) -> InternalResult<Vec<u8>>;
 }
 
 /// Create a server that can listen for requests from local clients

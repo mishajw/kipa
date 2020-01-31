@@ -145,10 +145,10 @@ pub trait SocketClient: SocketHandler {
     fn get_log(&self) -> &Logger;
 
     /// Create a socket to connect to the `node`
-    fn create_socket(&self, node: &Node, timeout: Duration) -> Result<Self::SocketType>;
+    fn create_socket(&self, node: &Node, timeout: Duration) -> InternalResult<Self::SocketType>;
 
     /// Send a request to another `Node` and get the `Response`
-    fn send(&self, node: &Node, request_data: &[u8], timeout: Duration) -> Result<Vec<u8>> {
+    fn send(&self, node: &Node, request_data: &[u8], timeout: Duration) -> InternalResult<Vec<u8>> {
         remotery_scope!("socket_client_send");
 
         let deadline = Instant::now() + timeout;
@@ -161,10 +161,12 @@ pub trait SocketClient: SocketHandler {
         let mut socket = self.create_socket(node, deadline_to_duration(deadline))?;
 
         trace!(self.get_log(), "Sending request to another node");
-        self.send_data(&request_data, &mut socket, Some(deadline))?;
+        self.send_data(&request_data, &mut socket, Some(deadline))
+            .map_err(InternalError::private)?;
 
         trace!(self.get_log(), "Reading response from another node");
         self.receive_data(&mut socket, Some(deadline))
+            .map_err(InternalError::private)
     }
 }
 

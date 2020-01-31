@@ -184,8 +184,7 @@ impl MessageHandlerClient {
         let message_data =
             to_internal_result(self.data_transformer.encode_request_message(message))?;
 
-        let response_message_data =
-            to_internal_result(self.client.send(node, &message_data, timeout))?;
+        let response_message_data = self.client.send(node, &message_data, timeout)?;
         let response_message = to_internal_result(
             self.data_transformer
                 .decode_response_message(&response_message_data, node.address.clone()),

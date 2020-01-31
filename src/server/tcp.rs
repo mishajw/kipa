@@ -9,8 +9,8 @@ use thread_manager::ThreadManager;
 
 use std::net::{IpAddr, Ipv6Addr, SocketAddr, TcpListener, TcpStream};
 use std::sync::Arc;
-use std::thread;
 use std::time::Duration;
+use std::{io, thread};
 
 use slog::Logger;
 
@@ -143,14 +143,31 @@ impl SocketClient for TcpGlobalClient {
         &self.log
     }
 
-    fn create_socket(&self, node: &Node, timeout: Duration) -> Result<TcpStream> {
-        TcpStream::connect_timeout(&node.address.to_socket_addr(), timeout)
-            .chain_err(|| format!("Error on trying to connect to node {}", node))
+    fn create_socket(&self, node: &Node, timeout: Duration) -> InternalResult<TcpStream> {
+        let socket = TcpStream::connect_timeout(&node.address.to_socket_addr(), timeout);
+        match socket {
+            Ok(socket) => Ok(socket),
+            Err(err) => {
+                let error_message = if err.kind() == io::ErrorKind::ConnectionRefused {
+                    format!(
+                        "Connection to {} refused. Is the address and port correct?",
+                        node.address
+                    )
+                } else {
+                    format!("Failed to setup socket to {}.", node.address)
+                };
+                Err(InternalError::public_with_error(
+                    &error_message,
+                    ApiErrorType::External,
+                    err,
+                ))
+            }
+        }
     }
 }
 
 impl Client for TcpGlobalClient {
-    fn send(&self, node: &Node, request_data: &[u8], timeout: Duration) -> Result<Vec<u8>> {
+    fn send(&self, node: &Node, request_data: &[u8], timeout: Duration) -> InternalResult<Vec<u8>> {
         SocketClient::send(self, node, request_data, timeout)
     }
 }
