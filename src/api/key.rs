@@ -85,8 +85,12 @@ pub struct SecretKey {
 impl SecretKey {
     #[allow(missing_docs)]
     pub fn new(data: Vec<u8>) -> Result<Self> {
+        let cert = parse_cert(&data)?;
+        if !cert.is_tsk() {
+            bail!(ErrorKind::ConfigError("Provided key is not a secret key".into()));
+        }
         Ok(SecretKey {
-            sequoia_cert: parse_cert(&data)?,
+            sequoia_cert: cert,
         })
     }
 
