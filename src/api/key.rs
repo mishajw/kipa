@@ -87,11 +87,11 @@ impl SecretKey {
     pub fn new(data: Vec<u8>) -> Result<Self> {
         let cert = parse_cert(&data)?;
         if !cert.is_tsk() {
-            bail!(ErrorKind::ConfigError("Provided key is not a secret key".into()));
+            bail!(ErrorKind::ConfigError(
+                "Provided key is not a secret key".into()
+            ));
         }
-        Ok(SecretKey {
-            sequoia_cert: cert,
-        })
+        Ok(SecretKey { sequoia_cert: cert })
     }
 
     /// Gets the public part of the secret key.
