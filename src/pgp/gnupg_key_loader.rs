@@ -39,9 +39,7 @@ impl GnupgKeyLoader {
         self.check_key_id_in_gnupg(&key_id, true)?;
 
         let secret = secret_loader.load()?;
-        let key_data = self
-            .get_private_key_data(&key_id, &secret)
-            .map_err(InternalError::private)?;
+        let key_data = self.get_private_key_data(&key_id, &secret)?;
         Ok(SecretKey::new(key_data).map_err(InternalError::private)?)
     }
 
@@ -62,7 +60,7 @@ impl GnupgKeyLoader {
     }
 
     /// Gets private key data from user's GnuPG directory, without passphrase.
-    fn get_private_key_data(&self, key_id: &str, secret: &str) -> Result<Vec<u8>> {
+    fn get_private_key_data(&self, key_id: &str, secret: &str) -> InternalResult<Vec<u8>> {
         remotery_scope!("gpg_get_user_key_data");
         info!(
             self.log, "Spawning GPG command to export key data";
@@ -79,20 +77,38 @@ impl GnupgKeyLoader {
             .stderr(Stdio::piped());
         let mut child = command
             .spawn()
-            .chain_err(|| "Error on spawn gpg command to export key data")?;
+            .chain_err(|| "Error on spawn gpg command to export key data")
+            .map_err(InternalError::private)?;
 
         // Write the passphrase to stdin.
-        let mut stdin = BufWriter::new(child.stdin.as_mut().chain_err(|| "Failed to get stdin")?);
+        let mut stdin = BufWriter::new(
+            child
+                .stdin
+                .as_mut()
+                .chain_err(|| "Failed to get stdin")
+                .map_err(InternalError::private)?,
+        );
         stdin
             .write(&format!("{}\n", secret).as_bytes())
-            .chain_err(|| "Error on writing secret to gpg command")?;
-        stdin.flush().chain_err(|| "Error on flushing gpg stdin")?;
+            .chain_err(|| "Error on writing secret to gpg command")
+            .map_err(InternalError::private)?;
+        stdin
+            .flush()
+            .chain_err(|| "Error on flushing gpg stdin")
+            .map_err(InternalError::private)?;
         drop(stdin);
 
         let output = child
             .wait_with_output()
-            .chain_err(|| "Failed to wait for gpg and get output")?;
-        self.check_output(&output)?;
+            .chain_err(|| "Failed to wait for gpg and get output")
+            .map_err(InternalError::private)?;
+        if output.status.code() == Some(2) {
+            bail!(InternalError::public(
+                "Couldn't read private key data. Is the password correct?",
+                ApiErrorType::Configuration
+            ));
+        }
+        self.check_output(&output).map_err(InternalError::private)?;
         // Key data is written to stdout.
         Ok(output.stdout)
     }
@@ -173,7 +189,15 @@ impl GnupgKeyLoader {
                     .unwrap_or("invalid utf8"));
         }
         if !output.status.success() {
-            return Err(ErrorKind::CommandError("Non-successful exit code from gpg".into()).into());
+            return Err(ErrorKind::CommandError(format!(
+                "Non-successful exit code from gpg: {}",
+                output
+                    .status
+                    .code()
+                    .map(|i| i.to_string())
+                    .unwrap_or("no code".into())
+            ))
+            .into());
         }
         if output.stdout.is_empty() {
             return Err(ErrorKind::CommandError("Nothing returned from gpg".into()).into());
