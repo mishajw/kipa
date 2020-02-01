@@ -635,7 +635,7 @@ impl Creator for dyn PayloadHandler {
         }
 
         Ok(Box::new(GraphPayloadHandler::new(
-            local_node.key.clone(),
+            local_node.clone(),
             search_breadth,
             connect_search_breadth,
             max_num_search_threads,

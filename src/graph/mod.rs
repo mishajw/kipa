@@ -13,7 +13,7 @@ pub use graph::neighbours_store::{
     DEFAULT_MAX_NUM_NEIGHBOURS,
 };
 
-use api::{Address, Key, Node};
+use api::{Key, Node};
 use api::{RequestPayload, ResponsePayload};
 use error::*;
 use graph::search::{GraphSearch, SearchParams};
@@ -28,24 +28,24 @@ use slog::Logger;
 use std::sync::Arc;
 use std::time::Duration;
 
-/// The default breadth to use when searching
+/// The default breadth to use when searching.
 pub const DEFAULT_SEARCH_BREADTH: &str = "10";
 
-/// The default breadth of the search to use when connecting
+/// The default breadth of the search to use when connecting.
 pub const DEFAULT_CONNECT_SEARCH_BREADTH: &str = "3";
 
-/// The default maximum number of concurrent threads to have when searching
+/// The default maximum number of concurrent threads to have when searching.
 pub const DEFAULT_MAX_NUM_SEARCH_THREADS: &str = "10";
 
-/// The default timeout for queries when performing a search
+/// The default timeout for queries when performing a search.
 pub const DEFAULT_SEARCH_TIMEOUT_SEC: &str = "5";
 
-/// Default size of thread pool for conducting searches
+/// Default size of thread pool for conducting searches.
 pub const DEFAULT_SEARCH_THREAD_POOL_SIZE: &str = "10";
 
-/// Contains graph search information
+/// Contains graph search information.
 pub struct GraphPayloadHandler {
-    local_key: Key,
+    local_node: Node,
     search_breadth: usize,
     connect_search_breadth: usize,
     max_num_search_threads: usize,
@@ -57,13 +57,9 @@ pub struct GraphPayloadHandler {
 }
 
 impl GraphPayloadHandler {
-    /// Create a new graph request handler
-    ///
-    /// - `local_key` is the key for the local node.
-    /// - `remote_server` is used for communicating with other nodes.
-    /// - `initial_node` is the initial other node in KIPA network.
+    /// Create a new graph request handler.
     pub fn new(
-        local_key: Key,
+        local_node: Node,
         search_breadth: usize,
         connect_search_breadth: usize,
         max_num_search_threads: usize,
@@ -75,7 +71,7 @@ impl GraphPayloadHandler {
         log: Logger,
     ) -> Self {
         GraphPayloadHandler {
-            local_key,
+            local_node,
             search_breadth,
             connect_search_breadth,
             max_num_search_threads,
@@ -91,12 +87,13 @@ impl GraphPayloadHandler {
         remotery_scope!("graph_search");
         debug!(self.log, "Running graph search"; "search_key" => %search_key);
         let callback = SearchRequestCallback {
+            local_key: self.local_node.key.clone(),
             search_key: search_key.clone(),
             message_handler_client: self.message_handler_client.clone(),
             timeout: self.search_timeout,
             wrapped_client: WrappedClient {
                 message_handler_client: self.message_handler_client.clone(),
-                local_key: self.local_key.clone(),
+                local_key: self.local_node.key.clone(),
                 neighbours_store: self.neighbours_store.clone(),
                 timeout: self.search_timeout,
                 log: log.new(o!("wrapped_client" => true)),
@@ -105,12 +102,7 @@ impl GraphPayloadHandler {
         };
         let search_result = self.graph_search.search(
             &search_key,
-            vec![Node::new(
-                // Address never used, when querying for self we return results straight from a
-                // NeighboursStore.
-                Address::new(vec![0, 0, 0, 0], 0),
-                self.local_key.clone(),
-            )],
+            vec![self.local_node.clone()],
             callback,
             SearchParams {
                 breadth: self.search_breadth,
@@ -142,7 +134,7 @@ impl GraphPayloadHandler {
             neighbours_store: self.neighbours_store.clone(),
             wrapped_client: WrappedClient {
                 message_handler_client: self.message_handler_client.clone(),
-                local_key: self.local_key.clone(),
+                local_key: self.local_node.key.clone(),
                 neighbours_store: self.neighbours_store.clone(),
                 timeout: self.search_timeout,
                 log: log.new(o!("wrapped_client" => true)),
@@ -150,7 +142,7 @@ impl GraphPayloadHandler {
             log: log.new(o!("connect_callback" => true)),
         };
         let result: Result<Option<()>> = self.graph_search.search(
-            &self.local_key,
+            &self.local_node.key,
             vec![node.clone()],
             callback,
             SearchParams {
@@ -267,6 +259,7 @@ impl PayloadHandler for GraphPayloadHandler {
 
 /// Callback for performing `SearchRequest` searches.
 struct SearchRequestCallback {
+    local_key: Key,
     search_key: Key,
     message_handler_client: Arc<MessageHandlerClient>,
     wrapped_client: WrappedClient,
@@ -284,6 +277,9 @@ impl SearchCallback<Node> for SearchRequestCallback {
         LogEvent::search_found(node, &self.log);
         if node.key != self.search_key {
             return Ok(SearchCallbackAction::Continue());
+        }
+        if node.key == self.local_key {
+            return Ok(SearchCallbackAction::Return(node.clone()));
         }
 
         // Send verification message to the node to ensure that the discovered IP address is owned
