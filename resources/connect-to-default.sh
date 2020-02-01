@@ -6,23 +6,30 @@
 # the author's hosted node.
 
 set -e
+DEFAULT_KEY_ID="D959094C"
 
 if ! command -v kipa >/dev/null; then
   echo "KIPA not installed."
   exit 1
 fi
 
-connect_key_id=$(curl --silent https://mishajw.com/kipa-key-id.txt)
-connect_address="46.101.16.228:10842"
+key_id=${1:-$DEFAULT_KEY_ID}
+key_file="$(pwd)/resources/keys/$key_id.asc"
+ip_address_file="$(pwd)/resources/keys/$key_id-ip-address.txt"
 
-if ! gpg --list-keys $connect_key_id >/dev/null; then
-  read -p "Key ID $connect_key_id does not exist in GPG. Import? [y/N] " result
+if [ ! -e "$key_file" ] || [ ! -e "$ip_address_file" ]; then
+  echo "Couldn't find $key_file or $ip_address_file"
+  exit 1
+fi
+
+if ! gpg --list-keys $key_id >/dev/null; then
+  read -p "Key ID $key_id does not exist in GPG. Import? [y/N] " result
   if [[ "$result" != "y" ]]; then
     exit
   fi
-  curl --silent https://mishajw.com/kipa.asc | gpg --import
+  gpg --import $key_file
 fi
 
 kipa connect \
-  --key-id "$connect_key_id" \
-  --address "$connect_address"
+  --key-id "$key_id" \
+  --address "$(cat $ip_address_file)"
