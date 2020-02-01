@@ -108,7 +108,8 @@ impl GnupgKeyLoader {
                 ApiErrorType::Configuration
             ));
         }
-        self.check_output(&output).map_err(InternalError::private)?;
+        self.check_output(&output, false)
+            .map_err(InternalError::private)?;
         // Key data is written to stdout.
         Ok(output.stdout)
     }
@@ -126,7 +127,7 @@ impl GnupgKeyLoader {
             .chain_err(|| "Error on spawn gpg command to export public key data")?
             .wait_with_output()
             .chain_err(|| "Failed to wait for gpg and get output")?;
-        self.check_output(&output)?;
+        self.check_output(&output, false)?;
         // Key data is written to stdout.
         Ok(output.stdout)
     }
@@ -165,7 +166,7 @@ impl GnupgKeyLoader {
             .chain_err(|| "Error on spawn gpg command to get key list")?
             .wait_with_output()
             .chain_err(|| "Failed to wait for gpg and get output")?;
-        self.check_output(&output)?;
+        self.check_output(&output, true)?;
 
         let stdout = String::from_utf8(output.stdout)
             .chain_err(|| "Failed to pass gpg key list as UTF-8.")?;
@@ -181,7 +182,7 @@ impl GnupgKeyLoader {
     }
 
     /// Checks that the output of a process is healthy.
-    fn check_output(&self, output: &Output) -> Result<()> {
+    fn check_output(&self, output: &Output, allow_empty: bool) -> Result<()> {
         if !output.stderr.is_empty() {
             warn!(
                 self.log, "GPG command for exporting keys printed to stderr";
@@ -199,7 +200,7 @@ impl GnupgKeyLoader {
             ))
             .into());
         }
-        if output.stdout.is_empty() {
+        if !allow_empty && output.stdout.is_empty() {
             return Err(ErrorKind::CommandError("Nothing returned from gpg".into()).into());
         }
         Ok(())
