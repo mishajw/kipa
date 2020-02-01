@@ -66,15 +66,15 @@ fn main() -> std::result::Result<(), String> {
         Ok(()) => Ok(()),
         Err(InternalError::PublicError(err, priv_err_opt)) => {
             if let Some(priv_err) = priv_err_opt {
-                crit!(
-                    log, "Error occured when starting daemon";
+                debug!(
+                    log, "Error occurred when starting daemon";
                     "err_message" => %priv_err.display_chain());
             }
             Err(format!("Error: {}", err.message))
         }
         Err(InternalError::PrivateError(err)) => {
             crit!(
-                log, "Error occured when starting daemon";
+                log, "Error occurred when starting daemon";
                 "err_message" => err.display_chain().to_string());
             Err("Internal error (check logs)".into())
         }
@@ -177,16 +177,12 @@ fn run_servers(args: &clap::ArgMatches, log: &slog::Logger) -> InternalResult<()
         log.new(o!("local_server" => true)),
     )?;
 
-    let server_thread = server.start().map_err(|_| {
-        InternalError::public(
-            "Error on creating server thread",
-            ApiErrorType::Configuration,
-        )
-    })?;
-    let local_server_thread = local_server.start().map_err(|_| {
-        InternalError::public(
+    let server_thread = server.start()?;
+    let local_server_thread = local_server.start().map_err(|err| {
+        InternalError::public_with_error(
             "Error on creating local server thread",
             ApiErrorType::Configuration,
+            err,
         )
     })?;
 

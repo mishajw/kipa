@@ -19,7 +19,7 @@ pub mod unix_socket;
 /// them to `PayloadHandler`
 pub trait Server: Send + Sync {
     /// Start the server
-    fn start(&self) -> Result<JoinHandle<()>>;
+    fn start(&self) -> InternalResult<JoinHandle<()>>;
     // TODO: Start function should be able to consume `self`, but we can't due
     // to referencing types as `: Server` which is not sized. This leads to a
     // redundant clone in implementations of `start()`, which is inexpensive but

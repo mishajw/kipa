@@ -41,12 +41,21 @@ impl TcpServer {
 }
 
 impl Server for TcpServer {
-    fn start(&self) -> Result<thread::JoinHandle<()>> {
+    fn start(&self) -> InternalResult<thread::JoinHandle<()>> {
         let listener = TcpListener::bind(SocketAddr::new(
-            IpAddr::V6(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0)),
+            IpAddr::V6(Ipv6Addr::UNSPECIFIED),
             self.local_node.address.port,
         ))
-        .chain_err(|| "Error on bind to TCP socket")?;
+        .map_err(|err| {
+            InternalError::public_with_error(
+                &format!(
+                    "Failed to listen on {}. Is something listening on the same port?",
+                    self.local_node.address
+                ),
+                ApiErrorType::Configuration,
+                err,
+            )
+        })?;
         info!(
             self.log,
             "Started listening for TCP connections";
