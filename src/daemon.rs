@@ -6,7 +6,8 @@ extern crate slog;
 extern crate slog_async;
 extern crate slog_term;
 
-use kipa_lib::api::Node;
+use kipa_lib::api::error::ApiErrorType;
+use kipa_lib::api::{Address, Node, RequestPayload};
 use kipa_lib::creators::*;
 use kipa_lib::data_transformer::DataTransformer;
 use kipa_lib::error::*;
@@ -51,6 +52,18 @@ fn main() -> std::result::Result<(), String> {
                 .long("max-num-threads")
                 .short("j")
                 .help("Maximum number of active threads")
+                .takes_value(true),
+        )
+        .arg(
+            clap::Arg::with_name("connect_address")
+                .long("connect-address")
+                .help("If set, KIPA will connect to the daemon at this address on startup")
+                .takes_value(true),
+        )
+        .arg(
+            clap::Arg::with_name("connect_key_id")
+                .long("connect-key-id")
+                .help("If set, KIPA will connect to a daemon with this key on startup")
                 .takes_value(true),
         )
         .args(&creator_args)
@@ -146,6 +159,34 @@ fn run_servers(args: &clap::ArgMatches, log: &slog::Logger) -> InternalResult<()
         log.new(o!("request_handler" => true)),
     )?
     .into();
+
+    // Now we've set up the payload handler, we can connect to a node at startup.
+    match (
+        args.value_of("connect_address"),
+        args.value_of("connect_key_id"),
+    ) {
+        (Some(connect_address), Some(connect_key_id)) => {
+            let node = Node::new(
+                Address::from_string(connect_address)?,
+                gnupg_key_loader.get_recipient_public_key(connect_key_id.into())?,
+            );
+            info!(&log, "Connecting to the initial node"; "node" => %node);
+            payload_handler.receive(&RequestPayload::ConnectRequest(node), None, 0)?;
+        }
+        (Some(_), None) => {
+            return Err(InternalError::public(
+                "If --connect-address is set, --connect-key-id must be too.",
+                ApiErrorType::Configuration,
+            ))
+        }
+        (None, Some(_)) => {
+            return Err(InternalError::public(
+                "If --connect-key-id is set, --connect-address must be too.",
+                ApiErrorType::Configuration,
+            ))
+        }
+        (None, None) => {}
+    };
 
     let message_handler_server: Arc<MessageHandlerServer> = MessageHandlerServer::create(
         (
