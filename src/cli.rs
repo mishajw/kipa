@@ -88,7 +88,7 @@ fn main() -> std::result::Result<(), String> {
                     log, "Error occurred when performing command";
                     "err_message" => %priv_err.display_chain());
             }
-            Err(format!("Error: {}", err.message))
+            Err(err.message)
         }
         Err(InternalError::PrivateError(err)) => {
             crit!(
