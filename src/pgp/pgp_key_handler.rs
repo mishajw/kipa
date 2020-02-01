@@ -158,18 +158,7 @@ impl<'a> VerificationHelper for GpgHelper<'a> {
             "sender_key_id" => %self.sender.primary().keyid(),
             "recipient_key_id" => %self.recipient.primary().keyid(),
         );
-        Ok(key_ids
-            .iter()
-            .filter_map(|key_id| {
-                if *key_id == self.sender.primary().keyid().into() {
-                    Some(self.sender.clone())
-                } else if *key_id == self.recipient.primary().keyid().into() {
-                    Some(self.recipient.clone())
-                } else {
-                    None
-                }
-            })
-            .collect())
+        return Ok(vec![self.sender.clone(), self.recipient.clone()]);
     }
 
     fn check(&mut self, structure: &MessageStructure) -> sequoia_openpgp::Result<()> {
