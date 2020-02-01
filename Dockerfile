@@ -20,6 +20,7 @@ COPY Cargo.lock Cargo.lock
 COPY Cargo.toml Cargo.toml
 COPY build.rs build.rs
 COPY resources/docker-run.sh resources/docker-run.sh
+COPY resources/keys resources/keys
 COPY resources/proto/proto_api.proto resources/proto/proto_api.proto
 COPY src src
 RUN cargo install --path .
