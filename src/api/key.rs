@@ -3,7 +3,7 @@ use error::*;
 use sequoia_openpgp::parse::PacketParser;
 use sequoia_openpgp::parse::Parse;
 use sequoia_openpgp::serialize::Serialize;
-use sequoia_openpgp::TPK;
+use sequoia_openpgp::Cert;
 use serde;
 use std::fmt;
 use std::hash::{Hash, Hasher};
@@ -15,29 +15,29 @@ pub struct Key {
     ///
     /// We leak the implementation here so we don't have to deserialize the key data on every
     /// operation.
-    pub sequoia_tpk: TPK,
+    pub sequoia_cert: Cert,
 }
 
 impl Key {
     #[allow(missing_docs)]
     pub fn new(data: Vec<u8>) -> Result<Self> {
         Ok(Key {
-            sequoia_tpk: parse_tpk(&data)?,
+            sequoia_cert: parse_cert(&data)?,
         })
     }
 
     /// Gets the key data for serialization.
     pub fn key_data(&self) -> Vec<u8> {
         let mut public_key_data = Vec::new();
-        self.sequoia_tpk
+        self.sequoia_cert
             .serialize(&mut public_key_data)
-            .expect("Failed to serialize TPK");
+            .expect("Failed to serialize Cert");
         public_key_data
     }
 
     /// Gets the key ID string (8 characters long).
     pub fn key_id(&self) -> String {
-        let sequoia_key_id = self.sequoia_tpk.keyid().to_hex();
+        let sequoia_key_id = self.sequoia_cert.keyid().to_hex();
         assert_eq!(sequoia_key_id.len(), 16);
         sequoia_key_id[8..].to_string()
     }
@@ -45,7 +45,7 @@ impl Key {
 
 impl PartialEq for Key {
     fn eq(&self, other: &Self) -> bool {
-        self.sequoia_tpk.fingerprint() == other.sequoia_tpk.fingerprint()
+        self.sequoia_cert.fingerprint() == other.sequoia_cert.fingerprint()
     }
 }
 
@@ -53,7 +53,7 @@ impl Eq for Key {}
 
 impl Hash for Key {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.sequoia_tpk.fingerprint().hash(state);
+        self.sequoia_cert.fingerprint().hash(state);
     }
 }
 
@@ -79,38 +79,38 @@ pub struct SecretKey {
     ///
     /// We leak the implementation here so we don't have to deserialize the key data on every
     /// operation.
-    sequoia_tpk: TPK,
+    sequoia_cert: Cert,
 }
 
 impl SecretKey {
     #[allow(missing_docs)]
     pub fn new(data: Vec<u8>) -> Result<Self> {
         Ok(SecretKey {
-            sequoia_tpk: parse_tpk(&data)?,
+            sequoia_cert: parse_cert(&data)?,
         })
     }
 
     /// Gets the public part of the secret key.
     pub fn public(&self) -> Result<Key> {
         let mut public_key_data = Vec::new();
-        // When we serialize TPKs, sequoia only exports the public parts. The
+        // When we serialize certificates, sequoia only exports the public parts. The
         // secret parts are discarded.
-        self.sequoia_tpk
+        self.sequoia_cert
             .serialize(&mut public_key_data)
             .map_err(|e| -> Error {
-                ErrorKind::GpgError("Failed to serialize TPK".into(), e).into()
+                ErrorKind::GpgError("Failed to serialize certificate".into(), e).into()
             })?;
         Key::new(public_key_data)
     }
 
     /// Gets the secret cryptographic key data.
-    pub fn secret_key_yes_really(&self) -> &TPK {
-        &self.sequoia_tpk
+    pub fn secret_key_yes_really(&self) -> &Cert {
+        &self.sequoia_cert
     }
 
     /// Gets the key ID string (8 characters long).
     pub fn key_id(&self) -> String {
-        let sequoia_key_id = self.sequoia_tpk.keyid().to_hex();
+        let sequoia_key_id = self.sequoia_cert.keyid().to_hex();
         assert_eq!(sequoia_key_id.len(), 16);
         sequoia_key_id[8..].to_string()
     }
@@ -122,8 +122,8 @@ impl fmt::Display for SecretKey {
     }
 }
 
-fn parse_tpk(data: &[u8]) -> Result<TPK> {
+fn parse_cert(data: &[u8]) -> Result<Cert> {
     PacketParser::from_bytes(data)
-        .and_then(TPK::from_packet_parser)
-        .map_err(|e| ErrorKind::GpgError("Failed to parse bytes as TPK".into(), e).into())
+        .and_then(Cert::from_packet_parser)
+        .map_err(|e| ErrorKind::GpgError("Failed to parse bytes as certificate".into(), e).into())
 }
