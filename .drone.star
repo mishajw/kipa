@@ -19,8 +19,31 @@ def main(ctx):
     cargo('randomresp', feat='use-protobuf use-tcp use-unix-socket use-random-response'),
     # TODO: Enable clippy checks after fixing all issues.
     # TODO: Run python end-to-end tests.
+    {
+      "kind": "pipeline",
+      "name": "publish",
+      "steps": [
+        {
+          "name": "build",
+          "image": "spritsail/docker-build",
+          "pull": "always",
+          "settings": {
+            "repo": "kipa",
+          },
+        },
+        publish_step(
+          "publish-branch",
+          [ctx.build.branch],
+          {"event": ["push"]}
+        ),
+        publish_step(
+          "publish-tag",
+          [get_tag(ctx) + " | %rempre v | %auto 2", "latest"],
+          {"event": ["tag"]}
+        ),
+      ]
+    },
   ]
-
 
 # name      string, name of the pipeline. must be valid yaml word with no breaks
 # args      string, arguments for provided cmd
@@ -63,5 +86,43 @@ def cargo(name, args='', cmd=None, deps=defdeps, pre=[], feat=None, env=None):
     },
     "steps": [step],
   }
+
+# Step for publishing a built docker image.
+#
+# name      string, name of the pipeline.
+# tags      list,   list of tag commands for docker-publish.
+# when      dict,   when block for the pipeline.
+def publish_step(name, tags, when):
+  return {
+    "name": name,
+    "image": "spritsail/docker-publish",
+    "pull": "always",
+    "settings": {
+      "from": "kipa",
+      "repo": "mishajw/kipa",
+      "tags": tags
+      },
+    "environment": {
+      "DOCKER_USERNAME": {
+        "from_secret": "docker_username",
+        },
+      "DOCKER_PASSWORD": {
+        "from_secret": "docker_password",
+        },
+      },
+    "when": when,
+  }
+
+# Extract the tag from the context's git ref.
+#
+# ctx       dict, the drone context.
+def get_tag(ctx):
+  ref = ctx.build.ref.split("/")
+  ref_type = ref[1]
+  ref_name = ref[2]
+
+  if ref_type != "tags":
+    return "no tag"
+  return ref_name
 
 # vim: ft=python sw=2
