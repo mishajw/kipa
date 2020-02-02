@@ -97,14 +97,13 @@ Prerequisites:
 # KIPA is a work in progress - to be cautious, make a KIPA-specific key when trying it out.
 gpg --generate-key
 
-# Install & start up the daemon.
+# Install KIPA.
 cargo install kipa
-kipa-daemon --key-id "$MY_KEY_ID" &
 
-# To connect, you need to know the address and key of a single device in the network.
-kipa connect --address "$KNOWN_ADDRESS" --key-id "$KNOWN_KEY_ID"
-# Or, connect to a default node.
-cd path-to-this-repository && ./resources/connect-to-default.sh
+# Start the daemon, and connect to any node in the network. A live example is given.
+kipa-daemon --key-id "$MY_KEY_ID" \
+    --connect-key-id D959094C \
+    --connect-address 46.101.16.228:10842 &
 
 # Now you can search for key IDs that you have in GPG!
 kipa search --key-id "$THEIR_KEY_ID"
@@ -120,19 +119,18 @@ gpg --generate-key
 gpg --export-secret-keys --output secret-key "$KEY_ID"
 echo "my-secret-key-p@ssword" > secret-key-password
 
-# Build & start the container.
-docker build -t kipa https://github.com/mishajw/kipa.git
-docker run --name kipa \
+# Start the container, and connect to any node in the network. A live example is given.
+docker run \
+    --name kipa \
+    # Mount the secret key files.
     --mount type=bind,source=$KEY_PATH,target=/root/key \
     --mount type=bind,source=$KEY_PASSWORD_PATH,target=/root/key-password \
-    kipa $KEY_ID
-
-# To connect, you need to know the address and key of a single device in the network.
-docker exec kipa \
-    kipa connect --address "$KNOWN_ADDRESS" --key-id "$KNOWN_KEY_ID"
-# Or, connect to a default node.
-docker exec kipa \
-    sh -c "$(cat ./resources/connect-to-default.sh)"
+    # If running as a production instance, set up restarts, detach, and expose the port.
+    --restart on-failure --publish 10842:10842 --detach \
+    mishajw/kipa:latest
+    --key-id "$KEY_ID"
+    --connect-key-id D959094C
+    --connect-address 46.101.16.228:10842
 ```
 
 ### Simulations
