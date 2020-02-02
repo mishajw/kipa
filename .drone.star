@@ -21,7 +21,7 @@ def main(ctx):
     # TODO: Run python end-to-end tests.
     {
       "kind": "pipeline",
-      "name": "publish",
+      "name": "docker-publish",
       "steps": [
         {
           "name": "build",
@@ -43,6 +43,21 @@ def main(ctx):
         ),
       ]
     },
+    cargo(
+      "publish",
+      cmd="cargo publish --allow-dirty --dry-run",
+      pre=[
+        # Run cargo build to generate the protobuf source.
+        "cargo build",
+        # Remove build.rs so that protobuf source isn't generated on docs.rs.
+        "echo 'fn main() {}' > build.rs",
+        # Remove generated protobuf source from .gitignore so it's included in release.
+        "sed 's/.*proto_api.rs$//g' .gitignore -i",
+        "cargo login $CARGO_SECRET",
+      ],
+      env={"CARGO_SECRET": {"from_secret": "cargo_secret"}},
+      where={"event": ["tag"]},
+    ),
   ]
 
 # name      string, name of the pipeline. must be valid yaml word with no breaks
@@ -51,7 +66,7 @@ def main(ctx):
 # pre       list,   commands to run after installing packages, before cargo cmd
 # feat      string, features to use instead of default in cargo cmd
 # env       dict,   environment variables to pass to the container
-def cargo(name, args="", cmd=None, deps=defdeps, pre=[], feat=None, env=None):
+def cargo(name, args="", cmd=None, deps=defdeps, pre=[], feat=None, env=None, where=None):
   step = {
     "name": "build-%s" % name,
     "image": "rust:slim-buster",    # Because rust is broken on musl at the moment:
@@ -77,6 +92,9 @@ def cargo(name, args="", cmd=None, deps=defdeps, pre=[], feat=None, env=None):
     cmd += " " + args
 
   step["commands"].append(cmd)
+
+  if where:
+    step["where"] = where
 
   return {
     "kind": "pipeline",
