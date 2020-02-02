@@ -55,7 +55,7 @@ pub type RequestBody = MessageBody<RequestPayload>;
 pub type ResponseBody = MessageBody<error::ApiResult<ResponsePayload>>;
 
 /// Different types of requests and their payloads.
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, PartialEq, Eq)]
 pub enum RequestPayload {
     /// Search for a key in the network.
     ///

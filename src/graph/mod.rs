@@ -174,9 +174,11 @@ impl PayloadHandler for GraphPayloadHandler {
                 .map(|n| n.to_string()).unwrap_or_else(|| "none".into()));
         LogEvent::receive_request(payload, &log);
 
-        if let Some(n) = sender {
+        // Consider the sender as a neighbour. If it's a verify request, don't consider to stop an
+        // infinite loop of verifications.
+        if sender.is_some() && *payload != RequestPayload::VerifyRequest() {
             remotery_scope!("consider_sender_for_neighbour");
-            self.neighbours_store.consider_candidate(&n, true);
+            self.neighbours_store.consider_candidate(&sender.unwrap());
         }
 
         match *payload {
@@ -324,7 +326,7 @@ impl SearchCallback<()> for ConnectRequestCallback {
 
     fn found_node(&self, node: &Node) -> Result<SearchCallbackAction<()>> {
         trace!(self.log, "Found node"; "node" => %node);
-        self.neighbours_store.consider_candidate(node, false);
+        self.neighbours_store.consider_candidate(node);
         Ok(SearchCallbackAction::Continue())
     }
 

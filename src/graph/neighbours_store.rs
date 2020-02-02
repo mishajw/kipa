@@ -86,7 +86,7 @@ impl NeighboursStore {
     /// Given a node, consider keeping it as a neighbour
     // TODO: Run this code in parallel, as it can cause a lot of computation and send requests to
     // other nodes.
-    pub fn consider_candidate(&self, node: &Node, trusted: bool) {
+    pub fn consider_candidate(&self, node: &Node) {
         let key_space = self.key_space_manager.create_from_key(&node.key);
 
         // Don't add ourselves
@@ -100,7 +100,6 @@ impl NeighboursStore {
             "node" => %node,
             "distance" => self.key_space_manager.distance(
                 &key_space, &self.local_key_space),
-            "trusted" => trusted,
             "num_neighbours" => self.neighbours.lock().unwrap().len());
 
         // Check if there is an existing neighbour with the same key - if there
@@ -114,7 +113,7 @@ impl NeighboursStore {
         {
             // Check if the address has changed, and if the new address is
             // valid. If so, update the address
-            if n.address != node.address && (trusted || self.verify_neighbour(node)) {
+            if n.address != node.address && self.verify_neighbour(node) {
                 info!(
                     self.log, "Updating neighbour with new address";
                     "new_node" => %node,
@@ -140,7 +139,7 @@ impl NeighboursStore {
             debug!(
                 self.log, "Trying to keep potential neighbour, as we have less than the max";
                 "node" => %node);
-            self.add_neighbour(node.clone(), key_space, trusted);
+            self.add_neighbour(node.clone(), key_space);
             return;
         }
 
@@ -160,7 +159,7 @@ impl NeighboursStore {
             debug!(
                 self.log, "Trying to keep potential neighbour, as score is more than others";
                 "node" => %node);
-            if self.add_neighbour(node.clone(), key_space, trusted) {
+            if self.add_neighbour(node.clone(), key_space) {
                 self.neighbours
                     .lock()
                     .unwrap()
@@ -186,13 +185,12 @@ impl NeighboursStore {
 
     /// Add a neighbour to the list, first verifying it exists. Returns true if
     /// adding succeeded
-    fn add_neighbour(&self, neighbour: Node, key_space: KeySpace, trusted: bool) -> bool {
-        let verified = trusted || self.verify_neighbour(&neighbour);
+    fn add_neighbour(&self, neighbour: Node, key_space: KeySpace) -> bool {
+        let verified = self.verify_neighbour(&neighbour);
         if verified {
             info!(
                 self.log, "Adding new neighbour";
                 "neighbour" => %neighbour,
-                "trusted" => trusted,
                 "num_neighbours" => self.neighbours.lock().unwrap().len() + 1);
             self.neighbours.lock().unwrap().push((neighbour, key_space));
         }
