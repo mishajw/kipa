@@ -5,18 +5,18 @@
 #   drone starlark convert --stdout --format > .drone.yml
 #   drone exec --volume /var/run/docker.sock:/var/run/docker.sock
 
-defcmd = 'cargo check'
-defdeps = 'clang make automake libc-dev libclang-dev pkg-config gnupg protobuf-compiler libgmp-dev nettle-dev'
+defcmd = "cargo check"
+defdeps = "clang make automake libc-dev libclang-dev pkg-config gnupg protobuf-compiler libgmp-dev nettle-dev"
 
 def main(ctx):
   return [
-    cargo('format', cmd='cargo fmt -- --check', pre=['rustup component add rustfmt', 'cargo build']),
-    cargo('test', cmd='cargo test'),
+    cargo("format", cmd="cargo fmt -- --check", pre=["rustup component add rustfmt", "cargo build"]),
+    cargo("test", cmd="cargo test"),
     # TODO(mishajw) fix tests and re-add --tests
-    cargo('all', '--all', env={'RUSTFLAGS': '-D warnings'}),
-    cargo('graph', feat='use-protobuf use-tcp use-unix-socket use-graph'),
-    cargo('blackhole', feat='use-protobuf use-tcp use-unix-socket use-black-hole'),
-    cargo('randomresp', feat='use-protobuf use-tcp use-unix-socket use-random-response'),
+    cargo("all", "--all", env={"RUSTFLAGS": "-D warnings"}),
+    cargo("graph", feat="use-protobuf use-tcp use-unix-socket use-graph"),
+    cargo("blackhole", feat="use-protobuf use-tcp use-unix-socket use-black-hole"),
+    cargo("randomresp", feat="use-protobuf use-tcp use-unix-socket use-random-response"),
     # TODO: Enable clippy checks after fixing all issues.
     # TODO: Run python end-to-end tests.
     {
@@ -51,7 +51,7 @@ def main(ctx):
 # pre       list,   commands to run after installing packages, before cargo cmd
 # feat      string, features to use instead of default in cargo cmd
 # env       dict,   environment variables to pass to the container
-def cargo(name, args='', cmd=None, deps=defdeps, pre=[], feat=None, env=None):
+def cargo(name, args="", cmd=None, deps=defdeps, pre=[], feat=None, env=None):
   step = {
     "name": "build-%s" % name,
     "image": "rust:slim-buster",    # Because rust is broken on musl at the moment:
@@ -59,12 +59,12 @@ def cargo(name, args='', cmd=None, deps=defdeps, pre=[], feat=None, env=None):
   }
 
   if env:
-    step['environment'] = env
+    step["environment"] = env
   if deps:
-    step['commands'].insert(0, 'apt-get -qq update')
-    step['commands'].insert(1, 'apt-get -qq install %s' % deps)
+    step["commands"].insert(0, "apt-get -qq update")
+    step["commands"].insert(1, "apt-get -qq install %s" % deps)
   if pre:
-    step['commands'] += pre
+    step["commands"] += pre
 
   pipelinename = "cargo-%s" % name
   if not cmd:
@@ -72,11 +72,11 @@ def cargo(name, args='', cmd=None, deps=defdeps, pre=[], feat=None, env=None):
     cmd = defcmd
 
   if feat:
-    cmd += ' --no-default-features --features="%s"' % feat
-  if args != '':
-    cmd += ' ' + args
+    cmd += " --no-default-features --features='%s'" % feat
+  if args != "":
+    cmd += " " + args
 
-  step['commands'].append(cmd)
+  step["commands"].append(cmd)
 
   return {
     "kind": "pipeline",
