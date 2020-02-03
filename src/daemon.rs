@@ -6,6 +6,10 @@ extern crate slog;
 extern crate slog_async;
 extern crate slog_term;
 
+use std::sync::Arc;
+
+use error_chain::ChainedError;
+
 use kipa_lib::api::error::ApiErrorType;
 use kipa_lib::api::{Address, Node, RequestPayload};
 use kipa_lib::creators::*;
@@ -21,9 +25,7 @@ use kipa_lib::pgp::SecretLoader;
 use kipa_lib::remotery_util;
 use kipa_lib::server::{Client, LocalServer, Server};
 use kipa_lib::thread_manager::ThreadManager;
-
-use error_chain::ChainedError;
-use std::sync::Arc;
+use kipa_lib::versioning;
 
 fn main() -> std::result::Result<(), String> {
     let mut creator_args = vec![];
@@ -39,6 +41,7 @@ fn main() -> std::result::Result<(), String> {
     creator_args.append(&mut KeySpaceManager::get_clap_args());
 
     let args = clap::App::new("kipa-daemon")
+        .version(&*versioning::get_version())
         .arg(
             clap::Arg::with_name("key_id")
                 .long("key-id")

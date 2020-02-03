@@ -60,6 +60,6 @@ pub mod creators;
 pub mod local_address_params;
 mod log_event;
 pub mod thread_manager;
-mod versioning;
+pub mod versioning;
 
 pub mod error;

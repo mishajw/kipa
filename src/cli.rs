@@ -15,7 +15,9 @@ use kipa_lib::error::*;
 use kipa_lib::message_handler::MessageHandlerLocalClient;
 use kipa_lib::pgp::GnupgKeyLoader;
 use kipa_lib::server::{LocalClient, LocalServer};
+use kipa_lib::versioning;
 
+use clap::AppSettings;
 use error_chain::ChainedError;
 use std::sync::Arc;
 
@@ -29,7 +31,9 @@ fn main() -> std::result::Result<(), String> {
     creator_args.append(&mut LocalServer::get_clap_args());
     creator_args.append(&mut LocalClient::get_clap_args());
 
-    let args = clap::App::new("kipa-cli")
+    let args = clap::App::new("kipa")
+        .version(&*versioning::get_version())
+        .setting(AppSettings::SubcommandRequiredElseHelp)
         .subcommand(
             clap::SubCommand::with_name("search")
                 .about("Search for a node given a key")

@@ -1,3 +1,5 @@
+//! Version of the KIPA binaries.
+
 use error::*;
 
 use failure::_core::cmp::Ordering;
