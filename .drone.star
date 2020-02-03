@@ -45,7 +45,7 @@ def main(ctx):
     },
     cargo(
       "publish",
-      cmd="cargo publish --allow-dirty --dry-run",
+      cmd="cargo publish --allow-dirty",
       pre=[
         # Run cargo build to generate the protobuf source.
         "cargo build",
