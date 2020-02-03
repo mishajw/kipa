@@ -96,6 +96,8 @@ Prerequisites:
 ```bash
 # KIPA is a work in progress - to be cautious, make a KIPA-specific key when trying it out.
 gpg --generate-key
+# KIPA reads the key password from a file.
+echo "my-secret-key-p@ssword" > secret.txt
 
 # Install KIPA.
 cargo install kipa
@@ -116,8 +118,8 @@ You can also set up a daemon in a Docker container.
 ```bash
 # Set up a new key, export it to a file, and export the password to a file.
 gpg --generate-key
-gpg --export-secret-keys --output secret-key "$KEY_ID"
-echo "my-secret-key-p@ssword" > secret-key-password
+gpg --export-secret-keys --output "$KEY_PATH" "$KEY_ID"
+echo "my-secret-key-p@ssword" > $KEY_PASSWORD_PATH
 
 # Start the container, and connect to any node in the network. A live example is given.
 docker run \
