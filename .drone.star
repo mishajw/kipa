@@ -56,7 +56,7 @@ def main(ctx):
         "cargo login $CARGO_SECRET",
       ],
       env={"CARGO_SECRET": {"from_secret": "cargo_secret"}},
-      where={"event": ["tag"]},
+      when={"event": ["tag"]},
     ),
   ]
 
@@ -66,7 +66,8 @@ def main(ctx):
 # pre       list,   commands to run after installing packages, before cargo cmd
 # feat      string, features to use instead of default in cargo cmd
 # env       dict,   environment variables to pass to the container
-def cargo(name, args="", cmd=None, deps=defdeps, pre=[], feat=None, env=None, where=None):
+# when      dict,   when clause for the pipeline's step.
+def cargo(name, args="", cmd=None, deps=defdeps, pre=[], feat=None, env=None, when=None):
   step = {
     "name": "build-%s" % name,
     "image": "rust:slim-buster",    # Because rust is broken on musl at the moment:
@@ -93,8 +94,8 @@ def cargo(name, args="", cmd=None, deps=defdeps, pre=[], feat=None, env=None, wh
 
   step["commands"].append(cmd)
 
-  if where:
-    step["where"] = where
+  if when != None:
+    step["when"] = when
 
   return {
     "kind": "pipeline",
