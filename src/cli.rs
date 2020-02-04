@@ -168,7 +168,7 @@ fn message_daemon(args: &clap::ArgMatches, log: &slog::Logger) -> InternalResult
             ResponsePayload::ListNeighboursResponse(ref neighbours) => {
                 println!("Neighbours:");
                 for n in neighbours {
-                    println!("- {}", n);
+                    println!("- Key ID {} at {}", n.key.key_id(), n.address);
                 }
                 Ok(())
             }
