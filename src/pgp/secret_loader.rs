@@ -25,9 +25,16 @@ impl SecretLoader {
     fn get_secret_from_file(&self) -> InternalResult<String> {
         info!(self.log, "Reading secret from file"; "path" => &self.secret_path);
 
-        let mut secret_file = to_internal_result(
-            fs::File::open(&self.secret_path).chain_err(|| "Error on opening secret file"),
-        )?;
+        let mut secret_file = fs::File::open(&self.secret_path).map_err(|err| {
+            InternalError::public_with_error(
+                &format!(
+                    "Failed to opening secret file at {}. Does it exist?",
+                    self.secret_path
+                ),
+                ApiErrorType::Configuration,
+                err,
+            )
+        })?;
 
         let mut secret = String::new();
         to_internal_result(
