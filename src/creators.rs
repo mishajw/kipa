@@ -110,7 +110,7 @@ impl Creator for Logger {
             clap::Arg::with_name("verbose")
                 .long("verbose")
                 .short("v")
-                .help("Verbose logging (0=errors, 1=warnings, 2=info, 3=debug, 4=trace")
+                .help("Verbose logging (0=errors, 1=warnings, 2=info, 3=debug, 4=trace)")
                 .multiple(true),
         ]
     }
