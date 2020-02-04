@@ -86,9 +86,12 @@ impl InternalError {
 impl fmt::Display for InternalError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            InternalError::PublicError(pub_err, Some(priv_err)) => {
-                write!(f, "Public error: {}, caused by {}", pub_err, priv_err)
-            }
+            InternalError::PublicError(pub_err, Some(priv_err)) => write!(
+                f,
+                "Public error: {}, caused by {}",
+                pub_err,
+                priv_err.display_chain()
+            ),
             InternalError::PublicError(pub_err, None) => write!(f, "Public error: {}", pub_err),
             InternalError::PrivateError(err) => write!(f, "Private error: {}", err.display_chain()),
         }
