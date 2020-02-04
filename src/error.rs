@@ -71,7 +71,7 @@ impl InternalError {
     where
         E: ::std::error::Error + Send + 'static,
     {
-        // Copied and editted from `error_chain`'s `chain_err` function
+        // Copied and edited from `error_chain`'s `chain_err` function
         let state = error_chain::State::new::<Error>(Box::new(error));
         let new_error = error_chain::ChainedError::new(s.into(), state);
         InternalError::PublicError(ApiError::new(s.into(), error_type), Some(new_error))

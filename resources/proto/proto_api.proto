@@ -15,7 +15,7 @@ message Node {
 }
 
 // A node without without the IP number portion (only the port number), as the
-// IP address should be infered from the connection instead of sent in the
+// IP address should be inferred from the connection instead of sent in the
 // payload
 message SenderNode {
   Key key = 1;
