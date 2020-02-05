@@ -21,10 +21,7 @@ use clap::AppSettings;
 use error_chain::ChainedError;
 use std::sync::Arc;
 
-// TODO: Change from returning `ApiResult<()>` to an error code linked to
-// `ApiErrorType` - should be possible with `std::process::Termination`, but
-// this is only available in nightly. Keep an eye on issue #43301
-fn main() -> std::result::Result<(), String> {
+fn main() {
     let mut creator_args = vec![];
     creator_args.append(&mut slog::Logger::get_clap_args());
     creator_args.append(&mut DataTransformer::get_clap_args());
@@ -85,20 +82,22 @@ fn main() -> std::result::Result<(), String> {
         "args" => ::std::env::args().skip(1).collect::<Vec<_>>().join(" "));
 
     match message_daemon(&args, &log) {
-        Ok(()) => Ok(()),
+        Ok(()) => {}
         Err(InternalError::PublicError(err, priv_err_opt)) => {
             if let Some(priv_err) = priv_err_opt {
                 crit!(
                     log, "Error occurred when performing command";
                     "err_message" => %priv_err.display_chain());
             }
-            Err(err.message)
+            eprintln!("Error: {}", err.message);
+            std::process::exit(1);
         }
         Err(InternalError::PrivateError(err)) => {
             crit!(
                 log, "Error occurred when performing command";
                 "err_message" => %err.display_chain());
-            Err("Internal error (check logs)".into())
+            eprintln!("Internal error (check logs)");
+            std::process::exit(1);
         }
     }
 }

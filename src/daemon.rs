@@ -27,7 +27,7 @@ use kipa_lib::server::{Client, LocalServer, Server};
 use kipa_lib::thread_manager::ThreadManager;
 use kipa_lib::versioning;
 
-fn main() -> std::result::Result<(), String> {
+fn main() {
     let mut creator_args = vec![];
     creator_args.append(&mut slog::Logger::get_clap_args());
     creator_args.append(&mut LocalAddressParams::get_clap_args());
@@ -79,20 +79,22 @@ fn main() -> std::result::Result<(), String> {
     let _remotery = remotery_util::initialize_remotery(&log);
 
     match run_servers(&args, &log) {
-        Ok(()) => Ok(()),
+        Ok(()) => {}
         Err(InternalError::PublicError(err, priv_err_opt)) => {
             if let Some(priv_err) = priv_err_opt {
                 debug!(
                     log, "Error occurred when starting daemon";
                     "err_message" => %priv_err.display_chain());
             }
-            Err(err.message)
+            eprintln!("Error: {}", err.message);
+            std::process::exit(1);
         }
         Err(InternalError::PrivateError(err)) => {
             crit!(
                 log, "Error occurred when starting daemon";
                 "err_message" => err.display_chain().to_string());
-            Err("Internal error (check logs)".into())
+            eprintln!("Internal error (check logs)");
+            std::process::exit(1);
         }
     }
 }
