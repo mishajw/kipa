@@ -148,7 +148,7 @@ class DockerBackend(ParallelBackend):
                     echo "p@ssword" >> secret.txt
                 CMD \\
                     for _ in $(seq 3); do \\
-                        ./kipa-daemon -vvvv --write-logs true --key-id $KIPA_KEY_ID $KIPA_ARGS; \\
+                        ./kipa-daemon -vvvv --write-logs true --key $KIPA_KEY_ID $KIPA_ARGS; \\
                         sleep 5; \\
                     done
             """

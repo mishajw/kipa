@@ -43,8 +43,8 @@ fn main() {
     let args = clap::App::new("kipa-daemon")
         .version(&*versioning::get_version())
         .arg(
-            clap::Arg::with_name("key_id")
-                .long("key-id")
+            clap::Arg::with_name("key_name")
+                .long("key")
                 .short("k")
                 .help("Key read from GPG")
                 .takes_value(true)
@@ -64,8 +64,8 @@ fn main() {
                 .takes_value(true),
         )
         .arg(
-            clap::Arg::with_name("connect_key_id")
-                .long("connect-key-id")
+            clap::Arg::with_name("connect_key_name")
+                .long("connect-key")
                 .help("If set, KIPA will connect to a daemon with this key on startup")
                 .takes_value(true),
         )
@@ -109,7 +109,7 @@ fn run_servers(args: &clap::ArgMatches, log: &slog::Logger) -> InternalResult<()
     };
     let request_thread_manager = Arc::new(request_thread_manager);
 
-    let key_id: String = args.value_of("key_id").unwrap().into();
+    let key_name: String = args.value_of("key_name").unwrap().into();
     let secret_loader: SecretLoader =
         *SecretLoader::create((), args, log.new(o!("secret_loader" => true)))?;
     let gnupg_key_loader: GnupgKeyLoader =
@@ -118,7 +118,7 @@ fn run_servers(args: &clap::ArgMatches, log: &slog::Logger) -> InternalResult<()
         PgpKeyHandler::create((), args, log.new(o!("pgp_key_handler" => true)))?.into();
 
     // Create local node
-    let local_secret_key = gnupg_key_loader.get_local_private_key(key_id, secret_loader)?;
+    let local_secret_key = gnupg_key_loader.get_local_private_key(key_name, secret_loader)?;
     let local_node = Node::new(
         LocalAddressParams::create((), args, log.new(o!("local_address_params" => true)))?
             .create_address(log.new(o!("address_creation" => true)))?,
@@ -168,25 +168,25 @@ fn run_servers(args: &clap::ArgMatches, log: &slog::Logger) -> InternalResult<()
     // Now we've set up the payload handler, we can connect to a node at startup.
     match (
         args.value_of("connect_address"),
-        args.value_of("connect_key_id"),
+        args.value_of("connect_key_name"),
     ) {
-        (Some(connect_address), Some(connect_key_id)) => {
+        (Some(connect_address), Some(connect_key_name)) => {
             let node = Node::new(
                 Address::from_string(connect_address)?,
-                gnupg_key_loader.get_recipient_public_key(connect_key_id.into())?,
+                gnupg_key_loader.get_recipient_public_key(connect_key_name.into())?,
             );
             info!(&log, "Connecting to the initial node"; "node" => %node);
             payload_handler.receive(&RequestPayload::ConnectRequest(node), None, 0)?;
         }
         (Some(_), None) => {
             return Err(InternalError::public(
-                "If --connect-address is set, --connect-key-id must be too.",
+                "If --connect-address is set, --connect-key must be too.",
                 ApiErrorType::Configuration,
             ))
         }
         (None, Some(_)) => {
             return Err(InternalError::public(
-                "If --connect-key-id is set, --connect-address must be too.",
+                "If --connect-key is set, --connect-address must be too.",
                 ApiErrorType::Configuration,
             ))
         }

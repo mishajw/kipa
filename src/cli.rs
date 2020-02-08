@@ -35,7 +35,7 @@ fn main() {
             clap::SubCommand::with_name("search")
                 .about("Search for a node given a key")
                 .arg(
-                    clap::Arg::with_name("key_id")
+                    clap::Arg::with_name("key_name")
                         .help("The key to search for")
                         .takes_value(true)
                         .required(true),
@@ -54,8 +54,8 @@ fn main() {
             clap::SubCommand::with_name("connect")
                 .about("Connect to a node with a key and IP address")
                 .arg(
-                    clap::Arg::with_name("key_id")
-                        .long("key-id")
+                    clap::Arg::with_name("key_name")
+                        .long("key")
                         .short("k")
                         .help("The key to connect to")
                         .takes_value(true)
@@ -122,7 +122,7 @@ fn message_daemon(args: &clap::ArgMatches, log: &slog::Logger) -> InternalResult
 
     if let Some(search_args) = args.subcommand_matches("search") {
         let search_key = gnupg_key_loader
-            .get_recipient_public_key(String::from(search_args.value_of("key_id").unwrap()))?;
+            .get_recipient_public_key(String::from(search_args.value_of("key_name").unwrap()))?;
         let response =
             message_handler_local_client.send(RequestPayload::SearchRequest(search_key))?;
 
@@ -147,7 +147,7 @@ fn message_daemon(args: &clap::ArgMatches, log: &slog::Logger) -> InternalResult
     } else if let Some(connect_args) = args.subcommand_matches("connect") {
         // Get node from arguments
         let node_key = gnupg_key_loader
-            .get_recipient_public_key(String::from(connect_args.value_of("key_id").unwrap()))?;
+            .get_recipient_public_key(String::from(connect_args.value_of("key_name").unwrap()))?;
         let node_address = Address::from_string(connect_args.value_of("address").unwrap())?;
         let node = Node::new(node_address, node_key);
 

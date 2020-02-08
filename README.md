@@ -62,7 +62,7 @@ are not known, but public keys are:
 # Run on receiver
 nc -l -p 8080 > file.txt
 # Run on sender
-cat file.txt > nc $(kipa search --key-id $RECEIVER_KEY_ID --print ip) 8080
+cat file.txt > nc $(kipa search --key $RECEIVER_KEY_ID --print ip) 8080
 ```
 
 Any use of KIPA requires that keys are already known in the system - it does not solve the problem
@@ -103,8 +103,8 @@ echo "my-secret-key-p@ssword" > secret.txt
 cargo install kipa
 
 # Start the daemon, and connect to any node in the network. A live example is given.
-kipa-daemon --key-id "$MY_KEY_ID" \
-    --connect-key-id D959094C \
+kipa-daemon --key "$MY_KEY_ID" \
+    --connect-key D959094C \
     --connect-address 46.101.16.228:10842 &
 # This will listen on port 10842 (overridable with --port) to communicate with other KIPA nodes - so
 # if you're behind NAT, be sure to expose the port!
@@ -132,8 +132,8 @@ docker run \
     # If running as a production instance, set up restarts, detach, and expose the port.
     --restart on-failure --publish 10842:10842 --detach \
     mishajw/kipa:latest
-    --key-id "$KEY_ID"
-    --connect-key-id D959094C
+    --key "$KEY_ID"
+    --connect-key D959094C
     --connect-address 46.101.16.228:10842
 ```
 

@@ -28,30 +28,28 @@ impl GnupgKeyLoader {
     /// Gets the user's private key.
     pub fn get_local_private_key(
         &self,
-        key_id: String,
+        key_name: String,
         secret_loader: SecretLoader,
     ) -> InternalResult<SecretKey> {
         remotery_scope!("gnupg_get_local_private_key");
         trace!(
             self.log, "Requested local private key ID";
-            "key_id" => &key_id);
+            "key_name" => &key_name);
 
-        self.check_key_id_in_gnupg(&key_id, true)?;
-
+        let key_id = self.get_key_id_for_name(&key_name, true)?;
         let secret = secret_loader.load()?;
         let key_data = self.get_private_key_data(&key_id, &secret)?;
         Ok(SecretKey::new(key_data).map_err(InternalError::private)?)
     }
 
     /// Gets the public key of a recipient.
-    pub fn get_recipient_public_key(&self, key_id: String) -> InternalResult<Key> {
+    pub fn get_recipient_public_key(&self, key_name: String) -> InternalResult<Key> {
         remotery_scope!("gnupg_get_recipient_public_key");
         trace!(
             self.log, "Requested recipient public key ID";
-            "key_id" => &key_id);
+            "key_name" => &key_name);
 
-        self.check_key_id_in_gnupg(&key_id, false)?;
-
+        let key_id = self.get_key_id_for_name(&key_name, false)?;
         let key_data = self
             .get_public_key_data(&key_id)
             .map_err(InternalError::private)?;
@@ -132,23 +130,28 @@ impl GnupgKeyLoader {
         Ok(output.stdout)
     }
 
-    /// Checks whether `key_id` exists in GnuPG keys.
-    fn check_key_id_in_gnupg(&self, key_id: &str, secret_keys: bool) -> InternalResult<()> {
+    /// Gets the key ID for a key name
+    ///
+    /// The key name can be the email, the name of the owner, or even the key ID itself.
+    fn get_key_id_for_name(&self, key_name: &str, secret_keys: bool) -> InternalResult<String> {
         let key_ids = self
-            .get_key_id_list(secret_keys)
+            .get_all_key_ids_for_name(key_name, secret_keys)
             .map_err(InternalError::private)?;
-        let key_id_in_gnupg = key_ids.into_iter().any(|id| id.ends_with(key_id));
-        if !key_id_in_gnupg {
-            return Err(InternalError::public(
-                &format!("Key ID {} was not found in GnuPG.", key_id),
+
+        match key_ids.into_iter().next() {
+            Some(key_id) => {
+                debug!(self.log, "Resolved {} to key ID {}", key_name, key_id);
+                Ok(key_id)
+            }
+            None => Err(InternalError::public(
+                &format!("Key name {} was not found in GnuPG.", key_name),
                 ApiErrorType::Configuration,
-            ));
+            )),
         }
-        Ok(())
     }
 
     /// Gets a list of public or secret key IDs.
-    fn get_key_id_list(&self, secret_keys: bool) -> Result<Vec<String>> {
+    fn get_all_key_ids_for_name(&self, key_name: &str, secret_keys: bool) -> Result<Vec<String>> {
         let list_argument = if secret_keys {
             "--list-secret-keys"
         } else {
@@ -157,7 +160,7 @@ impl GnupgKeyLoader {
 
         let mut command = Command::new("gpg");
         command
-            .args(&[list_argument, "--with-colons"])
+            .args(&[list_argument, "--with-colons", key_name])
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
 

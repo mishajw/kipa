@@ -25,9 +25,7 @@ def connect_network(network: Network, backend: Backend) -> None:
         else:
             raise AssertionError()
         commands = [
-            CliCommand(
-                a, ["connect", "--key-id", b.key_id, "--address", backend.get_ip_address(b),],
-            )
+            CliCommand(a, ["connect", "--key", b.key_id, "--address", backend.get_ip_address(b),],)
             for a, b in connections
         ]
         results = backend.run_commands(commands)
