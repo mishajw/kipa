@@ -72,7 +72,11 @@ fn main() {
                         .required(true),
                 ),
         )
-        .subcommand(clap::SubCommand::with_name("list-neighbours").about("List all neighbours"))
+        .subcommand(
+            clap::SubCommand::with_name("list-neighbours")
+                .alias("ls")
+                .about("List all neighbours"),
+        )
         .args(&creator_args)
         .get_matches();
 
