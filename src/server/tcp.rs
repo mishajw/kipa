@@ -153,6 +153,13 @@ impl SocketClient for TcpGlobalClient {
     }
 
     fn create_socket(&self, node: &Node, timeout: Duration) -> InternalResult<TcpStream> {
+        trace!(
+            self.log, "Creating socket";
+            "timeout" => format!("{:?}", timeout),
+            "node" => %node,
+            "node_ip_data" => format!("{:?}", node.address.ip_data),
+            "node_ip_port" => node.address.port,
+        );
         let socket = TcpStream::connect_timeout(&node.address.to_socket_addr(), timeout);
         match socket {
             Ok(socket) => Ok(socket),
