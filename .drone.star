@@ -5,59 +5,118 @@
 #   drone starlark convert --stdout --format > .drone.yml
 #   drone exec --volume /var/run/docker.sock:/var/run/docker.sock
 
+image = "rust:slim-buster"
 defcmd = "cargo check"
+# TODO rename
 defdeps = "clang make automake libc-dev libclang-dev pkg-config gnupg protobuf-compiler libgmp-dev nettle-dev"
 
 def main(ctx):
   return [
-    cargo("format", cmd="cargo fmt -- --check", pre=["rustup component add rustfmt", "cargo build"]),
-    cargo("test", cmd="cargo test"),
-    # TODO(mishajw) fix tests and re-add --tests
-    cargo("all", "--all", env={"RUSTFLAGS": "-D warnings"}),
-    cargo("graph", feat="use-protobuf use-tcp use-unix-socket use-graph"),
-    cargo("blackhole", feat="use-protobuf use-tcp use-unix-socket use-black-hole"),
-    cargo("randomresp", feat="use-protobuf use-tcp use-unix-socket use-random-response"),
-    # TODO: Enable clippy checks after fixing all issues.
-    # TODO: Run python end-to-end tests.
     {
       "kind": "pipeline",
-      "name": "docker-publish",
+      "name": "cargo",
       "steps": [
         {
-          "name": "build",
-          "image": "spritsail/docker-build",
-          "pull": "always",
-          "settings": {
-            "repo": "kipa",
-          },
+          "name": "install-deps",
+          "image": image,
+          "commands": [
+            "apt-get -qq update",
+            "apt-get -qq install %s" % defdeps,
+          ],
         },
-        publish_step(
-          "publish-branch",
-          [ctx.build.branch],
-          {"event": ["push"]}
-        ),
-        publish_step(
-          "publish-tag",
-          [get_tag(ctx) + " | %rempre v | %auto 2", "latest"],
-          {"event": ["tag"]}
-        ),
+        {
+          "name": "build",
+          "image": image,
+          "commands": ["cargo build"],
+          "depends_on": ["install-deps"],
+        },
+        {
+          "name": "test",
+          "image": image,
+          "commands": ["cargo test"],
+          "depends_on": ["build"],
+        },
+        {
+          "name": "check-all",
+          "image": image,
+          "env": {"RUSTFLAGS": "-D warnings"},
+          "commands": ["cargo check --all --target-dir check-all-target"],
+          "depends_on": ["install-deps"],
+        },
+        {
+          "name": "features-blackhole",
+          "image": image,
+          "commands": cargo_check_features(
+            "blackhole",
+            "use-protobuf use-tcp use-unix-socket use-black-hole"
+          ),
+          "depends_on": ["install-deps"],
+        },
+        {
+          "name": "features-random-response",
+          "image": image,
+          "commands": cargo_check_features(
+            "blackhole",
+            "use-protobuf use-tcp use-unix-socket use-random-response"
+          ),
+          "depends_on": ["install-deps"],
+        },
       ]
     },
-    cargo(
-      "publish",
-      cmd="cargo publish --allow-dirty",
-      pre=[
-        # Run cargo build to generate the protobuf source.
-        "cargo build",
-        # Remove build.rs so that protobuf source isn't generated on docs.rs.
-        "echo 'fn main() {}' > build.rs",
-        # Remove generated protobuf source from .gitignore so it's included in release.
-        "sed 's/.*proto_api.rs$//g' .gitignore -i",
-        "cargo login $CARGO_SECRET",
-      ],
-      env={"CARGO_SECRET": {"from_secret": "cargo_secret"}},
-      when={"event": ["tag"]},
-    ),
+
+    # cargo("format", cmd="cargo fmt -- --check", pre=["rustup component add rustfmt", "cargo build"]),
+    # cargo("test", cmd="cargo test"),
+    # # TODO(mishajw) fix tests and re-add --tests
+    # cargo("all", "--all", env={"RUSTFLAGS": "-D warnings"}),
+    # cargo("graph", feat="use-protobuf use-tcp use-unix-socket use-graph"),
+    # cargo("blackhole", feat="use-protobuf use-tcp use-unix-socket use-black-hole"),
+    # cargo("randomresp", feat="use-protobuf use-tcp use-unix-socket use-random-response"),
+    # TODO: Enable clippy checks after fixing all issues.
+    # TODO: Run python end-to-end tests.
+    # {
+    #   "kind": "pipeline",
+    #   "name": "docker-publish",
+    #   "steps": [
+    #     {
+    #       "name": "build",
+    #       "image": "spritsail/docker-build",
+    #       "pull": "always",
+    #       "settings": {
+    #         "repo": "kipa",
+    #       },
+    #     },
+    #     publish_step(
+    #       "publish-branch",
+    #       [ctx.build.branch],
+    #       {"event": ["push"]}
+    #     ),
+    #     publish_step(
+    #       "publish-tag",
+    #       [get_tag(ctx) + " | %rempre v | %auto 2", "latest"],
+    #       {"event": ["tag"]}
+    #     ),
+    #   ]
+    # },
+    # cargo(
+    #   "publish",
+    #   cmd="cargo publish --allow-dirty",
+    #   pre=[
+    #     # Run cargo build to generate the protobuf source.
+    #     "cargo build",
+    #     # Remove build.rs so that protobuf source isn't generated on docs.rs.
+    #     "echo 'fn main() {}' > build.rs",
+    #     # Remove generated protobuf source from .gitignore so it's included in release.
+    #     "sed 's/.*proto_api.rs$//g' .gitignore -i",
+    #     "cargo login $CARGO_SECRET",
+    #   ],
+    #   env={"CARGO_SECRET": {"from_secret": "cargo_secret"}},
+    #   when={"event": ["tag"]},
+    # ),
+  ]
+
+def cargo_check_features(name, features):
+  return [
+    "cargo check --target-dir %s-target --no-default-features --features '%s'" % (name, features)
   ]
 
 # name      string, name of the pipeline. must be valid yaml word with no breaks
