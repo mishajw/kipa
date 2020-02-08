@@ -52,6 +52,7 @@ error_chain! {
 ///
 /// If it needs to be, must be converted into an `ApiError` using
 /// `to_api_error()`.
+#[derive(Debug)]
 pub enum InternalError {
     /// Public error wrapping `ApiError`
     PublicError(ApiError, Option<Error>),

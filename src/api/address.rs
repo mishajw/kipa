@@ -10,9 +10,8 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 /// bytes of the IPv6 address is this prefix, and the last 8 bytes is the IPv4 address.
 ///
 /// See: https://en.wikipedia.org/wiki/IPv6#IPv4-mapped_IPv6_addresses
-const IPV4_IN_IPV6_PREFIX: [u8; 12] = [
-    0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xFF, 0xFF, 0xFF, 0xFF,
-];
+const IPV4_IN_IPV6_PREFIX: [u8; 12] =
+    [0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xFF, 0xFF];
 
 /// An address of a node.
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -111,5 +110,19 @@ impl serde::Serialize for Address {
         S: serde::Serializer,
     {
         serializer.serialize_str(&self.to_socket_addr().to_string())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use spectral::assert_that;
+
+    #[test]
+    fn normalize() {
+        assert_that!(Address::from_string("[::ffff:1.2.3.4]:5")
+            .unwrap()
+            .to_string())
+        .is_equal_to("1.2.3.4:5".to_string());
     }
 }
