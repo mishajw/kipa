@@ -106,6 +106,8 @@ cargo install kipa
 kipa-daemon --key-id "$MY_KEY_ID" \
     --connect-key-id D959094C \
     --connect-address 46.101.16.228:10842 &
+# This will listen on port 10842 (overridable with --port) to communicate with other KIPA nodes - so
+# if you're behind NAT, be sure to expose the port!
 
 # Now you can search for key IDs that you have in GPG!
 kipa search "$THEIR_KEY_ID"
