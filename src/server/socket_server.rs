@@ -72,9 +72,9 @@ pub trait SocketHandler {
         let mut len_data: [u8; SIZE_OF_LEN] = [0; SIZE_OF_LEN];
 
         self.set_socket_timeout(socket, deadline.map(deadline_to_duration))?;
-        socket
-            .read_exact(&mut len_data)
-            .chain_err(|| "Error on reading length data")?;
+        socket.read_exact(&mut len_data).chain_err(|| {
+            "Error on reading data from socket. Was connection broken on other side?"
+        })?;
 
         let mut cursor = Cursor::new(len_data);
         let len = cursor
