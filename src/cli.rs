@@ -36,8 +36,6 @@ fn main() {
                 .about("Search for a node given a key")
                 .arg(
                     clap::Arg::with_name("key_id")
-                        .long("key-id")
-                        .short("k")
                         .help("The key to search for")
                         .takes_value(true)
                         .required(true),

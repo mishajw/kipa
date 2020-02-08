@@ -18,7 +18,7 @@ def sample_test_searches(network: Network, backend: Backend, num_searches: int) 
         return TestResult([], 0, 0, 0)
     random_node_pairs = [random.choice(node_pairs) for _ in range(num_searches)]
 
-    commands = [CliCommand(a.id, ["search", "--key-id", b.key_id()]) for a, b in random_node_pairs]
+    commands = [CliCommand(a.id, ["search", b.key_id()]) for a, b in random_node_pairs]
     command_results = backend.run_commands(commands)
 
     search_results: List[SearchResult] = []

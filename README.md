@@ -108,7 +108,7 @@ kipa-daemon --key-id "$MY_KEY_ID" \
     --connect-address 46.101.16.228:10842 &
 
 # Now you can search for key IDs that you have in GPG!
-kipa search --key-id "$THEIR_KEY_ID"
+kipa search "$THEIR_KEY_ID"
 ```
 
 ### Docker
