@@ -11,7 +11,7 @@ FROM rust:slim-buster
 
 RUN \
   apt-get update && \
-  apt-get -y install \
+  apt-get -y install --no-install-recommends \
     clang make automake libc-dev libclang-dev pkg-config curl gnupg protobuf-compiler \
     libgmp-dev nettle-dev
 
