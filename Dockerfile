@@ -18,11 +18,28 @@ RUN \
 WORKDIR /root/kipa
 COPY Cargo.lock Cargo.lock
 COPY Cargo.toml Cargo.toml
+# Fetch dependencies first, improve Docker caching performance
+RUN cargo fetch
+
 COPY build.rs build.rs
-COPY resources/docker-run.sh resources/docker-run.sh
-COPY resources/keys resources/keys
 COPY resources/proto/proto_api.proto resources/proto/proto_api.proto
 COPY src src
-RUN cargo install --path .
+RUN cargo install --path . --root out
+
+# ~~~~~~~~~~~~~~~~~~~~~
+
+FROM debian:buster-slim
+
+RUN \
+  apt-get update && \
+  apt-get -y install --no-install-recommends \
+    gnupg && \
+  apt-get -y clean && \
+  rm -rf /var/lib/apt/lists/*
+
+COPY resources/docker-run.sh resources/docker-run.sh
+COPY resources/keys resources/keys
+
+COPY --from=0 /root/kipa/out/ /
 
 ENTRYPOINT ["sh", "resources/docker-run.sh"]
