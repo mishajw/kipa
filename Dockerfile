@@ -13,7 +13,8 @@ RUN \
   apt-get update && \
   apt-get -y install \
     clang make automake libc-dev libclang-dev pkg-config curl gnupg protobuf-compiler \
-    libgmp-dev nettle-dev
+    libgmp-dev nettle-dev && \
+    apt-get clean
 
 WORKDIR /root/kipa
 COPY Cargo.lock Cargo.lock
