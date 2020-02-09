@@ -34,7 +34,10 @@ def main(ctx):
         publish_step(
           "publish-branch",
           [ctx.build.branch],
-          {"event": ["push"]}
+          {
+            "event": ["push"],
+            "repo": "mishajw/kipa",
+          },
         ),
         publish_step(
           "publish-tag",
