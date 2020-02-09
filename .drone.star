@@ -17,7 +17,7 @@ def main(ctx):
     cargo("graph", feat="use-protobuf use-tcp use-unix-socket use-graph"),
     cargo("blackhole", feat="use-protobuf use-tcp use-unix-socket use-black-hole"),
     cargo("randomresp", feat="use-protobuf use-tcp use-unix-socket use-random-response"),
-    # TODO: Enable clippy checks after fixing all issues.
+    cargo("clippy", cmd="cargo clippy -- -Dwarnings", pre=["rustup component add clippy"]),
     # TODO: Run python end-to-end tests.
     {
       "kind": "pipeline",
