@@ -4,8 +4,8 @@
 
 set -e
 
-KEY_FILE="/root/key"
-KEY_PASSWORD_FILE="/root/key-password"
+KEY_FILE="${KEY_FILE:-/root/key}"
+KEY_PASSWORD_FILE="${KEY_PASSWORD_FILE:-/root/key-password}"
 
 if ! [ -e "$KEY_FILE" ]; then
   echo "$KEY_FILE not mounted."
@@ -17,9 +17,9 @@ if ! [ -e "$KEY_PASSWORD_FILE" ]; then
 fi
 
 # Import the secret key + all keys in `./resources/keys`.
-gpg --import --batch /root/key
+gpg --import --batch "$KEY_FILE"
 gpg --import --batch ./resources/keys/*.asc
 kipa-daemon \
   -vvvv \
-  --secret-path /root/key-password \
+  --secret-path "$KEY_PASSWORD_FILE" \
   "$@"
