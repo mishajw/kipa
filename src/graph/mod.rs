@@ -46,39 +46,38 @@ pub const DEFAULT_SEARCH_THREAD_POOL_SIZE: &str = "10";
 /// Contains graph search information.
 pub struct GraphPayloadHandler {
     local_node: Node,
-    search_breadth: usize,
-    connect_search_breadth: usize,
-    max_num_search_threads: usize,
-    search_timeout: Duration,
     message_handler_client: Arc<MessageHandlerClient>,
     neighbours_store: Arc<NeighboursStore>,
     graph_search: Arc<GraphSearch>,
+    graph_params: GraphParams,
     log: Logger,
+}
+
+/// Parameters for GraphPayloadHandler.
+pub struct GraphParams {
+    pub search_breadth: usize,
+    pub connect_search_breadth: usize,
+    pub max_num_search_threads: usize,
+    pub search_timeout: Duration,
 }
 
 impl GraphPayloadHandler {
     /// Create a new graph request handler.
     pub fn new(
         local_node: Node,
-        search_breadth: usize,
-        connect_search_breadth: usize,
-        max_num_search_threads: usize,
-        search_timeout_sec: usize,
         message_handler_client: Arc<MessageHandlerClient>,
         key_space_manager: Arc<KeySpaceManager>,
         neighbours_store: Arc<NeighboursStore>,
         search_thread_pool_size: usize,
+        graph_params: GraphParams,
         log: Logger,
     ) -> Self {
         GraphPayloadHandler {
             local_node,
-            search_breadth,
-            connect_search_breadth,
-            max_num_search_threads,
-            search_timeout: Duration::from_secs(search_timeout_sec as u64),
             message_handler_client,
             graph_search: Arc::new(GraphSearch::new(key_space_manager, search_thread_pool_size)),
             neighbours_store,
+            graph_params,
             log,
         }
     }
@@ -90,12 +89,12 @@ impl GraphPayloadHandler {
             local_key: self.local_node.key.clone(),
             search_key: search_key.clone(),
             message_handler_client: self.message_handler_client.clone(),
-            timeout: self.search_timeout,
+            timeout: self.graph_params.search_timeout,
             wrapped_client: WrappedClient {
                 message_handler_client: self.message_handler_client.clone(),
                 local_key: self.local_node.key.clone(),
                 neighbours_store: self.neighbours_store.clone(),
-                timeout: self.search_timeout,
+                timeout: self.graph_params.search_timeout,
                 log: log.new(o!("wrapped_client" => true)),
             },
             log: log.new(o!("search_callback" => true)),
@@ -105,9 +104,9 @@ impl GraphPayloadHandler {
             vec![self.local_node.clone()],
             callback,
             SearchParams {
-                breadth: self.search_breadth,
-                max_num_active_threads: self.max_num_search_threads,
-                timeout: self.search_timeout,
+                breadth: self.graph_params.search_breadth,
+                max_num_active_threads: self.graph_params.max_num_search_threads,
+                timeout: self.graph_params.search_timeout,
             },
             log.clone(),
         );
@@ -128,7 +127,7 @@ impl GraphPayloadHandler {
         self.message_handler_client.send_request(
             node,
             RequestPayload::VerifyRequest(),
-            self.search_timeout,
+            self.graph_params.search_timeout,
         )?;
         let callback = ConnectRequestCallback {
             neighbours_store: self.neighbours_store.clone(),
@@ -136,7 +135,7 @@ impl GraphPayloadHandler {
                 message_handler_client: self.message_handler_client.clone(),
                 local_key: self.local_node.key.clone(),
                 neighbours_store: self.neighbours_store.clone(),
-                timeout: self.search_timeout,
+                timeout: self.graph_params.search_timeout,
                 log: log.new(o!("wrapped_client" => true)),
             },
             log: log.new(o!("connect_callback" => true)),
@@ -146,9 +145,9 @@ impl GraphPayloadHandler {
             vec![node.clone()],
             callback,
             SearchParams {
-                breadth: self.connect_search_breadth,
-                max_num_active_threads: self.max_num_search_threads,
-                timeout: self.search_timeout,
+                breadth: self.graph_params.connect_search_breadth,
+                max_num_active_threads: self.graph_params.max_num_search_threads,
+                timeout: self.graph_params.search_timeout,
             },
             log,
         );
@@ -176,9 +175,11 @@ impl PayloadHandler for GraphPayloadHandler {
 
         // Consider the sender as a neighbour. If it's a verify request, don't consider to stop an
         // infinite loop of verifications.
-        if sender.is_some() && *payload != RequestPayload::VerifyRequest() {
-            remotery_scope!("consider_sender_for_neighbour");
-            self.neighbours_store.consider_candidate(&sender.unwrap());
+        if let Some(sender) = sender {
+            if *payload != RequestPayload::VerifyRequest() {
+                remotery_scope!("consider_sender_for_neighbour");
+                self.neighbours_store.consider_candidate(&sender);
+            }
         }
 
         match *payload {

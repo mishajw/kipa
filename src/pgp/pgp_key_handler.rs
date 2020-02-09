@@ -58,7 +58,7 @@ impl PgpKeyHandler {
             .revoked(false)
             .for_signing()
             .nth(0)
-            .ok_or(ErrorKind::ConfigError("No signing key found.".into()))?
+            .ok_or_else(|| ErrorKind::ConfigError("No signing key found.".into()))?
             .key()
             .clone()
             .mark_parts_secret()
@@ -158,7 +158,7 @@ impl<'a> VerificationHelper for GpgHelper<'a> {
             "sender_key_id" => %self.sender.primary().keyid(),
             "recipient_key_id" => %self.recipient.primary().keyid(),
         );
-        return Ok(vec![self.sender.clone(), self.recipient.clone()]);
+        Ok(vec![self.sender.clone(), self.recipient.clone()])
     }
 
     fn check(&mut self, structure: &MessageStructure) -> sequoia_openpgp::Result<()> {
@@ -189,11 +189,10 @@ impl<'a> DecryptionHelper for GpgHelper<'a> {
         D: FnMut(SymmetricAlgorithm, &SessionKey) -> sequoia_openpgp::Result<()>,
     {
         let (pkesk, subkey) = pkesks
-            .into_iter()
+            .iter()
             .flat_map(|pkesk| self.recipient.subkeys().map(move |subkey| (pkesk, subkey)))
-            .filter(|(pkesk, subkey)| *pkesk.recipient() == subkey.component().keyid())
-            .next()
-            .ok_or(failure::err_msg("No PKESKs matched recipient subkeys."))?;
+            .find(|(pkesk, subkey)| *pkesk.recipient() == subkey.component().keyid())
+            .ok_or_else(|| failure::err_msg("No PKESKs matched recipient subkeys."))?;
         let mut keypair = subkey.key().clone().mark_parts_secret()?.into_keypair()?;
         pkesk
             .decrypt(&mut keypair)

@@ -34,10 +34,10 @@ impl LogEvent {
     }
 
     /// Logs that a neighbour query succeeded.
-    pub fn query_succeeded(node: &Node, neighbours: &Vec<Node>, log: &Logger) {
+    pub fn query_succeeded(node: &Node, neighbours: &[Node], log: &Logger) {
         LogEvent::QuerySucceeded {
             node: node.clone(),
-            neighbours: neighbours.clone(),
+            neighbours: neighbours.to_vec(),
         }
         .log(log)
     }

@@ -46,7 +46,7 @@ fn main() {
                         .short("p")
                         .help("What results to print")
                         .takes_value(true)
-                        .possible_values(&vec!["ip", "port", "all"])
+                        .possible_values(&["ip", "port", "all"])
                         .default_value("all"),
                 ),
         )
@@ -162,7 +162,7 @@ fn message_daemon(args: &clap::ArgMatches, log: &slog::Logger) -> InternalResult
                 "Unrecognized response".into(),
             ))),
         }
-    } else if let Some(_) = args.subcommand_matches("list-neighbours") {
+    } else if args.subcommand_matches("list-neighbours").is_some() {
         let response = message_handler_local_client.send(RequestPayload::ListNeighboursRequest())?;
 
         match response {

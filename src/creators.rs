@@ -3,6 +3,9 @@
 //! These depend on features and conditional compilation in order to bring in
 //! the correct implementations.
 
+#![allow(unused)]
+#![allow(clippy::type_complexity)]
+
 use api::{Node, SecretKey};
 use data_transformer::DataTransformer;
 use error::*;
@@ -11,7 +14,6 @@ use local_address_params::LocalAddressParams;
 use message_handler::{MessageHandlerClient, MessageHandlerLocalClient, MessageHandlerServer};
 use payload_handler::PayloadHandler;
 use pgp::{GnupgKeyLoader, PgpKeyHandler, SecretLoader};
-#[allow(unused)]
 use server::{Client, LocalClient, LocalServer, Server};
 use thread_manager::ThreadManager;
 use versioning;
@@ -26,7 +28,6 @@ use slog_term;
 use std::fmt::Debug;
 use std::fs;
 use std::path::Path;
-#[allow(unused)]
 use std::sync::{Arc, Mutex};
 
 /// Macro to parse a `clap` argument with appropriate errors
@@ -598,7 +599,7 @@ impl Creator for dyn PayloadHandler {
         log: Logger,
     ) -> InternalResult<Box<Self>> {
         use graph::neighbour_gc::NeighbourGc;
-        use graph::GraphPayloadHandler;
+        use graph::{GraphParams, GraphPayloadHandler};
         use std::time::Duration;
 
         let (local_node, message_handler_client, key_space_manager) = parameters;
@@ -635,15 +636,17 @@ impl Creator for dyn PayloadHandler {
         }
 
         Ok(Box::new(GraphPayloadHandler::new(
-            local_node.clone(),
-            search_breadth,
-            connect_search_breadth,
-            max_num_search_threads,
-            search_timeout_sec,
+            local_node,
             message_handler_client,
             key_space_manager,
             neighbours_store,
             search_thread_pool_size,
+            GraphParams {
+                search_breadth,
+                connect_search_breadth,
+                max_num_search_threads,
+                search_timeout: Duration::from_secs(search_timeout_sec as u64),
+            },
             log,
         )))
     }

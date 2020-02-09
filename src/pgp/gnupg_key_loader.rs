@@ -176,9 +176,9 @@ impl GnupgKeyLoader {
         // Parse the --with-colons output. In this case, we're interested in the fingerprint tag,
         // and the key ID is in column 9.
         Ok(stdout
-            .split("\n")
+            .split('\n')
             .filter(|line| line.starts_with("fpr:"))
-            .flat_map(|line| line.split(":").nth(9).into_iter())
+            .flat_map(|line| line.split(':').nth(9).into_iter())
             .map(String::from)
             .filter(|s| !s.is_empty())
             .collect())
@@ -199,7 +199,7 @@ impl GnupgKeyLoader {
                     .status
                     .code()
                     .map(|i| i.to_string())
-                    .unwrap_or("no code".into())
+                    .unwrap_or_else(|| "no code".into())
             ))
             .into());
         }

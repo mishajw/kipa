@@ -55,6 +55,7 @@ pub type RequestBody = MessageBody<RequestPayload>;
 pub type ResponseBody = MessageBody<error::ApiResult<ResponsePayload>>;
 
 /// Different types of requests and their payloads.
+#[allow(clippy::large_enum_variant)]
 #[derive(Clone, Serialize, PartialEq, Eq)]
 pub enum RequestPayload {
     /// Search for a key in the network.
@@ -81,6 +82,7 @@ pub enum RequestPayload {
 }
 
 /// The response for a given request.
+#[allow(clippy::large_enum_variant)]
 pub enum ResponsePayload {
     /// Response for a
     /// [`SearchRequest`](./enum.RequestPayload.html#variant.SearchRequest).

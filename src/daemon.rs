@@ -27,6 +27,7 @@ use kipa_lib::server::{Client, LocalServer, Server};
 use kipa_lib::thread_manager::ThreadManager;
 use kipa_lib::versioning;
 
+#[allow(clippy::let_unit_value)]
 fn main() {
     let mut creator_args = vec![];
     creator_args.append(&mut slog::Logger::get_clap_args());
@@ -197,8 +198,8 @@ fn run_servers(args: &clap::ArgMatches, log: &slog::Logger) -> InternalResult<()
         (
             payload_handler,
             data_transformer.clone(),
-            pgp_key_handler.clone(),
-            local_secret_key.clone(),
+            pgp_key_handler,
+            local_secret_key,
         ),
         args,
         log.new(o!("message_handler_server" => true)),
@@ -209,7 +210,7 @@ fn run_servers(args: &clap::ArgMatches, log: &slog::Logger) -> InternalResult<()
     let server = Server::create(
         (
             message_handler_server.clone(),
-            local_node.clone(),
+            local_node,
             request_thread_manager.clone(),
         ),
         args,
@@ -218,7 +219,7 @@ fn run_servers(args: &clap::ArgMatches, log: &slog::Logger) -> InternalResult<()
 
     // Set up local listening for requests
     let local_server = LocalServer::create(
-        (message_handler_server.clone(), request_thread_manager),
+        (message_handler_server, request_thread_manager),
         args,
         log.new(o!("local_server" => true)),
     )?;

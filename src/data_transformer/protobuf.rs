@@ -187,7 +187,7 @@ impl TryInto<proto_api::ResponseBody> for ResponseBody {
                 proto_body.set_verify_response(proto_api::VerifyResponse::new());
             }
             Err(api_error) => {
-                let proto_error = api_error.clone().into();
+                let proto_error = api_error.into();
                 proto_body.set_api_error(proto_error);
             }
         };
@@ -254,7 +254,7 @@ impl TryInto<proto_api::Key> for Key {
 impl TryFrom<proto_api::Key> for Key {
     type Error = Error;
     fn try_from(kipa_key: proto_api::Key) -> Result<Key> {
-        Key::new(kipa_key.data.clone())
+        Key::new(kipa_key.data)
     }
 }
 
@@ -278,8 +278,8 @@ impl TryInto<proto_api::Node> for Node {
     type Error = Error;
     fn try_into(self) -> Result<proto_api::Node> {
         let mut kipa_node = proto_api::Node::new();
-        kipa_node.set_key(self.key.clone().try_into()?);
-        kipa_node.set_address(self.address.clone().into());
+        kipa_node.set_key(self.key.try_into()?);
+        kipa_node.set_address(self.address.into());
         Ok(kipa_node)
     }
 }
