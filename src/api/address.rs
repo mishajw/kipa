@@ -6,13 +6,6 @@ use serde;
 use std::fmt;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 
-/// IPv4 (4 bytes) addresses can be encoded in IPv6 (16 bytes) addresses. To do this, the first 12
-/// bytes of the IPv6 address is this prefix, and the last 8 bytes is the IPv4 address.
-///
-/// See: https://en.wikipedia.org/wiki/IPv6#IPv4-mapped_IPv6_addresses
-const IPV4_IN_IPV6_PREFIX: [u8; 12] =
-    [0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xFF, 0xFF];
-
 /// An address of a node.
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Address {
@@ -26,13 +19,7 @@ pub struct Address {
 
 impl Address {
     /// Create a new address with some address and port.
-    pub fn new(mut ip_data: Vec<u8>, port: u16) -> Self {
-        if ip_data.len() == 16 && ip_data[0..12] == IPV4_IN_IPV6_PREFIX {
-            // If the IPv6 address contains an IPv4 address, normalize to the IPv4 address.
-            // TODO(#26): Check if this resolves the issue. If it doesn't, this might cause some
-            // strange bugs in the future...
-            ip_data = ip_data[12..].to_vec();
-        }
+    pub fn new(ip_data: Vec<u8>, port: u16) -> Self {
         assert!(ip_data.len() == 4 || ip_data.len() == 16);
         Address { ip_data, port }
     }
@@ -110,19 +97,5 @@ impl serde::Serialize for Address {
         S: serde::Serializer,
     {
         serializer.serialize_str(&self.to_socket_addr().to_string())
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use spectral::assert_that;
-
-    #[test]
-    fn normalize() {
-        assert_that!(Address::from_string("[::ffff:1.2.3.4]:5")
-            .unwrap()
-            .to_string())
-        .is_equal_to("1.2.3.4:5".to_string());
     }
 }
