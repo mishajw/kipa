@@ -166,6 +166,30 @@ fn run_servers(args: &clap::ArgMatches, log: &slog::Logger) -> InternalResult<()
     )?
     .into();
 
+    let message_handler_server: Arc<MessageHandlerServer> = MessageHandlerServer::create(
+        (
+            payload_handler.clone(),
+            data_transformer.clone(),
+            pgp_key_handler,
+            local_secret_key,
+        ),
+        args,
+        log.new(o!("message_handler_server" => true)),
+    )?
+    .into();
+
+    // Set up listening for connections
+    let server = Server::create(
+        (
+            message_handler_server.clone(),
+            local_node,
+            request_thread_manager.clone(),
+        ),
+        args,
+        log.new(o!("server" => true)),
+    )?;
+    let server_thread = server.start()?;
+
     // Now we've set up the payload handler, we can connect to a node at startup.
     match (
         args.value_of("connect_address"),
@@ -194,37 +218,12 @@ fn run_servers(args: &clap::ArgMatches, log: &slog::Logger) -> InternalResult<()
         (None, None) => {}
     };
 
-    let message_handler_server: Arc<MessageHandlerServer> = MessageHandlerServer::create(
-        (
-            payload_handler,
-            data_transformer.clone(),
-            pgp_key_handler,
-            local_secret_key,
-        ),
-        args,
-        log.new(o!("message_handler_server" => true)),
-    )?
-    .into();
-
-    // Set up listening for connections
-    let server = Server::create(
-        (
-            message_handler_server.clone(),
-            local_node,
-            request_thread_manager.clone(),
-        ),
-        args,
-        log.new(o!("server" => true)),
-    )?;
-
     // Set up local listening for requests
     let local_server = LocalServer::create(
         (message_handler_server, request_thread_manager),
         args,
         log.new(o!("local_server" => true)),
     )?;
-
-    let server_thread = server.start()?;
     let local_server_thread = local_server.start().map_err(|err| {
         InternalError::public_with_error(
             "Error on creating local server thread",
