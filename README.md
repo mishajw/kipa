@@ -135,6 +135,11 @@ docker run \
     --key "$KEY_ID"
     --connect-key D959094C
     --connect-address 46.101.16.228:10842
+
+# You can use `docker exec` to run KIPA commands.
+# Note that only the keys in `./resources/keys` are in the container's GPG.
+docker exec kipa \
+    kipa search "$THEIR_KEY_ID"
 ```
 
 ### Simulations
