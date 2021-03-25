@@ -1,4 +1,4 @@
 Pillow==6.2.0
-PyYAML==5.1
+PyYAML==5.4
 docker==3.2.1
 matplotlib==3.0.1
